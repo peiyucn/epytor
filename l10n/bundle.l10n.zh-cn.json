@@ -1,3 +1,5 @@
 {
-  "Cannot open chat: please install Claude extension or GitHub Copilot": "无法打开聊天：请确保 Claude 扩展或 GitHub Copilot 已安装"
+  "Cannot open chat: please install Claude extension or GitHub Copilot": "无法打开聊天：请确保 Claude 扩展或 GitHub Copilot 已安装",
+  "Lines(src): {0}  Words: {1}  Chars: {2}": "行(源): {0}  字: {1}  字符: {2}",
+  "Chars (with spaces): {0}": "字符(含空格): {0}"
 }

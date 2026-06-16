@@ -88,4 +88,8 @@ export const ZH_CN_WEBVIEW: Record<string, string> = {
     'Next Match': '下一个匹配项',
     'Match Case': '区分大小写',
     'No results': '无结果',
+    // toc
+    'Pin panel': '固定面板',
+    'Collapse all': '全部折叠',
+    'Expand all': '全部展开',
 };

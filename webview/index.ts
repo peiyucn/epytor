@@ -16,6 +16,7 @@ import {
     notifyUploadImage,
     notifyGetProjectImages,
     notifyRenameImage,
+    notifyWordCount,
     getWebviewState,
     setWebviewState,
 } from "./messaging";
@@ -289,6 +290,40 @@ function escapeHtml(s: string): string {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+/** Word 风格字数：CJK 字符逐字 + 非 CJK 连续串计 1 + 空格不计 */
+function countWords(text: string): number {
+    let count = 0;
+    let inNonCjk = false;
+    const cjkRe = /[一-鿿㐀-䶿豈-﫿]/;
+    for (const ch of text) {
+        if (/\s/.test(ch)) {
+            inNonCjk = false;
+        } else if (cjkRe.test(ch)) {
+            inNonCjk = false;
+            count++;
+        } else {
+            if (!inNonCjk) {
+                inNonCjk = true;
+                count++;
+            }
+        }
+    }
+    return count;
+}
+
+/** 计算字数统计并通知 Extension 更新状态栏 */
+function updateWordCount(): void {
+    const view = getEditorView();
+    if (!view) return;
+    const text = view.state.doc.textBetween(0, view.state.doc.content.size, "\n");
+    notifyWordCount(
+        text.split("\n").length,
+        countWords(text),
+        text.replace(/\s/g, "").length,
+        text.length,
+    );
+}
+
 async function initEditor(
     container: HTMLElement,
     markdown: string,
@@ -306,10 +341,12 @@ async function initEditor(
         (updated) => {
             notifyUpdate(updated);
             toc.refresh(); // 内容变化时刷新目录（面板关闭时是 no-op）
+            updateWordCount(); // 更新字数统计
         },
         handleRenameImage,
     );
     toc.refresh(); // 编辑器初始化完成后刷新一次
+    updateWordCount(); // 编辑器初始化完成后统计一次
 }
 
 // 工具栏（传入 TOC 切换回调 + 图片上传回调）

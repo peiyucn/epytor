@@ -158,10 +158,19 @@ export class MarkdownEditorProvider
         );
     }
 
+    private readonly _statusBarItem: vscode.StatusBarItem;
+    private readonly _wordCounts = new Map<string, { lines: number; words: number; charsNoSpace: number; charsWithSpace: number }>();
+
     constructor(
         private readonly context: vscode.ExtensionContext,
         private readonly claudeTerminals: Set<vscode.Terminal>,
-    ) {}
+    ) {
+        this._statusBarItem = vscode.window.createStatusBarItem(
+            vscode.StatusBarAlignment.Right,
+            100,
+        );
+        this._statusBarItem.hide();
+    }
 
     async openCustomDocument(
         uri: vscode.Uri,
@@ -194,12 +203,16 @@ export class MarkdownEditorProvider
             this._pinnedDocuments.delete(uriKey);
             this._imageUriMaps.delete(uriKey);
             this._initializedPanels.delete(uriKey);
+            this._wordCounts.delete(uriKey);
             // 清理残余定时器
             const timer = this._autoSaveTimers.get(uriKey);
             if (timer !== undefined) {
                 clearTimeout(timer);
                 this._autoSaveTimers.delete(uriKey);
             }
+            // 面板关闭（含预览被替换、切文本编辑器）时隐藏状态栏
+            // 若有其他活跃 MD 面板，其 wordCount / onDidChangeViewState 会重新显示
+            this._statusBarItem.hide();
 
         });
 
@@ -220,7 +233,27 @@ export class MarkdownEditorProvider
         // 面板激活时（如全局搜索点击已打开的文件），检查并发送待跳转行号
         // 只处理已初始化（已 ready）的面板，避免新建面板时提前消耗 pending navigation
         webviewPanel.onDidChangeViewState(({ webviewPanel: p }) => {
-            if (!p.active) { return; }
+            if (!p.active) {
+                // 延迟检查：切换出 md 面板后若无活跃面板则隐藏状态栏
+                setTimeout(() => {
+                    const anyActive = Array.from(this._webviewPanels.values()).some(
+                        (panel) => {
+                            try { return panel.active; } catch { return false; }
+                        },
+                    );
+                    if (!anyActive) this._statusBarItem.hide();
+                }, 0);
+                return;
+            }
+            // 恢复字数统计
+            const wc = this._wordCounts.get(uriKey);
+            if (wc) {
+                this._statusBarItem.text = vscode.l10n.t('Lines(src): {0}  Words: {1}  Chars: {2}', wc.lines, wc.words.toLocaleString(), wc.charsNoSpace.toLocaleString());
+                this._statusBarItem.tooltip = vscode.l10n.t('Chars (with spaces): {0}', wc.charsWithSpace.toLocaleString());
+                this._statusBarItem.show();
+            } else {
+                this._statusBarItem.hide();
+            }
             if (!this._initializedPanels.has(uriKey)) { return; }
             const line = this._consumePendingNavigation(document.uri.fsPath)
                 ?? this._consumeGlobalRevealLine();
@@ -428,6 +461,19 @@ export class MarkdownEditorProvider
                     case "resolveImagePath":
                         if (message.id && message.relPath) {
                             this._handleResolveImagePath(document, panel, uriKey, message.id, message.relPath);
+                        }
+                        break;
+                    case "wordCount":
+                        this._wordCounts.set(uriKey, {
+                            lines: message.lines,
+                            words: message.words,
+                            charsNoSpace: message.charsNoSpace,
+                            charsWithSpace: message.charsWithSpace,
+                        });
+                        if (panel.active) {
+                            this._statusBarItem.text = vscode.l10n.t('Lines(src): {0}  Words: {1}  Chars: {2}', message.lines, message.words.toLocaleString(), message.charsNoSpace.toLocaleString());
+                            this._statusBarItem.tooltip = vscode.l10n.t('Chars (with spaces): {0}', message.charsWithSpace.toLocaleString());
+                            this._statusBarItem.show();
                         }
                         break;
                 }

@@ -75,6 +75,15 @@ export function notifyRenameImage(
     vscode.postMessage({ type: "renameImage", id, webviewUri, newBasename });
 }
 
+export function notifyWordCount(
+    lines: number,
+    words: number,
+    charsNoSpace: number,
+    charsWithSpace: number,
+): void {
+    vscode.postMessage({ type: "wordCount", lines, words, charsNoSpace, charsWithSpace });
+}
+
 export function onMessage(handler: (msg: IncomingMessage) => void): void {
     window.addEventListener("message", (event: MessageEvent) => {
         handler(event.data as IncomingMessage);

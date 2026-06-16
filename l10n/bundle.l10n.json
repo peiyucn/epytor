@@ -1,3 +1,5 @@
 {
-  "Cannot open chat: please install Claude extension or GitHub Copilot": "Cannot open chat: please install Claude extension or GitHub Copilot"
+  "Cannot open chat: please install Claude extension or GitHub Copilot": "Cannot open chat: please install Claude extension or GitHub Copilot",
+  "Lines(src): {0}  Words: {1}  Chars: {2}": "Lines(src): {0}  Words: {1}  Chars: {2}",
+  "Chars (with spaces): {0}": "Chars (with spaces): {0}"
 }
