@@ -189,7 +189,7 @@ export async function uploadImageToServer(
 ): Promise<string> {
     const serverUrl = cfg.get<string>("imageServerUrl", "").trim();
     if (!serverUrl) {
-        throw new Error("请先在设置中配置 markdownWysiwyg.imageServerUrl");
+        throw new Error("请先在设置中配置 epytor.imageServerUrl");
     }
 
     const fieldName =

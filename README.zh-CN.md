@@ -1,6 +1,6 @@
 # Markdown WYSIWYG Editor
 
-[English](README.md) | 简体中文 | [GitHub](https://github.com/git-xing/md-wysiwyg-editor)
+[English](README.md) | 简体中文 | [GitHub](https://github.com/peiyucn/epytor)
 
 一款基于 [Milkdown](https://milkdown.dev/)（ProseMirror）的 VSCode 所见即所得 Markdown 编辑器扩展，以富文本方式直接编辑 `.md` / `.markdown` 文件，保存结果为标准 Markdown，与任何文本编辑器完全兼容。
 
@@ -97,14 +97,14 @@
 
 | 设置项                                  | 类型      | 默认值         | 说明                                                   |
 | ------------------------------------ | ------- | ----------- | ---------------------------------------------------- |
-| `markdownWysiwyg.autoSave`           | boolean | `true`      | 编辑后自动写盘                                              |
-| `markdownWysiwyg.autoSaveDelay`      | number  | `1000`      | 自动保存防抖延迟（毫秒）                                         |
-| `markdownWysiwyg.defaultMode`        | string  | `"preview"` | 打开 `.md` 的默认模式：`preview`（WYSIWYG）或 `markdown`（文本编辑器） |
-| `markdownWysiwyg.codeBlockMaxHeight` | number  | `600`       | 代码块最大显示高度（像素）                                        |
-| `markdownWysiwyg.editorMaxWidth`     | number  | `900`       | 编辑器内容最大宽度（像素）                                        |
-| `markdownWysiwyg.fontFamily`         | string  | `""`        | 编辑器字体，留空继承 VSCode 编辑器字体，示例：`Georgia, serif`          |
-| `markdownWysiwyg.imageStorage`       | string  | `"local"`   | 图片存储模式：`local`（本地保存）或 `server`（上传至自定义 URL）           |
-| `markdownWysiwyg.imageLocalPath`     | string  | `""`        | 本地图片存储路径（相对于 workspace 根目录）                          |
+| `epytor.autoSave`           | boolean | `true`      | 编辑后自动写盘                                              |
+| `epytor.autoSaveDelay`      | number  | `1000`      | 自动保存防抖延迟（毫秒）                                         |
+| `epytor.defaultMode`        | string  | `"preview"` | 打开 `.md` 的默认模式：`preview`（WYSIWYG）或 `markdown`（文本编辑器） |
+| `epytor.codeBlockMaxHeight` | number  | `600`       | 代码块最大显示高度（像素）                                        |
+| `epytor.editorMaxWidth`     | number  | `900`       | 编辑器内容最大宽度（像素）                                        |
+| `epytor.fontFamily`         | string  | `""`        | 编辑器字体，留空继承 VSCode 编辑器字体，示例：`Georgia, serif`          |
+| `epytor.imageStorage`       | string  | `"local"`   | 图片存储模式：`local`（本地保存）或 `server`（上传至自定义 URL）           |
+| `epytor.imageLocalPath`     | string  | `""`        | 本地图片存储路径（相对于 workspace 根目录）                          |
 
 ***
 

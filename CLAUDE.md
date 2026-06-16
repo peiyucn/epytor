@@ -165,5 +165,5 @@ __mocks__/vscode.ts      — vscode API 统一 mock
 
 | 设置项                             | 类型      | 默认值    | 说明       |
 | ------------------------------- | ------- | ------ | -------- |
-| `markdownWysiwyg.autoSave`      | boolean | `true` | 编辑后自动写盘  |
-| `markdownWysiwyg.autoSaveDelay` | number  | `1000` | 防抖延迟（ms） |
+| `epytor.autoSave`      | boolean | `true` | 编辑后自动写盘  |
+| `epytor.autoSaveDelay` | number  | `1000` | 防抖延迟（ms） |

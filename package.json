@@ -1,9 +1,9 @@
 {
-  "name": "md-wysiwyg-editor",
-  "displayName": "WYSIWYG Markdown Editor",
+  "name": "epytor",
+  "displayName": "Epytor",
   "description": "WYSIWYG Markdown editor with live table editing",
   "version": "0.1.8",
-  "publisher": "chance-liu",
+  "publisher": "peiyucn",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -25,20 +25,20 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/git-xing/md-wysiwyg-editor.git"
+    "url": "https://github.com/peiyucn/epytor.git"
   },
   "bugs": {
-    "url": "https://github.com/git-xing/md-wysiwyg-editor/issues"
+    "url": "https://github.com/peiyucn/epytor/issues"
   },
-  "homepage": "https://github.com/git-xing/md-wysiwyg-editor#readme",
+  "homepage": "https://github.com/peiyucn/epytor#readme",
   "activationEvents": [],
   "main": "./dist/extension.js",
   "l10n": "./l10n",
   "contributes": {
     "customEditors": [
       {
-        "viewType": "markdownWysiwyg.editor",
-        "displayName": "WYSIWYG Markdown Editor",
+        "viewType": "epytor.editor",
+        "displayName": "Epytor",
         "selector": [
           {
             "filenamePattern": "*.md"
@@ -52,84 +52,84 @@
     ],
     "commands": [
       {
-        "command": "markdownWysiwyg.switchToTextEditor",
+        "command": "epytor.switchToTextEditor",
         "title": "%command.switchToTextEditor.title%",
         "icon": "$(eye-closed)"
       },
       {
-        "command": "markdownWysiwyg.switchToPreview",
+        "command": "epytor.switchToPreview",
         "title": "%command.switchToPreview.title%",
         "icon": "$(eye)"
       },
       {
-        "command": "markdownWysiwyg.debugModeEnable",
+        "command": "epytor.debugModeEnable",
         "title": "%command.debugModeEnable.title%"
       },
       {
-        "command": "markdownWysiwyg.debugModeDisable",
+        "command": "epytor.debugModeDisable",
         "title": "%command.debugModeDisable.title%"
       }
     ],
     "keybindings": [
       {
-        "command": "markdownWysiwyg.switchToTextEditor",
+        "command": "epytor.switchToTextEditor",
         "key": "ctrl+shift+m",
         "mac": "cmd+shift+m",
-        "when": "activeCustomEditorId == 'markdownWysiwyg.editor'"
+        "when": "activeCustomEditorId == 'epytor.editor'"
       },
       {
-        "command": "markdownWysiwyg.switchToPreview",
+        "command": "epytor.switchToPreview",
         "key": "ctrl+shift+m",
         "mac": "cmd+shift+m",
-        "when": "resourceExtname == '.md' && activeCustomEditorId != 'markdownWysiwyg.editor'"
+        "when": "resourceExtname == '.md' && activeCustomEditorId != 'epytor.editor'"
       }
     ],
     "menus": {
       "editor/title": [
         {
-          "command": "markdownWysiwyg.switchToTextEditor",
+          "command": "epytor.switchToTextEditor",
           "group": "navigation",
-          "when": "activeCustomEditorId == 'markdownWysiwyg.editor'"
+          "when": "activeCustomEditorId == 'epytor.editor'"
         },
         {
-          "command": "markdownWysiwyg.switchToPreview",
+          "command": "epytor.switchToPreview",
           "group": "navigation",
-          "when": "resourceExtname == '.md' && activeCustomEditorId != 'markdownWysiwyg.editor'"
+          "when": "resourceExtname == '.md' && activeCustomEditorId != 'epytor.editor'"
         },
         {
-          "command": "markdownWysiwyg.debugModeEnable",
+          "command": "epytor.debugModeEnable",
           "group": "9_debug",
-          "when": "activeCustomEditorId == 'markdownWysiwyg.editor' && !markdownWysiwyg.debugModeActive"
+          "when": "activeCustomEditorId == 'epytor.editor' && !epytor.debugModeActive"
         },
         {
-          "command": "markdownWysiwyg.debugModeDisable",
+          "command": "epytor.debugModeDisable",
           "group": "9_debug",
-          "when": "activeCustomEditorId == 'markdownWysiwyg.editor' && markdownWysiwyg.debugModeActive"
+          "when": "activeCustomEditorId == 'epytor.editor' && epytor.debugModeActive"
         }
       ]
     },
     "configuration": {
-      "title": "Markdown WYSIWYG Editor",
+      "title": "Epytor",
       "properties": {
-        "markdownWysiwyg.autoSave": {
+        "epytor.autoSave": {
           "type": "boolean",
           "default": true,
           "description": "%config.autoSave.description%"
         },
-        "markdownWysiwyg.autoSaveDelay": {
+        "epytor.autoSaveDelay": {
           "type": "number",
           "default": 1000,
           "minimum": 100,
           "maximum": 10000,
           "description": "%config.autoSaveDelay.description%"
         },
-        "markdownWysiwyg.codeBlockMaxHeight": {
+        "epytor.codeBlockMaxHeight": {
           "type": "number",
           "default": 600,
           "minimum": 100,
           "description": "%config.codeBlockMaxHeight.description%"
         },
-        "markdownWysiwyg.defaultMode": {
+        "epytor.defaultMode": {
           "type": "string",
           "enum": [
             "preview",
@@ -142,23 +142,23 @@
           "default": "preview",
           "description": "%config.defaultMode.description%"
         },
-        "markdownWysiwyg.editorMaxWidth": {
+        "epytor.editorMaxWidth": {
           "type": "number",
           "default": 900,
           "minimum": 400,
           "description": "%config.editorMaxWidth.description%"
         },
-        "markdownWysiwyg.fontFamily": {
+        "epytor.fontFamily": {
           "type": "string",
           "default": "",
           "description": "%config.fontFamily.description%"
         },
-        "markdownWysiwyg.debugMode": {
+        "epytor.debugMode": {
           "type": "boolean",
           "default": false,
           "description": "%config.debugMode.description%"
         },
-        "markdownWysiwyg.imageStorage": {
+        "epytor.imageStorage": {
           "order": 10,
           "type": "string",
           "enum": [
@@ -172,37 +172,37 @@
           "default": "local",
           "description": "%config.imageStorage.description%"
         },
-        "markdownWysiwyg.imageLocalPath": {
+        "epytor.imageLocalPath": {
           "order": 11,
           "type": "string",
           "default": "",
           "description": "%config.imageLocalPath.description%"
         },
-        "markdownWysiwyg.imageServerUrl": {
+        "epytor.imageServerUrl": {
           "order": 12,
           "type": "string",
           "default": "",
           "description": "%config.imageServerUrl.description%"
         },
-        "markdownWysiwyg.imageServerFieldName": {
+        "epytor.imageServerFieldName": {
           "order": 13,
           "type": "string",
           "default": "file",
           "description": "%config.imageServerFieldName.description%"
         },
-        "markdownWysiwyg.imageServerExtraParams": {
+        "epytor.imageServerExtraParams": {
           "order": 14,
           "type": "string",
           "default": "",
           "description": "%config.imageServerExtraParams.description%"
         },
-        "markdownWysiwyg.imageServerResponsePath": {
+        "epytor.imageServerResponsePath": {
           "order": 15,
           "type": "string",
           "default": "url",
           "description": "%config.imageServerResponsePath.description%"
         },
-        "markdownWysiwyg.imageSelectionColor": {
+        "epytor.imageSelectionColor": {
           "order": 16,
           "type": "string",
           "default": "rgba(52, 211, 153, 0.6)",
@@ -215,7 +215,7 @@
     "vscode:prepublish": "node esbuild.mjs --production",
     "build": "node esbuild.mjs",
     "watch": "node esbuild.mjs --watch",
-    "package": "vsce package --no-dependencies --out releases/ --baseContentUrl https://github.com/git-xing/md-wysiwyg-editor/blob/main --baseImagesUrl https://github.com/git-xing/md-wysiwyg-editor/raw/main",
+    "package": "vsce package --no-dependencies --out releases/ --baseContentUrl https://github.com/peiyucn/epytor/blob/main --baseImagesUrl https://github.com/peiyucn/epytor/raw/main",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"

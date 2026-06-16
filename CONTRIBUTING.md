@@ -42,4 +42,4 @@ docs/          Development documentation
 
 ## Reporting Bugs
 
-Please use the [Bug Report template](https://github.com/git-xing/md-wysiwyg-editor/issues/new?template=bug_report.md) and include your VS Code version and the Output panel logs.
+Please use the [Bug Report template](https://github.com/peiyucn/epytor/issues/new?template=bug_report.md) and include your VS Code version and the Output panel logs.

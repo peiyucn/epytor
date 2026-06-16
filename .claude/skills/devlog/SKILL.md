@@ -7,7 +7,7 @@ version: 1.0.0
 
 ## Purpose
 
-将两类条目提交为 GitHub Issue（仓库：`git-xing/md-wysiwyg-editor`）：
+将两类条目提交为 GitHub Issue（仓库：`peiyucn/epytor`）：
 
 1. **已知 Bug**：本次开发未修复或历史遗留的 bug（开发中已修复的不记录）
 2. **功能需求**：计划实现但尚未动工的功能点
@@ -39,7 +39,7 @@ version: 1.0.0
 
 ```bash
 gh issue create \
-  --repo git-xing/md-wysiwyg-editor \
+  --repo peiyucn/epytor \
   --title "[Bug] <标题>" \
   --label "bug,known-limitation" \
   --body "$(cat <<'EOF'
@@ -76,14 +76,14 @@ EOF
 运行前先检查 `known-limitation` label 是否存在：
 
 ```bash
-gh label list --repo git-xing/md-wysiwyg-editor | grep known-limitation
+gh label list --repo peiyucn/epytor | grep known-limitation
 ```
 
 若不存在则创建：
 
 ```bash
 gh label create "known-limitation" \
-  --repo git-xing/md-wysiwyg-editor \
+  --repo peiyucn/epytor \
   --description "已知但暂未修复的限制或 bug" \
   --color "FFA500"
 ```
@@ -108,7 +108,7 @@ gh label create "known-limitation" \
 
 ```bash
 gh issue create \
-  --repo git-xing/md-wysiwyg-editor \
+  --repo peiyucn/epytor \
   --title "[Feature] <功能标题>" \
   --label "enhancement,roadmap" \
   --body "$(cat <<'EOF'
@@ -151,14 +151,14 @@ EOF
 ### 检查并创建自定义 label
 
 ```bash
-gh label list --repo git-xing/md-wysiwyg-editor | grep roadmap
+gh label list --repo peiyucn/epytor | grep roadmap
 ```
 
 若不存在则创建：
 
 ```bash
 gh label create "roadmap" \
-  --repo git-xing/md-wysiwyg-editor \
+  --repo peiyucn/epytor \
   --description "纳入路线图的计划功能" \
   --color "0075CA"
 ```
@@ -170,7 +170,7 @@ gh label create "roadmap" \
 Issue 创建成功后，输出 Issue URL 让用户可以直接点击查看：
 
 ```
-✅ Issue 已创建：https://github.com/git-xing/md-wysiwyg-editor/issues/XXX
+✅ Issue 已创建：https://github.com/peiyucn/epytor/issues/XXX
 ```
 
 若创建多个 Issue，逐一列出所有 URL。

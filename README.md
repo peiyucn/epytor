@@ -1,6 +1,6 @@
 # Markdown WYSIWYG Editor
 
-English | [简体中文](README.zh-CN.md) | [GitHub](https://github.com/git-xing/md-wysiwyg-editor)
+English | [简体中文](README.zh-CN.md) | [GitHub](https://github.com/peiyucn/epytor)
 
 A VSCode WYSIWYG Markdown editor extension powered by [Milkdown](https://milkdown.dev/) (ProseMirror). Edit `.md` / `.markdown` files as rich text and save as standard Markdown — fully compatible with any text editor.
 
@@ -97,14 +97,14 @@ After installing the extension, open any `.md` / `.markdown` file in VS Code —
 
 | Setting                              | Type    | Default     | Description                                                                               |
 | ------------------------------------ | ------- | ----------- | ----------------------------------------------------------------------------------------- |
-| `markdownWysiwyg.autoSave`           | boolean | `true`      | Automatically save to disk after editing                                                  |
-| `markdownWysiwyg.autoSaveDelay`      | number  | `1000`      | Debounce delay in milliseconds for auto-save                                              |
-| `markdownWysiwyg.defaultMode`        | string  | `"preview"` | Default mode when opening `.md`: `preview` (WYSIWYG) or `markdown` (text editor)          |
-| `markdownWysiwyg.codeBlockMaxHeight` | number  | `600`       | Maximum code block height in pixels                                                       |
-| `markdownWysiwyg.editorMaxWidth`     | number  | `900`       | Maximum editor content width in pixels                                                    |
-| `markdownWysiwyg.fontFamily`         | string  | `""`        | Editor font family; leave empty to inherit VS Code editor font. Example: `Georgia, serif` |
-| `markdownWysiwyg.imageStorage`       | string  | `"local"`   | Image storage mode: `local` (save to disk) or `server` (upload to custom URL)             |
-| `markdownWysiwyg.imageLocalPath`     | string  | `""`        | Relative path (from workspace root) for local image storage                               |
+| `epytor.autoSave`           | boolean | `true`      | Automatically save to disk after editing                                                  |
+| `epytor.autoSaveDelay`      | number  | `1000`      | Debounce delay in milliseconds for auto-save                                              |
+| `epytor.defaultMode`        | string  | `"preview"` | Default mode when opening `.md`: `preview` (WYSIWYG) or `markdown` (text editor)          |
+| `epytor.codeBlockMaxHeight` | number  | `600`       | Maximum code block height in pixels                                                       |
+| `epytor.editorMaxWidth`     | number  | `900`       | Maximum editor content width in pixels                                                    |
+| `epytor.fontFamily`         | string  | `""`        | Editor font family; leave empty to inherit VS Code editor font. Example: `Georgia, serif` |
+| `epytor.imageStorage`       | string  | `"local"`   | Image storage mode: `local` (save to disk) or `server` (upload to custom URL)             |
+| `epytor.imageLocalPath`     | string  | `""`        | Relative path (from workspace root) for local image storage                               |
 
 ***
 

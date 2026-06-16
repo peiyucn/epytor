@@ -11,7 +11,7 @@ import type { ToExtensionMessage, ToWebviewMessage } from "../shared/messages";
 
 export class MarkdownEditorProvider
     implements vscode.CustomEditorProvider<MarkdownDocument> {
-    public static readonly viewType = "markdownWysiwyg.editor";
+    public static readonly viewType = "epytor.editor";
 
     private readonly _onDidChangeCustomDocument = new vscode.EventEmitter<
         vscode.CustomDocumentEditEvent<MarkdownDocument>
@@ -425,7 +425,7 @@ export class MarkdownEditorProvider
                         }
                         break;
                     case "openSettings":
-                        vscode.commands.executeCommand('workbench.action.openSettings', 'markdownWysiwyg');
+                        vscode.commands.executeCommand('workbench.action.openSettings', 'epytor');
                         break;
                     case "uploadImage":
                         if (message.id && message.data) {
@@ -516,7 +516,7 @@ export class MarkdownEditorProvider
     }
 
     private _scheduleAutoSaveOrMarkDirty(document: MarkdownDocument): void {
-        const config = vscode.workspace.getConfiguration("markdownWysiwyg");
+        const config = vscode.workspace.getConfiguration("epytor");
         const autoSave = config.get<boolean>("autoSave", true);
         const delay = config.get<number>("autoSaveDelay", 1000);
         const uriKey = document.uri.toString();
@@ -719,7 +719,7 @@ export class MarkdownEditorProvider
     }
 
     private _getHtmlForWebview(webview: vscode.Webview): string {
-        const cfg = vscode.workspace.getConfiguration("markdownWysiwyg");
+        const cfg = vscode.workspace.getConfiguration("epytor");
         const maxHeight = cfg.get<number>("codeBlockMaxHeight", 500);
         const editorMaxWidth = cfg.get<number>("editorMaxWidth", 900);
         const fontFamily = cfg.get<string>("fontFamily", "");
@@ -820,7 +820,7 @@ export class MarkdownEditorProvider
         altText: string,
     ): Promise<void> {
         const uriKey = document.uri.toString();
-        const cfg = vscode.workspace.getConfiguration('markdownWysiwyg', document.uri);
+        const cfg = vscode.workspace.getConfiguration('epytor', document.uri);
         const storage = cfg.get<string>('imageStorage', 'local');
         try {
             let url: string;
@@ -849,7 +849,7 @@ export class MarkdownEditorProvider
         uriKey: string,
         id: string,
     ): Promise<void> {
-        const cfg = vscode.workspace.getConfiguration('markdownWysiwyg', document.uri);
+        const cfg = vscode.workspace.getConfiguration('epytor', document.uri);
         const customPath = cfg.get<string>('imageLocalPath', '').trim();
         const IMAGE_EXTS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.bmp', '.tiff', '.ico']);
         const CANDIDATE_DIRS = ['images', 'imgs', 'assets/images', 'assets'];
