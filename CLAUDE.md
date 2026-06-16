@@ -13,6 +13,7 @@
 - **双目标构建**：`dist/extension.js`（Node.js）+ `dist/webview.js`（Browser），由 `esbuild.mjs` 完成
 - **打包发布**：VSIX 包必须输出到 `releases/` 文件夹，命令：`pnpm run package`
 - **Git commit 规范**：commit 描述部分必须用**中文**，类型前缀（`feat:`、`fix:`、`refactor:`、`chore:`、`docs:` 等）保留英文。例：`feat: 新增图片上传功能`、`fix: 修复表格拖拽偏移问题`
+- **诚实原则**：不确定的事直接说"不确定"，禁止编造 URL、issue 编号、API 接口、文档引用或任何事实性信息。如果引用外部资源，必须先验证其存在。
 
 ***
 
