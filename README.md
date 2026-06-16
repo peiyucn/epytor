@@ -1,7 +1,7 @@
 # epytor
 
 > Forked from [git-xing/md-wysiwyg-editor](https://github.com/git-xing/md-wysiwyg-editor) (MIT)
-> 
+>
 > 源项目更新较慢，此 fork 暂不计划向源项目提交 PR，专注于修复 bug 并克制地增加功能。
 
 简体中文 | [English](README.en-US.md) | [GitHub](https://github.com/peiyucn/epytor)
@@ -12,7 +12,7 @@
 
 本项目的首个版本为 **1.0.0**，以源项目 [v0.1.6](https://github.com/git-xing/md-wysiwyg-editor/releases/tag/v0.1.6) 为基础，主要增加了字数统计、TOC 面板增强，并修复了编辑时空行错位的 bug。所有标识（viewType、命令、配置键）从 `markdownWysiwyg.*` 改为 `epytor.*`，可与源扩展共存。
 
-***
+---
 
 ## 功能特性
 
@@ -81,7 +81,7 @@
 - 支持关闭自动保存，手动保存（标题栏显示 `●`）
 - 外部文件变更自动同步到编辑器（如 `git checkout`、其他编辑器修改）
 
-***
+---
 
 ## 快速上手
 
@@ -99,7 +99,7 @@
 | 文档内搜索        | `Cmd+F`（macOS）/ `Ctrl+F`（Windows）   |
 | 手动保存         | `Cmd+S`（macOS）/ `Ctrl+S`（Windows）   |
 
-***
+---
 
 ## 设置
 
@@ -114,17 +114,20 @@
 | `epytor.imageStorage`       | string  | `"local"`   | 图片存储模式：`local`（本地保存）或 `server`（上传至自定义 URL）           |
 | `epytor.imageLocalPath`     | string  | `""`        | 本地图片存储路径（相对于 workspace 根目录）                          |
 
-***
+---
 
 ## 环境要求
 
 - VSCode **1.80.0** 及以上
 
-***
+---
 
 ## 已知限制
 
 - 部分复杂 Markdown 扩展语法（如脚注、数学公式）尚未支持
+
 - **链接弹窗撤销**（`Cmd+Z` / `Ctrl+Z`）：在链接 URL / 文字输入框内，撤销操作被 VS Code Electron 层拦截，暂无法使用
+
 - **表格单元格行号**（发送到 Claude）：选中表格单元格时，上报的行号范围可能偏差，根因是 ProseMirror 节点索引与源码行号映射不对齐
+
 - **全局搜索跳转**：点击 `.md` 文件的全局搜索结果时，若同时打开多个 `.md` 文件，WYSIWYG 编辑器可能无法精确跳转到匹配行
