@@ -8,16 +8,9 @@ English | [简体中文](README.md) | [GitHub](https://github.com/peiyucn/Eyptor
 
 A VSCode WYSIWYG Markdown editor extension powered by [Milkdown](https://milkdown.dev/) (ProseMirror). Edit `.md` / `.markdown` files as rich text and save as standard Markdown — fully compatible with any text editor.
 
-### Version Note
+### Project Origin
 
-This project starts at **1.0.0**. Compared to upstream [v0.1.6](https://github.com/git-xing/md-wysiwyg-editor/releases/tag/v0.1.6), this release includes:
-
-| Category | Description |
-|----------|-------------|
-| New | Word count in the VS Code status bar (lines, words, characters) |
-| New | TOC panel enhancements: collapse/expand headings, pinning, drag-to-resize, scroll position persistence |
-| Bug Fix | Blank lines no longer accumulate or shift during editing |
-| Independence | `epytor.*` namespacing for viewType, commands, and config keys — can be installed alongside the original extension |
+The initial release is **1.0.0**, built on upstream [v0.1.6](https://github.com/git-xing/md-wysiwyg-editor/releases/tag/v0.1.6). Key additions include word count in the status bar, enhanced TOC panel, and a fix for blank-line drift during editing. All identifiers (viewType, commands, config keys) use `epytor.*` and can coexist with the original extension.
 
 ***
 
