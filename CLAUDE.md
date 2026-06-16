@@ -1,4 +1,4 @@
-# Claude 项目指令 — markdownView
+# Claude 项目指令 — eyptor
 
 ## 语言规范
 

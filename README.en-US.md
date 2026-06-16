@@ -1,10 +1,10 @@
-# Epytor
+# eyptor
 
 > Forked from [git-xing/md-wysiwyg-editor](https://github.com/git-xing/md-wysiwyg-editor) (MIT)
 > 
 > The upstream project updates slowly. This fork focuses on bug fixes and restrained feature additions, with no current plans to submit PRs upstream.
 
-English | [简体中文](README.md) | [GitHub](https://github.com/peiyucn/Eyptor)
+English | [简体中文](README.md) | [GitHub](https://github.com/peiyucn/eyptor)
 
 A VSCode WYSIWYG Markdown editor extension powered by [Milkdown](https://milkdown.dev/) (ProseMirror). Edit `.md` / `.markdown` files as rich text and save as standard Markdown — fully compatible with any text editor.
 

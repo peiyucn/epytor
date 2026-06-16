@@ -1,10 +1,10 @@
-# Epytor
+# eyptor
 
 > Forked from [git-xing/md-wysiwyg-editor](https://github.com/git-xing/md-wysiwyg-editor) (MIT)
 > 
 > 源项目更新较慢，此 fork 暂不计划向源项目提交 PR，专注于修复 bug 并克制地增加功能。
 
-简体中文 | [English](README.en-US.md) | [GitHub](https://github.com/peiyucn/Eyptor)
+简体中文 | [English](README.en-US.md) | [GitHub](https://github.com/peiyucn/eyptor)
 
 一款基于 [Milkdown](https://milkdown.dev/)（ProseMirror）的 VSCode 所见即所得 Markdown 编辑器扩展，以富文本方式直接编辑 `.md` / `.markdown` 文件，保存结果为标准 Markdown，与任何文本编辑器完全兼容。
 
