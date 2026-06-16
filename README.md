@@ -1,6 +1,8 @@
 # Epytor
 
 > Forked from [git-xing/md-wysiwyg-editor](https://github.com/git-xing/md-wysiwyg-editor) (MIT)
+> 
+> 源项目更新较慢，此 fork 暂不计划向源项目提交 PR，专注于修复 bug 并克制地增加功能。
 
 简体中文 | [English](README.en-US.md) | [GitHub](https://github.com/peiyucn/Eyptor)
 
