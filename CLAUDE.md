@@ -1,4 +1,4 @@
-# Claude 项目指令 — eyptor
+# Claude 项目指令 — epytor
 
 ## 语言规范
 

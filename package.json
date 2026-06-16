@@ -1,6 +1,6 @@
 {
   "name": "epytor",
-  "displayName": "eyptor",
+  "displayName": "epytor",
   "description": "WYSIWYG Markdown editor with live table editing",
   "version": "1.0.0",
   "publisher": "peiyucn",
@@ -25,12 +25,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/peiyucn/eyptor.git"
+    "url": "https://github.com/peiyucn/epytor.git"
   },
   "bugs": {
-    "url": "https://github.com/peiyucn/eyptor/issues"
+    "url": "https://github.com/peiyucn/epytor/issues"
   },
-  "homepage": "https://github.com/peiyucn/eyptor#readme",
+  "homepage": "https://github.com/peiyucn/epytor#readme",
   "activationEvents": [],
   "main": "./dist/extension.js",
   "l10n": "./l10n",
@@ -38,7 +38,7 @@
     "customEditors": [
       {
         "viewType": "epytor.editor",
-        "displayName": "eyptor",
+        "displayName": "epytor",
         "selector": [
           {
             "filenamePattern": "*.md"
@@ -109,7 +109,7 @@
       ]
     },
     "configuration": {
-      "title": "eyptor",
+      "title": "epytor",
       "properties": {
         "epytor.autoSave": {
           "type": "boolean",
@@ -215,7 +215,7 @@
     "vscode:prepublish": "node esbuild.mjs --production",
     "build": "node esbuild.mjs",
     "watch": "node esbuild.mjs --watch",
-    "package": "vsce package --no-dependencies --out releases/ --baseContentUrl https://github.com/peiyucn/eyptor/blob/main --baseImagesUrl https://github.com/peiyucn/eyptor/raw/main",
+    "package": "vsce package --no-dependencies --out releases/ --baseContentUrl https://github.com/peiyucn/epytor/blob/main --baseImagesUrl https://github.com/peiyucn/epytor/raw/main",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
