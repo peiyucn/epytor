@@ -8,6 +8,17 @@
 
 一款基于 [Milkdown](https://milkdown.dev/)（ProseMirror）的 VSCode 所见即所得 Markdown 编辑器扩展，以富文本方式直接编辑 `.md` / `.markdown` 文件，保存结果为标准 Markdown，与任何文本编辑器完全兼容。
 
+### 版本说明
+
+此项目起始版本为 **1.0.0**，相比源项目 [v0.1.6](https://github.com/git-xing/md-wysiwyg-editor/releases/tag/v0.1.6) 包含以下更新：
+
+| 类别 | 内容 |
+|------|------|
+| 新增 | 字数统计：VSCode 原生状态栏实时显示行数、字数、字符数 |
+| 新增 | TOC 面板增强：折叠/展开子标题、一键全部折叠/展开、固定钉住、拖拽调整面板宽度、滚动位置持久化 |
+| Bug 修复 | 修复编辑时空行在文件内累积、错位的问题 |
+| 项目独立 | viewType、命令 ID、配置键统一使用 `epytor.*`，可与源扩展同时安装互不冲突 |
+
 ***
 
 ## 功能特性
