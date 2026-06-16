@@ -25,12 +25,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/peiyucn/epytor.git"
+    "url": "https://github.com/peiyucn/Eyptor.git"
   },
   "bugs": {
-    "url": "https://github.com/peiyucn/epytor/issues"
+    "url": "https://github.com/peiyucn/Eyptor/issues"
   },
-  "homepage": "https://github.com/peiyucn/epytor#readme",
+  "homepage": "https://github.com/peiyucn/Eyptor#readme",
   "activationEvents": [],
   "main": "./dist/extension.js",
   "l10n": "./l10n",
@@ -215,7 +215,7 @@
     "vscode:prepublish": "node esbuild.mjs --production",
     "build": "node esbuild.mjs",
     "watch": "node esbuild.mjs --watch",
-    "package": "vsce package --no-dependencies --out releases/ --baseContentUrl https://github.com/peiyucn/epytor/blob/main --baseImagesUrl https://github.com/peiyucn/epytor/raw/main",
+    "package": "vsce package --no-dependencies --out releases/ --baseContentUrl https://github.com/peiyucn/Eyptor/blob/main --baseImagesUrl https://github.com/peiyucn/Eyptor/raw/main",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
