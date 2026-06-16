@@ -255,7 +255,7 @@ describe("saveImageLocally — 目录选择", () => {
     });
 
     it("优先使用绝对路径 imageLocalPath 配置项", async () => {
-        const customPath = "/custom/image-dir";
+        const customPath = path.resolve("/custom/image-dir");
         mockFs.stat.mockResolvedValue({ type: vscode.FileType.Directory });
         const cfg = makeCfg({ imageLocalPath: customPath });
         await saveImageLocally(docUri, cfg as never, imageData, "image/png", "x");
@@ -303,7 +303,7 @@ describe("saveImageLocally — 额外路径分支", () => {
         await saveImageLocally(docUri, cfg as never, imageData, "image/png", "x");
 
         const [callUri] = mockFs.writeFile.mock.calls[0] as [{ fsPath: string }];
-        expect(callUri.fsPath).toContain("static/images");
+        expect(callUri.fsPath).toContain(path.join("static", "images"));
     });
 
     it("相对 imageLocalPath + 无 workspace folder：使用 .md 同级目录拼接路径", async () => {
