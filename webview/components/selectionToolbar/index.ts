@@ -1,23 +1,23 @@
-import { commandsCtx } from "@milkdown/core";
+import { commandsCtx } from "@milkdown/kit/core";
 import {
     toggleStrongCommand,
     toggleEmphasisCommand,
     toggleInlineCodeCommand,
     turnIntoTextCommand,
     wrapInHeadingCommand,
-} from "@milkdown/preset-commonmark";
-import type { Node as PMNode, ResolvedPos } from "@milkdown/prose/model";
-import { toggleStrikethroughCommand } from "@milkdown/preset-gfm";
+} from "@milkdown/kit/preset/commonmark";
+import type { Node as PMNode, ResolvedPos } from "@milkdown/kit/prose/model";
+import { toggleStrikethroughCommand } from "@milkdown/kit/preset/gfm";
 import {
     CellSelection,
     deleteRow,
     deleteColumn,
     setCellAttr,
     TableMap,
-} from "@milkdown/prose/tables";
-import type { Editor } from "@milkdown/core";
-import type { EditorView } from "@milkdown/prose/view";
-import { TextSelection } from "@milkdown/prose/state";
+} from "@milkdown/kit/prose/tables";
+import type { Editor } from "@milkdown/kit/core";
+import type { EditorView } from "@milkdown/kit/prose/view";
+import { TextSelection } from "@milkdown/kit/prose/state";
 import {
     IconBold,
     IconItalic,

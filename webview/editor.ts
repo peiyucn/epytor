@@ -4,44 +4,67 @@ import {
     Editor,
     editorViewCtx,
     nodeViewCtx,
-    remarkStringifyOptionsCtx,
     rootCtx,
     schemaCtx,
-} from "@milkdown/core";
+} from "@milkdown/kit/core";
 import {
     toggleStrongCommand,
     toggleEmphasisCommand,
     toggleInlineCodeCommand,
-} from "@milkdown/preset-commonmark";
-import { toggleStrikethroughCommand } from "@milkdown/preset-gfm";
-import { listener, listenerCtx } from "@milkdown/plugin-listener";
-import { prism, prismConfig } from "@milkdown/plugin-prism";
-import { commonmark } from "@milkdown/preset-commonmark";
-import { gfm } from "@milkdown/preset-gfm";
-import type { EditorView } from "@milkdown/prose/view";
-import { history, undo, redo } from "@milkdown/prose/history";
-import { keymap } from "@milkdown/prose/keymap";
-import { Plugin, NodeSelection, TextSelection } from "@milkdown/prose/state";
-import { CellSelection, TableMap } from "@milkdown/prose/tables";
-import { liftListItem } from "@milkdown/prose/schema-list";
-import { $prose } from "@milkdown/utils";
+} from "@milkdown/kit/preset/commonmark";
+import { toggleStrikethroughCommand } from "@milkdown/kit/preset/gfm";
+import { listener, listenerCtx } from "@milkdown/kit/plugin/listener";
+import type { EditorView } from "@milkdown/kit/prose/view";
+import { undo, redo } from "@milkdown/kit/prose/history";
+import { keymap } from "@milkdown/kit/prose/keymap";
+import { Plugin, NodeSelection, TextSelection } from "@milkdown/kit/prose/state";
+import { liftListItem } from "@milkdown/kit/prose/schema-list";
+import { CellSelection, TableMap } from "@milkdown/kit/prose/tables";
+import { $prose } from "@milkdown/kit/utils";
+import { CrepeBuilder } from "@milkdown/crepe";
 
-// 调试日志开关：可通过 setLogTableSel(true/false) 动态切换（无需重载页面）
-let logTableSel = Boolean(window.__i18n?.debugMode);
+// 调试日志开关（由 index.ts setDebugMode 消息驱动）
+let logTableSel = false;
 export function setLogTableSel(enabled: boolean): void {
     logTableSel = enabled;
 }
 
-// 注册 ProseMirror history 插件（支持 undo/redo）
-const historyPlugin = $prose(() => history());
-// 注册快捷键：Mod-z = undo，Mod-Shift-z / Mod-y = redo
-const historyKeymapPlugin = $prose(() =>
-    keymap({
-        "Mod-z": undo,
-        "Mod-y": redo,
-        "Mod-Shift-z": redo,
-    }),
+// ─── Crepe 原生功能 ──────────────────────────────────────────────────────────
+// 以下 feature 由 @milkdown/crepe 官方维护，替换我们的自定义实现：
+//   feature/table       → 替换 addButtons + handles + toolbar（1,562 行）
+//   feature/code-mirror → 替换 codeBlock NodeView + Prism（1,909 行）
+//   feature/toolbar     → 替换 selectionToolbar + 格式化按钮（~1,800 行）
+//   feature/latex       → 全新：KaTeX 数学公式支持
+// feature/code-mirror → 换回自定义实现（复制反馈、全屏、样式更精致）
+import { codeMirror } from "@milkdown/crepe/feature/code-mirror";
+import { latex } from "@milkdown/crepe/feature/latex";
+import { languages as allCodeLanguages } from "@codemirror/language-data";
+
+// 只保留常用语言（143 → ~40）
+const WANTED_LANGS = new Set([
+    "bash", "sh", "c", "cpp", "c++", "csharp", "c#", "css", "go", "html",
+    "java", "javascript", "js", "json", "kotlin", "latex", "less", "lua",
+    "markdown", "md", "mermaid", "php", "python", "py", "ruby", "rust",
+    "sass", "scss", "sql", "swift", "toml", "typescript", "ts", "xml", "yaml", "yml",
+]);
+const codeLanguages = allCodeLanguages.filter(
+    (l: { alias: string[] }) => l.alias.some((a) => WANTED_LANGS.has(a))
 );
+// Mermaid 不在 @codemirror/language-data 中，手动添加
+codeLanguages.push({
+    name: "Mermaid",
+    alias: ["mermaid"],
+    extensions: ["mmd"],
+    load: async () => undefined, // 无语法高亮，仅语言标签
+});
+// feature/toolbar 暂不启用（与自定义工具栏冲突）
+
+// ─── 保留的自定义插件 ────────────────────────────────────────────────────────
+// 以下插件 Crepe 不提供对应功能，永久保留：
+//   listLiftPlugin           → 列表 backspace 上升一级
+//   listSpreadNormalizePlugin → 列表 spread 规范化
+//   selectionPlugin          → 选区变更回调（驱动外部 UI）
+//   formatKeymapPlugin       → 自定义格式化快捷键
 
 // 列表 Backspace：光标在行首时，层级 ≥2 → 上升一级；层级 1 → 同样上升（变为普通段落）
 const listLiftPlugin = $prose((ctx) => {
@@ -54,64 +77,20 @@ const listLiftPlugin = $prose((ctx) => {
     return keymap({
         Backspace: (state, dispatch) => {
             const { selection } = state;
-            if (!selection.empty) {
-                return false;
-            }
+            if (!selection.empty) return false;
             const { $from } = selection;
-            // 仅当光标在段落行首时触发
-            if ($from.parentOffset !== 0) {
-                return false;
-            }
-            // 确认当前在 list_item 内
+            if ($from.parentOffset !== 0) return false;
             let inList = false;
             for (let d = $from.depth; d >= 0; d--) {
-                if ($from.node(d).type === listItemType) {
-                    inList = true;
-                    break;
-                }
+                if ($from.node(d).type === listItemType) { inList = true; break; }
             }
-            if (!inList) {
-                return false;
-            }
+            if (!inList) return false;
             return doLift(state, dispatch);
         },
     });
 });
 
-// 代码块 Backspace：光标在代码块后的段落行首时，选中代码块而非进入其内部
-const codeBlockBackspacePlugin = $prose(() =>
-    keymap({
-        Backspace: (state, dispatch) => {
-            const { selection } = state;
-            if (!selection.empty || selection.$from.parentOffset !== 0) {
-                return false;
-            }
-            const $from = selection.$from;
-            const startOfBlock = $from.before($from.depth);
-            if (startOfBlock === 0) {
-                return false;
-            }
-            const nodeBefore = state.doc.resolve(startOfBlock).nodeBefore;
-            if (!nodeBefore || nodeBefore.type.name !== "code_block") {
-                return false;
-            }
-            if (dispatch) {
-                dispatch(
-                    state.tr.setSelection(
-                        NodeSelection.create(
-                            state.doc,
-                            startOfBlock - nodeBefore.nodeSize,
-                        ),
-                    ),
-                );
-            }
-            return true;
-        },
-    }),
-);
-
-// 格式化快捷键：Mod-b 粗体、Mod-i 斜体、Mod-Shift-s 删除线、Mod-e 行内代码
-// return true 使 ProseMirror 调用 preventDefault，阻止 VSCode 快捷键（如 Cmd+B 侧栏切换）冒泡
+// 格式化快捷键：Mod-b 粗体、Mod-i 斜体、Mod-Shift-x 删除线、Mod-e 行内代码
 const formatKeymapPlugin = $prose((ctx) =>
     keymap({
         "Mod-b": () => {
@@ -133,11 +112,10 @@ const formatKeymapPlugin = $prose((ctx) =>
                 ctx.get(commandsCtx).call(toggleInlineCodeCommand.key);
                 return true;
             }
-            // 无选区：插入零宽空格 + inlineCode mark，光标置入其中
             const codeMark = state.schema.marks["inlineCode"];
-            if (!codeMark) { return true; }
+            if (!codeMark) return true;
             const { from } = state.selection;
-            const textNode = state.schema.text("\u200b", [codeMark.create()]);
+            const textNode = state.schema.text("​", [codeMark.create()]);
             const tr = state.tr.insert(from, textNode);
             tr.setSelection(TextSelection.create(tr.doc, from + 1));
             view.dispatch(tr);
@@ -146,20 +124,76 @@ const formatKeymapPlugin = $prose((ctx) =>
     }),
 );
 
-// 选区变更回调（由 index.ts 注入，用于驱动浮动工具栏）
+// 选区变更回调（由 index.ts 注入，用于驱动工具栏等外部 UI）
 let _onSelectionChange: ((view: EditorView) => void) | null = null;
-
-export function registerSelectionChangeHandler(
-    cb: (view: EditorView) => void,
-): void {
+export function registerSelectionChangeHandler(cb: (view: EditorView) => void): void {
     _onSelectionChange = cb;
 }
 
-// 诊断日志辅助：从文档位置获取 1-indexed 行列号
-function getCellCoords(
-    doc: any,
-    pos: number,
-): { row: number; col: number } | null {
+const selectionPlugin = $prose(
+    () =>
+        new Plugin({
+            view: () => ({
+                update(view, prevState) {
+                    if (
+                        _onSelectionChange &&
+                        (!view.state.selection.eq(prevState.selection) ||
+                         !view.state.doc.eq(prevState.doc))
+                    ) {
+                        _onSelectionChange(view);
+                    }
+                },
+            }),
+        }),
+);
+
+// 列表 spread 规范化：编辑后若列表项只含单个块级子节点，自动将 spread 重置为 false
+const listSpreadNormalizePlugin = $prose((ctx) => {
+    const schema = ctx.get(schemaCtx);
+    return new Plugin({
+        appendTransaction(transactions, _oldState, newState) {
+            if (!transactions.some((tr) => tr.docChanged)) return null;
+            let minFrom = newState.doc.content.size;
+            let maxTo = 0;
+            for (const tr of transactions) {
+                if (!tr.docChanged) continue;
+                for (const step of tr.steps) {
+                    step.getMap().forEach((_os, _oe, newStart, newEnd) => {
+                        if (newStart < minFrom) minFrom = newStart;
+                        if (newEnd > maxTo) maxTo = newEnd;
+                    });
+                }
+            }
+            if (minFrom > maxTo) return null;
+            const tr = newState.tr;
+            let changed = false;
+            newState.doc.nodesBetween(minFrom, maxTo, (node, pos) => {
+                if (node.type !== schema.nodes.bullet_list && node.type !== schema.nodes.ordered_list)
+                    return;
+                let listNeedsSpread = false;
+                let offset = 1;
+                node.forEach((item) => {
+                    const itemNeedsSpread = item.childCount > 1;
+                    if (item.attrs.spread !== itemNeedsSpread) {
+                        tr.setNodeMarkup(pos + offset, undefined, { ...item.attrs, spread: itemNeedsSpread });
+                        changed = true;
+                    }
+                    if (itemNeedsSpread) listNeedsSpread = true;
+                    offset += item.nodeSize;
+                });
+                if (node.attrs.spread !== listNeedsSpread) {
+                    tr.setNodeMarkup(pos, undefined, { ...node.attrs, spread: listNeedsSpread });
+                    changed = true;
+                }
+            });
+            return changed ? tr : null;
+        },
+    });
+});
+
+// ─── 表格单元格点击修正 ──────────────────────────────────────────────────────
+
+function getCellCoords(doc: any, pos: number): { row: number; col: number } | null {
     try {
         const $pos = doc.resolve(pos);
         for (let d = $pos.depth; d >= 0; d--) {
@@ -181,15 +215,12 @@ function getCellCoords(
     return null;
 }
 
-// 单击表格单元格：将单格 CellSelection 转为 TextSelection，光标定位到点击位置
-// 用 appendTransaction 确保修正在首次渲染前同步完成（无绿色闪烁）
-// 格内文字拖拽：从点击位到当前鼠标位构造 TextSelection，恢复正常选区
 const cellClickFixPlugin = $prose(() => {
     let pendingClickPos: number | null = null;
-    let clickIsPlain = true; // mousedown 后未移动 > 4px 时为 true
-    let wasCrossCell = false; // 拖拽中是否出现过多格 CellSelection
-    let lastGoodCellSelection: CellSelection | null = null; // 最后一次有效的多格 CellSelection
-    let multiSelectCount = 0; // 诊断计数器：本次会话的多选次数
+    let clickIsPlain = true;
+    let wasCrossCell = false;
+    let lastGoodCellSelection: CellSelection | null = null;
+    let multiSelectCount = 0;
     let lastMouseX = 0;
     let lastMouseY = 0;
     let capturedView: EditorView | null = null;
@@ -197,34 +228,18 @@ const cellClickFixPlugin = $prose(() => {
     return new Plugin({
         view(editorView) {
             capturedView = editorView;
-            return {
-                destroy() {
-                    capturedView = null;
-                },
-            };
+            return { destroy() { capturedView = null; } };
         },
         props: {
             handleDOMEvents: {
                 mousedown: (view, event) => {
-                    if (
-                        event.button !== 0 ||
-                        event.detail !== 1 ||
-                        event.shiftKey ||
-                        event.ctrlKey ||
-                        event.metaKey
-                    ) {
+                    if (event.button !== 0 || event.detail !== 1 || event.shiftKey || event.ctrlKey || event.metaKey) {
                         pendingClickPos = null;
                         return false;
                     }
                     const cell = (event.target as Element).closest("td, th");
-                    if (!cell) {
-                        pendingClickPos = null;
-                        return false;
-                    }
-                    const pos = view.posAtCoords({
-                        left: event.clientX,
-                        top: event.clientY,
-                    });
+                    if (!cell) { pendingClickPos = null; return false; }
+                    const pos = view.posAtCoords({ left: event.clientX, top: event.clientY });
                     pendingClickPos = pos ? pos.pos : null;
                     clickIsPlain = true;
                     wasCrossCell = false;
@@ -232,15 +247,10 @@ const cellClickFixPlugin = $prose(() => {
                     lastMouseX = event.clientX;
                     lastMouseY = event.clientY;
 
-                    // capture-phase mousemove：在 ProseMirror 处理之前更新鼠标位置
                     const onMove = (mv: MouseEvent) => {
                         lastMouseX = mv.clientX;
                         lastMouseY = mv.clientY;
-                        const dx = mv.clientX - event.clientX;
-                        const dy = mv.clientY - event.clientY;
-                        if (Math.sqrt(dx * dx + dy * dy) > 4) {
-                            clickIsPlain = false;
-                        }
+                        if (Math.abs(mv.clientX - event.clientX) + Math.abs(mv.clientY - event.clientY) > 4) clickIsPlain = false;
                     };
                     document.addEventListener("mousemove", onMove, true);
 
@@ -248,41 +258,14 @@ const cellClickFixPlugin = $prose(() => {
                         document.removeEventListener("mouseup", cleanup, true);
                         document.removeEventListener("mousemove", onMove, true);
                         if (wasCrossCell) {
-                            // 跨格拖拽：同步清除，阻止 ProseMirror mouseup dispatch 再触发 appendTransaction
                             pendingClickPos = null;
                             clickIsPlain = true;
                             wasCrossCell = false;
-                            // 诊断日志（调试模式）
-                            if (logTableSel && lastGoodCellSelection) {
-                                const headCoords = capturedView
-                                    ? getCellCoords(
-                                          capturedView.state.doc,
-                                          lastGoodCellSelection.$headCell.pos +
-                                              1,
-                                      )
-                                    : null;
-                                let cellCount = 0;
-                                lastGoodCellSelection.forEachCell(() => {
-                                    cellCount++;
-                                });
-                                console.log(
-                                    `[TableSel] 拖拽结束 ${headCoords ? `${headCoords.row}行${headCoords.col}列` : "?行?列"} 共选中${cellCount}个表格内容`,
-                                );
-                            }
-                            // filterTransaction 在此期间保护 CellSelection 不被 readDOMChange 覆盖
-                            // 200ms 后过期（readDOMChange 通常在 20ms 内执行；mousedown 也会立即清除）
+                            { /* debug logging removed */ }
                             const savedCellSel = lastGoodCellSelection;
-                            setTimeout(() => {
-                                if (lastGoodCellSelection === savedCellSel) {
-                                    lastGoodCellSelection = null;
-                                }
-                            }, 200);
+                            setTimeout(() => { if (lastGoodCellSelection === savedCellSel) lastGoodCellSelection = null; }, 200);
                         } else {
-                            // 单击 / 格内拖拽：微任务清除，保证 ProseMirror mouseup dispatch 也能修正 CellSelection
-                            Promise.resolve().then(() => {
-                                pendingClickPos = null;
-                                clickIsPlain = true;
-                            });
+                            Promise.resolve().then(() => { pendingClickPos = null; clickIsPlain = true; });
                         }
                     };
                     document.addEventListener("mouseup", cleanup, true);
@@ -291,19 +274,8 @@ const cellClickFixPlugin = $prose(() => {
             },
         },
         filterTransaction(tr, state) {
-            // 跨格拖拽结束后的保护窗口（200ms）：阻止 readDOMChange 用 TextSelection 覆盖 CellSelection
-            if (!lastGoodCellSelection) {
-                return true;
-            }
-            if (
-                state.selection instanceof CellSelection &&
-                !(tr.selection instanceof CellSelection)
-            ) {
-                if (logTableSel) {
-                    console.log(
-                        "[TableSel] filterTransaction: 已阻止覆盖CellSelection",
-                    );
-                }
+            if (!lastGoodCellSelection) return true;
+            if (state.selection instanceof CellSelection && !(tr.selection instanceof CellSelection)) {
                 return false;
             }
             return true;
@@ -311,93 +283,32 @@ const cellClickFixPlugin = $prose(() => {
         appendTransaction(_trs, _oldState, newState) {
             if (pendingClickPos === null) return null;
             const sel = newState.selection;
-            if (
-                !(sel instanceof CellSelection) ||
-                sel.isRowSelection() ||
-                sel.isColSelection()
-            ) {
-                return null;
-            }
-            // 多格跨格拖拽（anchor ≠ head）：保留 CellSelection，并记录已出现跨格选区
+            if (!(sel instanceof CellSelection) || sel.isRowSelection() || sel.isColSelection()) return null;
             if (sel.$anchorCell.pos !== sel.$headCell.pos) {
-                if (!wasCrossCell && logTableSel) {
-                    // 首次检测到跨格：打印开始日志
-                    multiSelectCount++;
-                    const startCoords =
-                        pendingClickPos !== null
-                            ? getCellCoords(newState.doc, pendingClickPos)
-                            : null;
-                    console.log(`[TableSel] 第${multiSelectCount}次多选表格`);
-                    console.log(
-                        `[TableSel] 开始拖拽 ${startCoords ? `${startCoords.row}行${startCoords.col}列` : "?行?列"}`,
-                    );
-                }
                 wasCrossCell = true;
-                lastGoodCellSelection = sel; // 记录最后一次有效多格选区
+                lastGoodCellSelection = sel;
                 return null;
             }
             try {
                 if (!clickIsPlain && capturedView) {
-                    // 格内拖拽：TextSelection 从原点击位到当前鼠标位
-                    const toCoords = capturedView.posAtCoords({
-                        left: lastMouseX,
-                        top: lastMouseY,
-                    });
+                    const toCoords = capturedView.posAtCoords({ left: lastMouseX, top: lastMouseY });
                     if (toCoords) {
-                        const anchorP = Math.min(
-                            pendingClickPos,
-                            newState.doc.content.size,
-                        );
-                        const headP = Math.min(
-                            toCoords.pos,
-                            newState.doc.content.size,
-                        );
-                        // 同格检查：anchor 与 head 必须在同一 table_cell / table_header 内
-                        // 若跨格，说明是跨格拖拽的误判，保留 CellSelection 不转换
+                        const anchorP = Math.min(pendingClickPos, newState.doc.content.size);
+                        const headP = Math.min(toCoords.pos, newState.doc.content.size);
                         try {
                             const $a = newState.doc.resolve(anchorP);
                             const $h = newState.doc.resolve(headP);
-                            let aCellStart = -1,
-                                hCellStart = -1;
-                            for (let d = $a.depth; d >= 0; d--) {
-                                const n = $a.node(d).type.name;
-                                if (
-                                    n === "table_cell" ||
-                                    n === "table_header"
-                                ) {
-                                    aCellStart = $a.start(d);
-                                    break;
-                                }
-                            }
-                            for (let d = $h.depth; d >= 0; d--) {
-                                const n = $h.node(d).type.name;
-                                if (
-                                    n === "table_cell" ||
-                                    n === "table_header"
-                                ) {
-                                    hCellStart = $h.start(d);
-                                    break;
-                                }
-                            }
-                            if (aCellStart !== hCellStart) {
-                                return null;
-                            } // 跨格 → 不转换
-                        } catch {
-                            /* ignore, 继续转换 */
-                        }
-                        return newState.tr.setSelection(
-                            TextSelection.create(newState.doc, anchorP, headP),
-                        );
+                            let aCellStart = -1, hCellStart = -1;
+                            for (let d = $a.depth; d >= 0; d--) { if ($a.node(d).type.name === "table_cell" || $a.node(d).type.name === "table_header") { aCellStart = $a.start(d); break; } }
+                            for (let d = $h.depth; d >= 0; d--) { if ($h.node(d).type.name === "table_cell" || $h.node(d).type.name === "table_header") { hCellStart = $h.start(d); break; } }
+                            if (aCellStart !== hCellStart) return null;
+                        } catch { /* ignore */ }
+                        return newState.tr.setSelection(TextSelection.create(newState.doc, anchorP, headP));
                     }
                 }
-                // 单击：TextSelection 定位到点击位
-                const $pos = newState.doc.resolve(
-                    Math.min(pendingClickPos, newState.doc.content.size),
-                );
+                const $pos = newState.doc.resolve(Math.min(pendingClickPos, newState.doc.content.size));
                 return newState.tr.setSelection(TextSelection.near($pos));
-            } catch {
-                return null;
-            }
+            } catch { return null; }
         },
     });
 });
@@ -407,8 +318,6 @@ const cellClickFixPlugin = $prose(() => {
 const SEP_ROW_RE  = /^\|[\s\-:|]+\|$/;
 const TABLE_ROW_RE = /^\|.*\|$/;
 
-// 规范化分隔行：折叠 dash、规范化单元格空格，只保留对齐冒号
-// | :----- | :----: | → |:-|:-:|   两侧格式不同时视为等价
 function normalizeSepRow(line: string): string {
     const t = line.trim();
     const cells = t.split('|').slice(1, -1).map(c => {
@@ -417,8 +326,6 @@ function normalizeSepRow(line: string): string {
     return '|' + cells.join('|') + '|';
 }
 
-// 规范化相邻 strong 拆分：**a** **b** → **a b**（内容语义相同视为等价）
-// remark-stringify 在 strong 节点含 link 子节点时会输出两段 **...**
 function normalizeSplitStrong(line: string): string {
     let prev: string;
     do {
@@ -431,8 +338,6 @@ function normalizeSplitStrong(line: string): string {
     return line;
 }
 
-// 规范化表格数据行：去除单元格内多余空格，<br /> 等价于空单元格
-// | 水果     |   价格   | → |水果|价格|
 function normalizeTableDataRow(line: string): string {
     const t = line.trim();
     const cells = t.split('|').slice(1, -1).map(c => {
@@ -442,7 +347,6 @@ function normalizeTableDataRow(line: string): string {
     return '|' + cells.join('|') + '|';
 }
 
-// 规范化围栏代码块开始行：``` javascript → ```javascript（去除语言前的空格）
 function normalizeFenceOpen(line: string): string {
     return line.replace(/^(\s*`{3,})\s+/, '$1');
 }
@@ -456,21 +360,9 @@ function normLineForCompare(line: string): string {
 }
 
 // ─── 最小化差异合并 ──────────────────────────────────────────────────────────
-//
-// 将 remark-stringify 的全量序列化结果与原始文件做 LCS 差量合并。
-// 核心策略：以序列化结果（serialized）为骨架保留其空行结构，
-//           对 LCS 匹配的非空行使用原文件版本以保留用户格式；
-//           新增/删除的空行随序列化结果自然变化。
-//
-// 规范化规则（不影响合并策略，仅影响"是否视为同一行"的判断）：
-// - 表格分隔行用 normalizeSepRow 忽略 dash 宽度；
-//   对齐标记（:---:）改变时照常应用（表格对齐操作生效）
-// - adjacent strong 拆分（**a** **b** ↔ **a b**）视为等价，不触发差异
-// - 真正的内容变化（文字增删改）通过 LCS 精确定位并应用
 function applyMinimalChanges(saved: string, serialized: string): string {
     interface SigLine { text: string; lineIdx: number }
 
-    // 提取非空行签名：空行不参与 LCS，避免多个空行彼此混淆导致错误匹配
     function sigLines(md: string): SigLine[] {
         return md.split('\n').reduce<SigLine[]>((acc, line, i) => {
             if (line.trim() !== '') acc.push({ text: line, lineIdx: i });
@@ -482,7 +374,6 @@ function applyMinimalChanges(saved: string, serialized: string): string {
     const serialSig = sigLines(serialized);
     const n = savedSig.length, m = serialSig.length;
 
-    // LCS dp（Uint16Array 控制内存，典型 md 文件不超过 65535 非空行）
     const dp: Uint16Array[] = Array.from({ length: n + 1 }, () => new Uint16Array(m + 1));
     for (let i = 1; i <= n; i++)
         for (let j = 1; j <= m; j++)
@@ -490,8 +381,6 @@ function applyMinimalChanges(saved: string, serialized: string): string {
                 ? dp[i - 1][j - 1] + 1
                 : Math.max(dp[i - 1][j], dp[i][j - 1]);
 
-    // 回溯：构建 keepMap（serialized 非空行索引 → saved 非空行索引）
-    // 只有 LCS 匹配的非空行才用原文件版本；其余行（含所有空行）直接用序列化版本
     const keepMap = new Map<number, number>();
     {
         let i = n, j = m;
@@ -507,187 +396,27 @@ function applyMinimalChanges(saved: string, serialized: string): string {
         }
     }
 
-    // 快速路径：非空行全部匹配且总行数未变 → 无变更
     if (keepMap.size === n && keepMap.size === m && saved.length === serialized.length) return saved;
 
-    // 重建：以序列化结果为骨架遍历每一行（含空行）
-    //   keepMap 中有映射 → 用原文件行（保留用户格式，如表格列宽对齐）
-    //   keepMap 中无映射 → 用序列化行（新增内容 + 所有空行随序列化结果变化）
     const savedLines = saved.split('\n');
     const serializedLines = serialized.split('\n');
     const result: string[] = [];
-
     for (let i = 0; i < serializedLines.length; i++) {
         const savedIdx = keepMap.get(i);
-        if (savedIdx !== undefined) {
-            result.push(savedLines[savedIdx]);
-        } else {
-            result.push(serializedLines[i]);
-        }
+        if (savedIdx !== undefined) result.push(savedLines[savedIdx]);
+        else result.push(serializedLines[i]);
     }
-
     return result.join('\n');
 }
 
-// 自定义表格序列化：每列保持自然宽度，不对齐列宽
-// 覆盖 remark-gfm 默认的 table handler（后者会对所有列做等宽重排，
-// 导致编辑单个单元格时整张表格格式全部改变）
-// state.enter/exit 维护 mdast-util-to-markdown 的上下文栈，影响特殊字符的转义规则
-function serializeTableNoAlign(node: any, _parent: any, state: any): string {
-    const tableExit = state.enter('table');
-    const lines: string[] = [];
+// ─── 自定义视图组件（Crepe 不覆盖的部分）─────────────────────────────────────
 
-    for (let rowIdx = 0; rowIdx < node.children.length; rowIdx++) {
-        const row = node.children[rowIdx];
-        const rowExit = state.enter('tableRow');
-
-        const cellValues: string[] = row.children.map((cell: any) => {
-            const cellExit = state.enter('tableCell');
-            const phrasingExit = state.enter('phrasing');
-            const value = state.containerPhrasing(cell, { before: '|', after: '|' });
-            phrasingExit();
-            cellExit();
-            return value;
-        });
-
-        rowExit();
-        lines.push('| ' + cellValues.join(' | ') + ' |');
-
-        // 表头行后插入分隔行，保留原始对齐标记（:---:、---:、:---、---）
-        if (rowIdx === 0) {
-            const aligns: (string | null)[] = node.align ?? [];
-            const seps = row.children.map((_: any, j: number) => {
-                const a = aligns[j] ?? null;
-                if (a === 'center') return ':---:';
-                if (a === 'right') return '---:';
-                if (a === 'left') return ':---';
-                return '---';
-            });
-            lines.push('|' + seps.join('|') + '|');
-        }
-    }
-
-    tableExit();
-    return lines.join('\n');
-}
-
-// 列表 spread 规范化：编辑后若列表项只含单个块级子节点，自动将 spread 重置为 false
-// 防止删除嵌套子列表后，原 loose list 的 spread:true 残留导致序列化时插入多余空行
-// 仅对实际变更范围内的列表节点做规范化，避免编辑表格时全文档列表间距被重置
-const listSpreadNormalizePlugin = $prose((ctx) => {
-    const schema = ctx.get(schemaCtx);
-    return new Plugin({
-        appendTransaction(transactions, _oldState, newState) {
-            if (!transactions.some((tr) => tr.docChanged)) return null;
-
-            // 收集所有变更在新文档中的位置范围
-            let minFrom = newState.doc.content.size;
-            let maxTo = 0;
-            for (const tr of transactions) {
-                if (!tr.docChanged) continue;
-                for (const step of tr.steps) {
-                    step.getMap().forEach((_os, _oe, newStart, newEnd) => {
-                        if (newStart < minFrom) minFrom = newStart;
-                        if (newEnd > maxTo) maxTo = newEnd;
-                    });
-                }
-            }
-            if (minFrom > maxTo) return null;
-
-            const tr = newState.tr;
-            let changed = false;
-
-            // nodesBetween 会访问与范围重叠的所有节点（含祖先节点如 bullet_list）
-            newState.doc.nodesBetween(minFrom, maxTo, (node, pos) => {
-                if (
-                    node.type !== schema.nodes.bullet_list &&
-                    node.type !== schema.nodes.ordered_list
-                )
-                    return;
-                let listNeedsSpread = false;
-                let offset = 1; // 跳过列表节点自身的开标记
-                node.forEach((item) => {
-                    const itemNeedsSpread = item.childCount > 1;
-                    if (item.attrs.spread !== itemNeedsSpread) {
-                        tr.setNodeMarkup(pos + offset, undefined, {
-                            ...item.attrs,
-                            spread: itemNeedsSpread,
-                        });
-                        changed = true;
-                    }
-                    if (itemNeedsSpread) listNeedsSpread = true;
-                    offset += item.nodeSize;
-                });
-                if (node.attrs.spread !== listNeedsSpread) {
-                    tr.setNodeMarkup(pos, undefined, {
-                        ...node.attrs,
-                        spread: listNeedsSpread,
-                    });
-                    changed = true;
-                }
-            });
-            return changed ? tr : null;
-        },
-    });
-});
-
-const selectionPlugin = $prose(
-    () =>
-        new Plugin({
-            view: () => ({
-                update(view, prevState) {
-                    if (
-                        _onSelectionChange &&
-                        (!view.state.selection.eq(prevState.selection) ||
-                         !view.state.doc.eq(prevState.doc))
-                    ) {
-                        _onSelectionChange(view);
-                    }
-                    if (
-                        logTableSel &&
-                        prevState.selection instanceof CellSelection &&
-                        !(view.state.selection instanceof CellSelection)
-                    ) {
-                        console.trace("[TableSel] 取消表格选中");
-                    }
-                },
-            }),
-        }),
-);
-
-import { refractor } from "./highlighter";
-
-import DOMPurify from "dompurify";
-import { createCodeBlockView } from "./components/codeBlock";
 import { createImageView } from "./components/imageView";
 
-// ── HTML inline NodeView ───────────────────────────────────────────────────
-// Milkdown 的 html 节点（atom, inline）默认以 textContent 显示原始标签。
-// 此 NodeView 用 DOMPurify 净化后渲染真实 HTML，实现只读预览。
-function createHtmlView(node: { attrs: Record<string, string> }) {
-    const dom = document.createElement("span");
-    dom.className = "html-inline";
-    dom.dataset["type"] = "html";
-    const raw = node.attrs["value"] ?? "";
-    dom.innerHTML = DOMPurify.sanitize(raw, {
-        USE_PROFILES: { html: true },
-        ADD_ATTR: ["align", "style", "width", "height"],
-    });
-    return {
-        dom,
-        ignoreMutation: () => true,
-        stopEvent: () => false,
-    };
-}
+// ─── 编辑器实例管理 ──────────────────────────────────────────────────────────
 
 let _editor: Editor | null = null;
-
-// 上次保存/加载的 Markdown 原文（含用户原始格式：空行、分隔线宽度等）
-// 用于在自动保存时做最小化差异合并，避免全量序列化改变未编辑区域的格式
 let _savedMarkdown = '';
-
-// 用户是否已与编辑器产生交互（键盘/鼠标/粘贴等）
-// 每次 createEditor() 重置为 false，避免"仅打开文件即触发自动保存"
 let _hasUserInteracted = false;
 let _interactionListenerAdded = false;
 
@@ -703,9 +432,7 @@ function setupInteractionTracking(): void {
 }
 
 export function getEditorView(): EditorView | null {
-    if (!_editor) {
-        return null;
-    }
+    if (!_editor) return null;
     return _editor.action((ctx) => ctx.get(editorViewCtx));
 }
 
@@ -715,15 +442,10 @@ export async function createEditor(
     onUpdate: (markdown: string) => void,
     onRenameImage?: (webviewUri: string, newBasename: string) => Promise<void>,
 ): Promise<Editor> {
-    // Milkdown 的 markdownUpdated 监听器在 create() 完成后异步交付（RAF/microtask），
-    // 此时 isSettled 已为 true，会误触发保存。通过 _hasUserInteracted 确保
-    // 只有用户真正操作过才允许向 Extension 发送内容更新。
     _hasUserInteracted = false;
     setupInteractionTracking();
 
     let debounceTimer: ReturnType<typeof setTimeout>;
-    // IME 合成期间（compositionstart → compositionend）暂存最新 markdown，
-    // 防止拼音中间态被保存到文件
     let isComposing = false;
     let pendingMd: string | null = null;
 
@@ -732,90 +454,68 @@ export async function createEditor(
         debounceTimer = setTimeout(() => onUpdate(md), 300);
     };
     const debouncedUpdate = (md: string) => {
-        if (isComposing) {
-            pendingMd = md; // 合成中：暂存，等 compositionend 再发
-            return;
-        }
+        if (isComposing) { pendingMd = md; return; }
         fireUpdate(md);
     };
 
-    container.addEventListener('compositionstart', () => {
-        isComposing = true;
-    });
+    container.addEventListener('compositionstart', () => { isComposing = true; });
     container.addEventListener('compositionend', () => {
         isComposing = false;
         if (pendingMd !== null) {
             const md = pendingMd;
             pendingMd = null;
-            fireUpdate(md); // 合成完成后立即触发（仍经 300ms 防抖，合并快速连续提交）
+            fireUpdate(md);
         }
     });
 
-    // editor.create() 期间会因设置初始内容而触发 markdownUpdated，
-    // 用此标志阻断该初始触发，避免"打开即静默保存"的问题
     let isSettled = false;
 
-    _editor = await Editor.make()
+    // ── CrepeBuilder ──────────────────────────────────────────────────────────
+    const crepe = new CrepeBuilder({
+        root: container,
+        defaultValue: initialMarkdown,
+    });
+
+    // Phase 3: 启用 Crepe 原生功能（替换自定义实现 + 新增能力）
+    crepe
+        .addFeature(codeMirror, { languages: codeLanguages })
+        .addFeature(latex);       // 全新：KaTeX 数学公式
+    // feature/toolbar 暂时禁用（与自定义工具栏冲突，后续整合）
+
+    // 注入保留的自定义配置
+    crepe.editor
         .config((ctx) => {
-            ctx.set(rootCtx, container);
-            ctx.set(defaultValueCtx, initialMarkdown);
-            // 配置序列化选项，尽量保留原始格式
-            ctx.update(remarkStringifyOptionsCtx, (prev) => ({
-                ...prev,
-                bullet: '-' as const,
-                rule: '-' as const,   // 保留 --- 分割线，防止序列化为 ***
-                handlers: {
-                    ...(prev.handlers ?? {}),
-                    // 覆盖 remark-gfm 的 table handler：每列保持自然宽度，
-                    // 不重排列宽，避免编辑单个单元格时整表格式全部改变
-                    table: serializeTableNoAlign,
-                },
-            }));
             _savedMarkdown = initialMarkdown;
-            ctx.get(listenerCtx).markdownUpdated((_ctx, markdown) => {
-                if (!isSettled) return;          // 跳过初始化同步触发
-                if (!_hasUserInteracted) return; // 跳过初始化异步触发（RAF/microtask 延迟交付）
-                const toSave = applyMinimalChanges(_savedMarkdown, markdown);
-                if (toSave === _savedMarkdown) return; // 内容无实质变化，不触发保存
-                _savedMarkdown = toSave;
-                debouncedUpdate(toSave);
-            });
-            // 配置 prism：使用我们已注册语言的 refractor 实例
-            ctx.set(prismConfig.key, {
-                configureRefractor: () => refractor,
-            });
-            // 注册 code_block NodeView（顶部语言选择 + 复制按钮）
+
+            // 注册自定义 NodeView
             ctx.set(nodeViewCtx, [
-                ["code_block", createCodeBlockView],
-                ["html", (node: { attrs: Record<string, string> }) => createHtmlView(node)],
                 [
                     "image",
                     (node, view, getPos) =>
-                        createImageView(
-                            node,
-                            view,
-                            getPos,
-                            undefined,
-                            undefined,
-                            onRenameImage,
-                        ),
+                        createImageView(node, view, getPos, undefined, undefined, onRenameImage),
                 ],
             ]);
         })
-        .use(commonmark)
-        .use(gfm)
-        .use(listener)
-        .use(prism)
-        .use(historyPlugin)
-        .use(historyKeymapPlugin)
-        .use(listLiftPlugin)
-        .use(codeBlockBackspacePlugin)
-        .use(selectionPlugin)
-        .use(formatKeymapPlugin)
-        .use(cellClickFixPlugin)
-        .use(listSpreadNormalizePlugin)
-        .create();
+        .use(listener)              // 追加 listener 用于 markdownUpdated
+        .use(listLiftPlugin)        // 保留：列表 backspace
+        .use(selectionPlugin)       // 保留：选区变更回调
+        .use(formatKeymapPlugin)    // 保留：自定义格式化快捷键
+        .use(cellClickFixPlugin)    // 表格单击→光标定位，拖拽→多选
+        .use(listSpreadNormalizePlugin); // 保留：列表 spread 规范化
 
+    // 注册 markdownUpdated 回调（自动保存链路）
+    crepe.on((api) => {
+        api.markdownUpdated((_ctx, markdown) => {
+            if (!isSettled) return;
+            if (!_hasUserInteracted) return;
+            const toSave = applyMinimalChanges(_savedMarkdown, markdown);
+            if (toSave === _savedMarkdown) return;
+            _savedMarkdown = toSave;
+            debouncedUpdate(toSave);
+        });
+    });
+
+    _editor = await crepe.create();
     isSettled = true;
     return _editor;
 }

@@ -1,5 +1,5 @@
 import "./linkPopup.css";
-import type { EditorView } from "@milkdown/prose/view";
+import type { EditorView } from "@milkdown/kit/prose/view";
 import { notifyOpenUrl, notifyOpenFile } from "@/messaging";
 import {
     IconCheck,

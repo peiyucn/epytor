@@ -1,16 +1,22 @@
-# epytor
+# epytor🦖
+
+[![Version](https://img.shields.io/github/package-json/v/peiyucn/epytor?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=peiyucn.epytor-vscode)
+[![VS Marketplace](https://img.shields.io/badge/VS%20Marketplace-epytor-blue?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=peiyucn.epytor-vscode)
+[![License](https://img.shields.io/github/license/peiyucn/epytor?style=for-the-badge)](https://github.com/peiyucn/epytor/blob/main/LICENSE)
 
 > Forked from [git-xing/md-wysiwyg-editor](https://github.com/git-xing/md-wysiwyg-editor) (MIT)
-> 
-> 源项目更新较慢，此 fork 暂不计划向源项目提交 PR，专注于修复 bug 并克制地增加功能。
+>
+> 感谢源作者😀
+>
+> 此 fork 暂不计划向源项目提交 PR，专注于修复 bug 并增加功能。
 
 简体中文 | [English](README.md) | [GitHub](https://github.com/peiyucn/epytor)
 
 一款基于 [Milkdown](https://milkdown.dev/)（ProseMirror）的 VSCode 所见即所得 Markdown 编辑器扩展，以富文本方式直接编辑 `.md` / `.markdown` 文件，保存结果为标准 Markdown，与任何文本编辑器完全兼容。
 
-### 项目起点
+## 项目起点
 
-本项目的首个版本为 **1.0.0**，以源项目 [v0.1.6](https://github.com/git-xing/md-wysiwyg-editor/releases/tag/v0.1.6) 为基础，主要增加了字数统计、TOC 面板增强，并修复了编辑时空行错位的 bug。所有标识（viewType、命令、配置键）从 `markdownWysiwyg.*` 改为 `epytor.*`，可与源扩展共存。
+本项目的首个版本为 **1.0.0**，以源项目 [v0.1.6](https://github.com/git-xing/md-wysiwyg-editor/releases/tag/v0.1.6) 为基础，主要增加了字数统计、TOC 面板增强，并修复了编辑时空行错位的 bug。所有标识（viewType、命令、配置键）从 `markdownWysiwyg.*` 改为 `epytor.*`。
 
 ---
 

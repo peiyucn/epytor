@@ -1,7 +1,7 @@
 {
   "name": "epytor-vscode",
   "displayName": "epytor",
-  "description": "WYSIWYG Markdown editor with live table editing",
+  "description": "WYSIWYG Markdown editor",
   "version": "1.0.1",
   "publisher": "peiyucn",
   "engines": {
@@ -233,17 +233,11 @@
     "vitest": "^2.1.0"
   },
   "dependencies": {
-    "@milkdown/core": "^7.5.0",
-    "@milkdown/plugin-listener": "^7.5.0",
-    "@milkdown/plugin-prism": "^7.19.0",
-    "@milkdown/preset-commonmark": "^7.5.0",
-    "@milkdown/preset-gfm": "^7.5.0",
-    "@milkdown/prose": "^7.19.0",
-    "@milkdown/transformer": "^7.5.0",
-    "@milkdown/utils": "^7.19.0",
+    "@codemirror/language-data": "^6.5.2",
+    "@milkdown/crepe": "7.21.2",
+    "@milkdown/kit": "7.21.2",
     "dompurify": "^3.3.3",
     "mermaid": "^11.0.0",
-    "prosemirror-tables": "^1.8.5",
-    "refractor": "^5.0.0"
+    "prosemirror-tables": "^1.8.5"
   }
 }

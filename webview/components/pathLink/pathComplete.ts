@@ -1,6 +1,6 @@
 import { notifyGetPathSuggestions } from "@/messaging";
 import { getFileIcon } from "./fileIcons";
-import type { EditorView } from "@milkdown/prose/view";
+import type { EditorView } from "@milkdown/kit/prose/view";
 
 // 触发补全的路径前缀检测
 const PATH_PREFIX_REGEX = /^(@\/|\.{1,2}\/|[a-zA-Z0-9_-][a-zA-Z0-9._-]*\/)/;

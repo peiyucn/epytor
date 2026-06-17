@@ -80,82 +80,138 @@ body {
 
 /* Milkdown 根容器 */
 .milkdown {
+    position: relative;
+    outline: none;
+
+    /* 覆盖 Crepe 主题变量 → 联动 VSCode 主题 */
+    --crepe-color-background: var(--vscode-editor-background);
+    --crepe-color-on-background: var(--vscode-editor-foreground);
+    --crepe-color-surface: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+    --crepe-color-surface-low: var(--vscode-sideBar-background, var(--vscode-editor-background));
+    --crepe-color-on-surface: var(--vscode-editor-foreground);
+    --crepe-color-on-surface-variant: var(--vscode-descriptionForeground);
+    --crepe-color-outline: var(--vscode-editorWidget-border, #454545);
+    --crepe-color-primary: var(--vscode-focusBorder, #007acc);
+    --crepe-color-secondary: var(--vscode-button-secondaryBackground, #3a3d41);
+    --crepe-color-on-secondary: var(--vscode-button-secondaryForeground, #ccc);
+    --crepe-color-inverse: var(--vscode-editor-foreground);
+    --crepe-color-on-inverse: var(--vscode-editor-background);
+    --crepe-color-inline-code: var(--vscode-textPreformat-foreground, #f48771);
+    --crepe-color-error: var(--vscode-errorForeground, #f44336);
+    --crepe-color-hover: var(--vscode-list-hoverBackground, rgba(255,255,255,0.05));
+    --crepe-color-selected: var(--vscode-list-activeSelectionBackground, rgba(255,255,255,0.1));
+    --crepe-color-inline-area: var(--vscode-input-background, rgba(128,128,128,0.15));
+
+    /* 字体：覆盖 Crepe 的 serif/sans，统一用 VSCode 编辑器字体 */
+    --crepe-font-default: var(
+        --custom-font-family,
+        var(--vscode-editor-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif)
+    );
+    --crepe-font-title: var(
+        --custom-font-family,
+        var(--vscode-editor-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif)
+    );
+    --crepe-font-code: var(--vscode-editor-font-family, monospace);
+}
+
+/* 确保 .milkdown 及子元素继承 VSCode 字体 */
+.milkdown,
+.milkdown .ProseMirror {
+    font-family: var(
+        --custom-font-family,
+        var(--vscode-editor-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif)
+    ) !important;
+    font-size: var(--vscode-editor-font-size, 14px) !important;
+}
+
+/* Crepe 按钮/输入框基础重置（原 reset.css 提供，去掉 reset.css 后补上）*/
+.milkdown button,
+.milkdown input {
+    border: none;
+    background: none;
+    box-shadow: none;
+}
+.milkdown button:focus,
+.milkdown input:focus {
+    outline: none;
+}
+.milkdown :focus-visible {
     outline: none;
 }
 
-.milkdown .editor {
+.milkdown .ProseMirror {
     outline: none;
     background: transparent;
     color: inherit;
+    padding: 0 !important; /* #editor 已提供边距，去掉 Crepe 的 60px 120px */
+    caret-color: var(--vscode-editorCursor-foreground, #000);
     white-space: pre-wrap; /* ProseMirror 要求 */
     word-wrap: break-word;
 }
 
 /* 内联 HTML 渲染容器（DOMPurify 净化后只读显示） */
-.milkdown .editor .html-inline {
+.milkdown .ProseMirror .html-inline {
     display: contents;
 }
-.milkdown .editor .html-inline [align="center"] {
+.milkdown .ProseMirror .html-inline [align="center"] {
     text-align: center;
 }
 
-/* 段落：用 padding 替代 margin，确保点击区域包含视觉间距 */
-.milkdown .editor p {
+/* 段落 */
+.milkdown .ProseMirror p {
     margin: 0;
     padding-bottom: 0.4em;
 }
 
 /* 表格单元格内段落不留底部间距 */
-.milkdown .editor td > p,
-.milkdown .editor th > p {
+.milkdown .ProseMirror td > p,
+.milkdown .ProseMirror th > p {
     padding-bottom: 0;
 }
 
-/* 标题：用 padding 替代 margin，确保点击区域包含视觉间距 */
-.milkdown .editor h1,
-.milkdown .editor h2,
-.milkdown .editor h3,
-.milkdown .editor h4,
-.milkdown .editor h5,
-.milkdown .editor h6 {
+/* 标题：逐级明确尺寸，六级等差递减 */
+.milkdown .ProseMirror h1,
+.milkdown .ProseMirror h2,
+.milkdown .ProseMirror h3,
+.milkdown .ProseMirror h4,
+.milkdown .ProseMirror h5,
+.milkdown .ProseMirror h6 {
     color: var(--vscode-editor-foreground);
     font-weight: 600;
     line-height: 1.3;
-    margin: 0;
-    margin-bottom: 0.25em;
-    padding: 1em 0 0.5em;
+    margin-top: 0.8em;
+    margin-bottom: 0.4em;
 }
 
-.milkdown .editor h1 {
+.milkdown .ProseMirror h1 {
     font-size: 2em;
-    border-bottom: 1px solid
-        var(--vscode-panel-border, rgba(128, 128, 128, 0.35));
+    border-bottom: 1px solid var(--vscode-panel-border, rgba(128,128,128,0.35));
     padding-bottom: 0.25em;
 }
 
-.milkdown .editor h2 {
+.milkdown .ProseMirror h2 {
     font-size: 1.5em;
-    border-bottom: 1px solid
-        var(--vscode-panel-border, rgba(128, 128, 128, 0.35));
-    padding-bottom: 0.6em;
+    border-bottom: 1px solid var(--vscode-panel-border, rgba(128,128,128,0.35));
+    padding-bottom: 0.25em;
 }
 
-.milkdown .editor h3 {
-    font-size: 1.25em;
-}
+.milkdown .ProseMirror h3 { font-size: 1.25em; }
+.milkdown .ProseMirror h4 { font-size: 1.1em; }
+.milkdown .ProseMirror h5 { font-size: 1em; }
+.milkdown .ProseMirror h6 { font-size: 0.9em; color: var(--vscode-descriptionForeground); }
 
 /* 粗体、斜体 */
-.milkdown .editor strong {
+.milkdown .ProseMirror strong {
     color: var(--vscode-editor-foreground);
     font-weight: 700;
 }
 
-.milkdown .editor em {
+.milkdown .ProseMirror em {
     color: var(--vscode-editor-foreground);
 }
 
 /* 行内代码 */
-.milkdown .editor code {
+.milkdown .ProseMirror code {
     background: var(
         --vscode-textCodeBlock-background,
         rgba(128, 128, 128, 0.15)
@@ -171,7 +227,218 @@ body {
 }
 
 /* 代码块 */
-.milkdown .editor pre {
+/* ─── 代码块（基于 Crepe CodeMirror）─── */
+.milkdown .milkdown-code-block {
+    border-radius: 6px;
+    border: 1px solid var(--vscode-panel-border, rgba(128,128,128,0.2));
+    padding: 0 14px 14px !important;
+}
+
+/* 标题栏 */
+.milkdown .milkdown-code-block .tools {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--vscode-panel-border, rgba(128,128,128,0.15));
+    padding: 6px 0;
+}
+
+/* 按钮常驻 + 风格对齐顶部工具条 */
+.milkdown .milkdown-code-block .tools .language-button,
+.milkdown .milkdown-code-block .tools .tools-button-group > button,
+.milkdown .milkdown-code-block .epytor-fullscreen-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 26px;
+    height: 24px;
+    padding: 0 6px;
+    background: transparent;
+    color: var(--vscode-editor-foreground);
+    border: 1px solid transparent;
+    border-radius: 3px;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    line-height: 1;
+    opacity: 1;
+    transition: background 0.1s, border-color 0.1s;
+}
+.milkdown .milkdown-code-block .tools .language-button:hover,
+.milkdown .milkdown-code-block .tools .tools-button-group > button:hover,
+.milkdown .milkdown-code-block .epytor-fullscreen-btn:hover {
+    background: var(--vscode-toolbar-hoverBackground, rgba(128, 128, 128, 0.2));
+    border-color: var(--vscode-toolbar-hoverOutline, transparent);
+}
+
+/* 语言按钮增强可见性 */
+.milkdown .milkdown-code-block .tools .language-button {
+    background: var(--vscode-input-background, rgba(128,128,128,0.1));
+    border: 1px solid var(--vscode-input-border, rgba(128,128,128,0.4));
+    border-radius: 3px;
+    padding: 0 8px;
+    font-weight: 500;
+    margin-bottom: 0 !important;
+    text-transform: capitalize;
+}
+.milkdown .milkdown-code-block .tools .language-button:hover {
+    border-color: var(--vscode-focusBorder, #007acc);
+}
+/* 下拉箭头可见 */
+.milkdown .milkdown-code-block .expand-icon svg {
+    color: var(--vscode-editor-foreground) !important;
+    opacity: 0.6 !important;
+}
+
+/* 语言下拉 — 极简紧凑 */
+.milkdown .milkdown-code-block .language-picker {
+    z-index: 1000;
+    padding-top: 4px; /* 缩小与按钮的间距 */
+}
+.milkdown .milkdown-code-block .list-wrapper {
+    width: 160px;
+    padding: 0 !important;
+    border: 1px solid var(--vscode-focusBorder, #007acc);
+    border-radius: 4px;
+    background: var(--vscode-dropdown-background, var(--vscode-editorWidget-background));
+    overflow: hidden;
+}
+/* 搜索区 — 满宽底色分隔 */
+.milkdown .milkdown-code-block .search-box,
+.milkdown .milkdown-code-block .search-box:has(input:focus) {
+    padding: 6px 8px;
+    margin: 0;
+    outline: none !important;
+    background: var(--vscode-input-background, rgba(128,128,128,0.08));
+    border-bottom: 1px solid var(--vscode-panel-border, rgba(128,128,128,0.15));
+}
+/* 打开下拉时语言按钮保持蓝边框 */
+.milkdown .milkdown-code-block .language-button[data-expanded="true"] {
+    border-color: var(--vscode-focusBorder, #007acc) !important;
+}
+.milkdown .milkdown-code-block .search-box input {
+    font-size: 12px;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    caret-color: var(--vscode-editor-foreground);
+    color: var(--vscode-input-foreground, var(--vscode-editor-foreground));
+    width: 100%;
+    background: transparent;
+}
+.milkdown .milkdown-code-block .language-list {
+    max-height: 180px;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+.milkdown .milkdown-code-block .language-list-item:last-child {
+    margin-bottom: 0;
+}
+/* 强控列表项边距（覆盖 Vue scoped 样式）*/
+#editor .milkdown .milkdown-code-block .language-list-item {
+    padding: 4px 10px !important;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 18px;
+}
+#editor .milkdown .milkdown-code-block .language-list {
+    padding: 0 !important;
+}
+.milkdown .milkdown-code-block .language-list-item:hover {
+    background: var(--vscode-list-hoverBackground, rgba(128,128,128,0.12));
+}
+.milkdown .milkdown-code-block .language-list-item.focused {
+    background: var(--vscode-list-hoverBackground, rgba(128,128,128,0.15));
+}
+
+/* 取消 Crepe 的连体按钮风格，改为独立按钮 */
+.milkdown .milkdown-code-block .tools .tools-button-group {
+    gap: 4px;
+}
+.milkdown .milkdown-code-block .tools .tools-button-group > button:first-child,
+.milkdown .milkdown-code-block .tools .tools-button-group > button:last-child {
+    border-radius: 3px !important;
+}
+.milkdown .milkdown-code-block .expand-icon svg {
+    color: var(--vscode-editor-foreground);
+    opacity: 0.7;
+}
+
+/* 展开箭头 */
+.milkdown .milkdown-code-block .expand-icon svg {
+    color: var(--vscode-editor-foreground);
+    opacity: 0.7;
+}
+
+/* 下拉不裁剪 */
+.milkdown .milkdown-code-block .language-picker {
+    z-index: 1000;
+}
+
+/* 复制反馈 */
+
+/* ── 全屏 lightbox ─────────────────────────────────────── */
+.epytor-fs-lightbox {
+    position: fixed; inset: 0; z-index: 9999;
+    background: var(--vscode-editor-background, #1e1e1e);
+    display: flex; flex-direction: column;
+}
+.epytor-fs-header {
+    display: flex; align-items: center;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--vscode-panel-border, rgba(128,128,128,0.2));
+    flex-shrink: 0;
+}
+.epytor-fs-lang {
+    font-size: 13px; font-weight: 600;
+    color: var(--vscode-descriptionForeground);
+    text-transform: capitalize;
+}
+.epytor-fs-close {
+    margin-left: auto;
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 26px; height: 24px; padding: 0 4px;
+    background: transparent;
+    color: var(--vscode-editor-foreground);
+    border: 1px solid transparent;
+    border-radius: 3px;
+    font-size: 16px; line-height: 1;
+    cursor: pointer;
+    transition: background 0.1s, border-color 0.1s;
+}
+.epytor-fs-close:hover {
+    background: var(--vscode-toolbar-hoverBackground, rgba(128,128,128,0.2));
+    border-color: var(--vscode-toolbar-hoverOutline, transparent);
+}
+.epytor-fs-body {
+    flex: 1; min-height: 0;
+    overflow-y: auto;
+}
+.epytor-fs-body > .cm-editor {
+    max-height: none;
+    border-radius: 0;
+}
+.epytor-fs-body > .cm-editor .cm-scroller {
+    font-family: var(--vscode-editor-font-family, monospace);
+}
+.epytor-fs-body > .preview-panel {
+    padding: 0 32px 24px;
+}
+.epytor-fs-body .preview-panel .preview-divider {
+    height: 1px; opacity: 0.2;
+    background: var(--vscode-editorWidget-border, #454545);
+    margin: 6px 0;
+}
+.epytor-fs-body .preview-panel .preview-label {
+    margin: 6px 0; font-size: 12px;
+    color: var(--vscode-descriptionForeground);
+    font-weight: 600; text-transform: uppercase;
+}
+.epytor-fs-body .preview-panel .preview {
+    text-align: center; overflow-x: auto;
+}
+
+
+.milkdown .ProseMirror pre {
     background: var(
         --vscode-textCodeBlock-background,
         rgba(128, 128, 128, 0.1)
@@ -182,139 +449,111 @@ body {
     margin: 0 0 1em;
 }
 
-.milkdown .editor pre code {
+.milkdown .ProseMirror pre code {
     background: none;
     padding: 0;
     font-size: 0.9em;
 }
 
-/* 引用块 */
-.milkdown .editor blockquote {
-    border-left: 3px solid var(--vscode-textBlockQuote-border, #007acc);
-    background: var(
-        --vscode-textBlockQuote-background,
-        rgba(0, 122, 204, 0.05)
-    );
-    margin: 0 0 1em;
-    padding: 0.5em 1em;
+/* ─── 引用块 ──────────────────────────────────────────── */
+.milkdown .ProseMirror blockquote {
+    background: var(--vscode-textBlockQuote-background, rgba(128,128,128,0.04));
+    border-radius: 6px;
+    padding: 6px 10px 6px 20px !important;
     color: var(--vscode-editor-foreground);
-    opacity: 0.85;
+    border: none !important;
+}
+.milkdown .ProseMirror blockquote::before {
+    background: var(--vscode-editor-foreground) !important;
+    opacity: 0.25;
+    left: 8px !important;
 }
 
 /* 列表 */
-.milkdown .editor ul,
-.milkdown .editor ol {
-    padding-left: 1.8em;
-    margin: 0 0 0.75em;
+.milkdown .ProseMirror ul,
+.milkdown .ProseMirror ol {
+    padding-left: 1.8em !important;
+    margin: 0 0 0.75em !important;
 }
 
-.milkdown .editor li {
-    margin: 0.2em 0;
+.milkdown .ProseMirror li {
+    margin: 0.2em 0 !important;
 }
 
 /* 有序列表多层级数字样式 */
-.milkdown .editor ol {
+.milkdown .ProseMirror ol {
     list-style-type: decimal;
 }
 
-.milkdown .editor ol ol {
+.milkdown .ProseMirror ol ol {
     list-style-type: lower-alpha;
 }
 
-.milkdown .editor ol ol ol {
+.milkdown .ProseMirror ol ol ol {
     list-style-type: lower-roman;
 }
 
-.milkdown .editor ol ol ol ol {
+.milkdown .ProseMirror ol ol ol ol {
     list-style-type: decimal;
 }
 
 /* ── 任务列表（Milkdown v7 实际 DOM）───────────────────── */
 
-/* 任务列表：减小 ul 左缩进，消除复选框左侧多余空间 */
-.milkdown .editor ul:has(> li[data-item-type="task"]) {
-    padding-left: 4px;
-}
-
-/* 任务列表项：消除原始 bullet，用 position 定位伪元素 */
-.milkdown .editor li[data-item-type="task"] {
+/* ── 任务列表 ─────────────────────────────────────────── */
+.milkdown .ProseMirror li[data-item-type="task"] {
     list-style: none;
-    position: relative;
-    padding-left: 22px;
-    cursor: default;
 }
-
-.milkdown .editor li[data-item-type="task"]::marker {
-    content: "";
+.milkdown .ProseMirror li[data-item-type="task"]::marker {
+    display: none;
 }
-
-/* 伪元素模拟 checkbox（未勾选） */
-.milkdown .editor li[data-item-type="task"]::before {
+.milkdown .ProseMirror li[data-item-type="task"] p:first-child::before {
     content: "";
-    position: absolute;
-    left: 0;
-    top: 0.2em;
-    width: 14px;
-    height: 14px;
-    border: 1.5px solid var(--vscode-checkbox-border, #6c6c6c);
-    border-radius: 2px;
+    display: inline-block;
+    width: 14px; height: 14px;
+    margin-right: 6px;
+    vertical-align: middle;
+    border: 1.5px solid var(--vscode-checkbox-border, #8b8b8b);
+    border-radius: 3px;
     background: var(--vscode-checkbox-background, transparent);
-    box-sizing: border-box;
     cursor: pointer;
 }
-
-/* 已勾选状态：蓝色背景 */
-.milkdown .editor li[data-item-type="task"][data-checked="true"]::before {
-    background: var(--vscode-checkbox-selectBackground, #007acc);
-    border-color: var(--vscode-checkbox-selectBackground, #007acc);
-}
-
-/* 已勾选：纯 CSS 勾选标记（旋转 L 形边框） */
-.milkdown .editor li[data-item-type="task"][data-checked="true"]::after {
-    content: "";
-    position: absolute;
-    left: 3px;
-    top: calc(0.2em + 1px);
-    width: 5px;
-    height: 9px;
-    border-right: 2px solid #fff;
-    border-bottom: 2px solid #fff;
-    transform: rotate(45deg) translate(-1px, -2px);
-    transform-origin: center;
-    box-sizing: border-box;
-}
-
-/* 已勾选的文字加删除线（可选视觉提示） */
-.milkdown .editor li[data-item-type="task"][data-checked="true"] > p {
-    opacity: 0.6;
-    text-decoration: line-through;
+.milkdown .ProseMirror li[data-item-type="task"][data-checked="true"] p:first-child::before {
+    background-color: var(--vscode-focusBorder, #007acc);
+    border-color: var(--vscode-focusBorder, #007acc);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+    background-size: 10px 10px;
+    background-position: center;
+    background-repeat: no-repeat;
 }
 
 /* 链接 */
-.milkdown .editor a {
+.milkdown .ProseMirror a {
     color: var(--vscode-textLink-foreground, #4ea6ea);
     text-decoration: none;
 }
-
-.milkdown .editor a:hover {
+.milkdown .ProseMirror a:hover {
     text-decoration: underline;
     color: var(--vscode-textLink-activeForeground, #4ea6ea);
 }
+/* 按住 Ctrl/Meta 时链接显示小手（提示可 ctrl+click 打开）*/
+body.epytor-modifier-active .milkdown .ProseMirror a:hover {
+    cursor: pointer;
+}
 
 /* 水平分割线 */
-.milkdown .editor hr {
+.milkdown .ProseMirror hr {
     border: none;
     border-top: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.35));
     margin: 1.5em 0;
 }
 
 /* 删除线 */
-.milkdown .editor del {
+.milkdown .ProseMirror del {
     opacity: 0.6;
 }
 
 /* 表格 */
-.milkdown .editor table {
+.milkdown .ProseMirror table {
     border-collapse: collapse;
     width: 100%;
     margin: 0 0 1em;
@@ -322,8 +561,8 @@ body {
     display: block;
 }
 
-.milkdown .editor th,
-.milkdown .editor td {
+.milkdown .ProseMirror th,
+.milkdown .ProseMirror td {
     border: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.35));
     padding: 6px 12px;
     text-align: left;
@@ -333,17 +572,17 @@ body {
 }
 
 /* 空单元格内的段落撑开行高，确保空表格行高一致 */
-.milkdown .editor td > p,
-.milkdown .editor th > p {
+.milkdown .ProseMirror td > p,
+.milkdown .ProseMirror th > p {
     min-height: 1.2em;
 }
 
-.milkdown .editor th {
+.milkdown .ProseMirror th {
     background: rgba(128, 128, 128, 0.08);
     font-weight: 600;
 }
 
-.milkdown .editor tbody tr:nth-child(even) td {
+.milkdown .ProseMirror tbody tr:nth-child(even) td {
     background: var(
         --vscode-editor-lineHighlightBackground,
         rgba(128, 128, 128, 0.04)
@@ -351,7 +590,7 @@ body {
 }
 
 /* 选中高亮 */
-.milkdown .editor ::selection {
+.milkdown .ProseMirror ::selection {
     background: var(
         --vscode-editor-selectionBackground,
         rgba(0, 122, 204, 0.3)
@@ -359,12 +598,12 @@ body {
 }
 
 /* ─── 表格单元格范围选择（prosemirror-tables CellSelection）─── */
-.milkdown .editor .selectedCell {
+.milkdown .ProseMirror .selectedCell {
     position: relative;
     background: rgba(52, 211, 153, 0.15) !important;
 }
 
-.milkdown .editor .selectedCell::after {
+.milkdown .ProseMirror .selectedCell::after {
     content: "";
     position: absolute;
     inset: -1px;
@@ -374,7 +613,7 @@ body {
 }
 
 /* 列宽拖拽手柄 */
-.milkdown .editor .column-resize-handle {
+.milkdown .ProseMirror .column-resize-handle {
     position: absolute;
     right: -2px;
     top: 0;
@@ -385,13 +624,13 @@ body {
     z-index: 20;
 }
 
-.milkdown .editor.resize-cursor,
-.milkdown .editor.resize-cursor * {
+.milkdown .ProseMirror.resize-cursor,
+.milkdown .ProseMirror.resize-cursor * {
     cursor: col-resize !important;
 }
 
 /* 光标 */
-.milkdown .editor .ProseMirror-focused {
+.milkdown .ProseMirror-focused {
     outline: none;
 }
 

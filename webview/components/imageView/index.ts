@@ -1,10 +1,10 @@
-import type { Node as PMNode } from "@milkdown/prose/model";
-import { TextSelection } from "@milkdown/prose/state";
+import type { Node as PMNode } from "@milkdown/kit/prose/model";
+import { TextSelection } from "@milkdown/kit/prose/state";
 import type {
     Decoration,
     DecorationSource,
     EditorView,
-} from "@milkdown/prose/view";
+} from "@milkdown/kit/prose/view";
 import {
     IconZoomIn,
     IconPencil,
@@ -160,8 +160,14 @@ export function createImageView(
     img.alt = (node.attrs["alt"] as string) ?? "";
     img.draggable = false;
 
-    // ── 图片加载失败占位符 ────────────────────────────────────
+    // ── 加载中占位符 ──────────────────────────────────────────
     let imgErrored = false;
+    let imgLoaded = false;
+    const loadingPlaceholder = document.createElement("div");
+    loadingPlaceholder.className = "img-loading-placeholder";
+    loadingPlaceholder.innerHTML = '<span class="img-loading-spinner"></span><span>Loading...</span>';
+
+    // ── 图片加载失败占位符 ────────────────────────────────────
     const errorPlaceholder = document.createElement("div");
     errorPlaceholder.className = "img-error-placeholder";
     errorPlaceholder.style.display = "none";
@@ -169,17 +175,23 @@ export function createImageView(
     img.addEventListener("error", () => {
         imgErrored = true;
         img.style.display = "none";
+        loadingPlaceholder.style.display = "none";
         errorPlaceholder.innerHTML = `${IconImageOff}<span>${t("Image not found")}</span>`;
         errorPlaceholder.style.display = "flex";
     });
 
     img.addEventListener("load", () => {
+        imgLoaded = true;
+        loadingPlaceholder.style.display = "none";
         if (imgErrored) {
             imgErrored = false;
             img.style.display = "";
             errorPlaceholder.style.display = "none";
         }
     });
+
+    // 初始显示加载中（图片稍后自然触发 load/error 切换）
+    loadingPlaceholder.style.display = "flex";
 
     // ── 工具栏 ────────────────────────────────────────────────
     const toolbar = document.createElement("div");
@@ -311,6 +323,7 @@ export function createImageView(
     toolbar.appendChild(deleteBtn);
 
     wrapper.appendChild(img);
+    wrapper.appendChild(loadingPlaceholder);
     wrapper.appendChild(errorPlaceholder);
     wrapper.appendChild(toolbar);
 
@@ -491,13 +504,12 @@ export function createImageView(
             const newAlt = (updatedNode.attrs["alt"] as string) ?? "";
             if (rawSrc !== newSrc) {
                 rawSrc = newSrc;
+                // 重置加载状态
+                imgLoaded = false;
+                imgErrored = false;
+                loadingPlaceholder.style.display = "flex";
+                errorPlaceholder.style.display = "none";
                 img.src = newSrc;
-                // 重置错误状态，让浏览器重新尝试加载新 src
-                if (imgErrored) {
-                    imgErrored = false;
-                    img.style.display = "";
-                    errorPlaceholder.style.display = "none";
-                }
                 updateInfoElement(newSrc);
             }
             if (img.alt !== newAlt) {

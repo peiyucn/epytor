@@ -1,4 +1,4 @@
-import { commandsCtx, editorViewCtx } from "@milkdown/core";
+import { commandsCtx, editorViewCtx } from "@milkdown/kit/core";
 import {
     createCodeBlockCommand,
     insertHrCommand,
@@ -10,16 +10,16 @@ import {
     wrapInBulletListCommand,
     wrapInHeadingCommand,
     wrapInOrderedListCommand,
-} from "@milkdown/preset-commonmark";
+} from "@milkdown/kit/preset/commonmark";
 import {
     insertTableCommand,
     toggleStrikethroughCommand,
-} from "@milkdown/preset-gfm";
-import { undo, redo } from "@milkdown/prose/history";
-import { lift } from "@milkdown/prose/commands";
-import { TextSelection } from "@milkdown/prose/state";
-import type { Editor } from "@milkdown/core";
-import type { EditorView } from "@milkdown/prose/view";
+} from "@milkdown/kit/preset/gfm";
+import { undo, redo } from "@milkdown/kit/prose/history";
+import { lift } from "@milkdown/kit/prose/commands";
+import { TextSelection } from "@milkdown/kit/prose/state";
+import type { Editor } from "@milkdown/kit/core";
+import type { EditorView } from "@milkdown/kit/prose/view";
 import {
     IconBold,
     IconItalic,

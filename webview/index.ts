@@ -1,12 +1,17 @@
-import "./style.css";
+import "@milkdown/crepe/theme/classic-dark.css";
+import "@milkdown/crepe/theme/common/prosemirror.css";
+import "@milkdown/crepe/theme/common/reset.css";
+import "@milkdown/crepe/theme/common/code-mirror.css";
+import "@milkdown/crepe/theme/common/latex.css";
+import "./style.css"; // 必须在 Crepe CSS 之后加载，用 VSCode 变量覆盖 Crepe 主题
 import {
     createEditor,
     getEditorView,
     registerSelectionChangeHandler,
     setLogTableSel,
 } from "./editor";
-import type { EditorView } from "@milkdown/prose/view";
-import { TextSelection } from "@milkdown/prose/state";
+import type { EditorView } from "@milkdown/kit/prose/view";
+import { TextSelection } from "@milkdown/kit/prose/state";
 import {
     notifyReady,
     notifyUpdate,
@@ -28,11 +33,9 @@ import { dispatchImgPathSuggestions, dispatchImagePathResolved } from "./compone
 import { setImageUriMap } from "./components/imageView";
 import { initFindBar } from "./components/findBar";
 import { initHeadingIds } from "./headingIds";
-import {
-    setupTableAddButtons,
-    setDebugMode,
-} from "./components/table/addButtons";
+import { setupTableAddButtons, setDebugMode } from "./components/table/addButtons";
 import { setupTableHandles } from "./components/table/handles";
+import { setupTableToolbar } from "./components/table/toolbar";
 import { initToolbar } from "./components/toolbar";
 import { initToc } from "./components/toc";
 import {
@@ -41,13 +44,22 @@ import {
     findLineInOriginalSource,
     getCellRowSourceLine,
 } from "./components/selectionToolbar";
-import { CellSelection } from "@milkdown/prose/tables";
-import { setupTableToolbar } from "./components/table/toolbar";
-import type { Editor } from "@milkdown/core";
-import { editorViewCtx } from "@milkdown/core";
+import { CellSelection } from "@milkdown/kit/prose/tables";
+import type { Editor } from "@milkdown/kit/core";
+import { editorViewCtx } from "@milkdown/kit/core";
+import { applyTooltip } from "./ui/tooltip";
 
 let currentEditor: Editor | null = null;
 let currentLineMap: number[] = [];
+
+// 修饰键监听：按住 Ctrl/Meta 时给 body 加 class，链接 hover 显示小手
+document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey) document.body.classList.add('epytor-modifier-active');
+});
+document.addEventListener('keyup', (e) => {
+    if (!e.ctrlKey && !e.metaKey) document.body.classList.remove('epytor-modifier-active');
+});
+window.addEventListener('blur', () => document.body.classList.remove('epytor-modifier-active'));
 export function getLineMap(): number[] {
     return currentLineMap;
 }
@@ -285,7 +297,6 @@ function renderFrontmatterPanel(frontmatter: string | undefined): void {
     if (editor) { editor.style.paddingTop = '16px'; }
 }
 
-
 function escapeHtml(s: string): string {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
@@ -371,6 +382,7 @@ if (editorContainer) {
     initPathComplete(() => getEditorView());
     setupTableAddButtons(editorContainer, () => getEditorView());
     setupTableHandles(editorContainer, () => getEditorView());
+    enhanceCodeBlocks(editorContainer);
 
     // 点击 #editor 容器底部空白区域（内容最后一行以下）→ 光标移到文档末尾并聚焦
     editorContainer.addEventListener("mousedown", (e) => {
@@ -453,7 +465,118 @@ document.addEventListener("paste", (e) => {
         );
 });
 
-// 选中文字浮动工具栏 + 表格工具栏（共享同一个 selectionChange 事件）
+
+// ── 代码块复制 + 全屏 ───────────────────────────────────────────────────────
+const ICON_MAXIMIZE = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>';
+
+function enhanceCodeBlocks(container: HTMLElement): void {
+    // ── 复制按钮：点击后弹 ✔ 提示 ────────────────────────────────────
+    container.addEventListener('click', (e) => {
+        const btn = (e.target as Element).closest('.copy-button') as HTMLElement | null;
+        if (!btn) return;
+        setTimeout(() => {
+            const tip = applyTooltip(btn, '✔ Copied!');
+            tip.show();
+            setTimeout(() => tip.setText('Copy'), 1500);
+        }, 100);
+    });
+
+    // ── 全屏按钮（我们的自定义功能，不是 Crepe 的，直接创建）─────────────
+    const addFullscreenBtn = (block: Element): void => {
+        // 原生按钮加 tooltip（只做一次）
+        const copyBtn = block.querySelector('.copy-button') as HTMLElement | null;
+        if (copyBtn && !copyBtn.dataset.tip) { copyBtn.dataset.tip = '1'; applyTooltip(copyBtn, 'Copy'); }
+        const previewBtn = block.querySelector('.preview-toggle-button') as HTMLElement | null;
+        if (previewBtn && !previewBtn.dataset.tip) { previewBtn.dataset.tip = '1'; applyTooltip(previewBtn, 'Toggle preview'); }
+
+        if (block.querySelector('.epytor-fullscreen-btn')) return;
+        const btnGroup = block.querySelector('.tools-button-group');
+        if (!btnGroup) return;
+
+        // 预览按钮放在最前面
+        if (previewBtn && btnGroup.firstChild !== previewBtn) {
+            btnGroup.insertBefore(previewBtn, btnGroup.firstChild);
+        }
+
+        const fsBtn = document.createElement('button');
+        fsBtn.className = 'epytor-fullscreen-btn';
+        fsBtn.innerHTML = ICON_MAXIMIZE;
+        applyTooltip(fsBtn, 'Fullscreen');
+        fsBtn.addEventListener('mousedown', (ev) => {
+            ev.preventDefault(); ev.stopPropagation();
+            const cmEditor = block.querySelector('.cm-editor') as HTMLElement | null;
+            const cmHost = block.querySelector('.codemirror-host') as HTMLElement | null;
+            const previewPanel = block.querySelector('.preview-panel') as HTMLElement | null;
+            if (!cmEditor) return;
+            const langBtn = block.querySelector('.language-button');
+            const lang = langBtn?.textContent?.trim() || '';
+
+            const lb = document.createElement('div');
+            lb.className = 'epytor-fs-lightbox';
+            lb.innerHTML = `<div class="epytor-fs-header">
+                <span class="epytor-fs-lang">${lang}</span>
+                <button class="epytor-fs-close">✕</button>
+            </div>
+            <div class="epytor-fs-body"></div>`;
+            document.body.appendChild(lb);
+            const body = lb.querySelector('.epytor-fs-body') as HTMLElement;
+            body.appendChild(cmEditor);
+            if (previewPanel) body.appendChild(previewPanel);
+
+            const close = () => {
+                if (cmHost && cmEditor.parentElement !== cmHost) cmHost.appendChild(cmEditor);
+                if (previewPanel && previewPanel.parentElement !== block) block.appendChild(previewPanel);
+                if (document.body.contains(lb)) document.body.removeChild(lb);
+                document.removeEventListener('keydown', onKey);
+            };
+            const onKey = (ke: KeyboardEvent) => {
+                if (ke.key === 'Escape') { ke.preventDefault(); close(); }
+            };
+            document.addEventListener('keydown', onKey);
+            lb.querySelector('.epytor-fs-close')!.addEventListener('mousedown', (me) => { me.preventDefault(); close(); });
+            lb.addEventListener('mousedown', (me) => { if (me.target === lb) close(); });
+        });
+        btnGroup.appendChild(fsBtn);
+    };
+
+    // 初次 + 后续代码块都加上全屏按钮
+    const scanBlocks = () => container.querySelectorAll('.milkdown-code-block').forEach(addFullscreenBtn);
+    requestAnimationFrame(scanBlocks);
+    new MutationObserver(() => requestAnimationFrame(scanBlocks))
+        .observe(container, { childList: true, subtree: true });
+
+    // 语言搜索框键盘导航
+    container.addEventListener('keydown', (e) => {
+        const input = e.target as HTMLElement;
+        if (!input.closest('.search-box')) return;
+        const list = input.closest('.list-wrapper')?.querySelector('.language-list');
+        if (!list) return;
+        const items = list.querySelectorAll<HTMLElement>('.language-list-item');
+        if (items.length === 0) return;
+        const focused = list.querySelector<HTMLElement>('.language-list-item.focused');
+        let idx = -1;
+        if (focused) items.forEach((el, i) => { if (el === focused) idx = i; });
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            const next = Math.min(idx + 1, items.length - 1);
+            items.forEach(el => el.classList.remove('focused'));
+            items[next].classList.add('focused');
+            items[next].scrollIntoView({ block: 'nearest' });
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            const prev = Math.max(idx - 1, 0);
+            items.forEach(el => el.classList.remove('focused'));
+            items[prev].classList.add('focused');
+            items[prev].scrollIntoView({ block: 'nearest' });
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (focused) focused.click();
+        }
+    });
+}
+
+
+// 选中文字浮动工具栏 + 表格工具栏
 const selTb = setupSelectionToolbar(
     () => getEditorView(),
     () => currentEditor,
@@ -461,6 +584,7 @@ const selTb = setupSelectionToolbar(
     getMarkdownSource,
 );
 const tableTb = setupTableToolbar(() => getEditorView());
+
 registerSelectionChangeHandler((view) => {
     selTb.onSelectionChange(view);
     tableTb.onSelectionChange(view);

@@ -1,5 +1,5 @@
 import './toc.css';
-import type { EditorView } from "@milkdown/prose/view";
+import type { EditorView } from "@milkdown/kit/prose/view";
 import { applyTooltip } from "@/ui/tooltip";
 import { t } from "@/i18n";
 import { IconPin, IconChevronRight, IconChevronDown, IconChevronsUp, IconChevronsDown } from "@/ui/icons";

@@ -6,9 +6,9 @@ import {
     addColumnBefore,
     TableMap,
     CellSelection,
-} from "@milkdown/prose/tables";
-import { TextSelection } from "@milkdown/prose/state";
-import type { EditorView } from "@milkdown/prose/view";
+} from "@milkdown/kit/prose/tables";
+import { TextSelection } from "@milkdown/kit/prose/state";
+import type { EditorView } from "@milkdown/kit/prose/view";
 import { IconPlus } from "@/ui/icons";
 
 // ── 调试模式：由 Extension 侧通过设置/菜单控制，默认关闭 ───────────────

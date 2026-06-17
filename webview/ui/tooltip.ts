@@ -85,7 +85,7 @@ export function applyTooltip(
     text: string,
     options: TooltipOptions = {},
 ): TooltipHandle {
-    const { placement = "below", truncatedOnly = false } = options;
+    const { placement = "above", truncatedOnly = false } = options;
     let currentText = text;
 
     el.removeAttribute("title");

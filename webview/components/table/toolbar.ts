@@ -1,4 +1,4 @@
-import type { EditorView } from "@milkdown/prose/view";
+import type { EditorView } from "@milkdown/kit/prose/view";
 
 type GetView = () => EditorView | null;
 

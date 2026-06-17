@@ -140,6 +140,37 @@
     color: var(--vscode-input-foreground, var(--vscode-editor-foreground));
 }
 
+/* 图片加载中占位符 */
+.img-loading-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: 120px;
+    min-height: 64px;
+    padding: 12px 16px;
+    background: var(--vscode-editor-background);
+    border: 1px dashed var(--vscode-editorWidget-border, #454545);
+    border-radius: 4px;
+    color: var(--vscode-descriptionForeground);
+    font-size: 12px;
+    user-select: none;
+}
+
+.img-loading-spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--vscode-editorWidget-border, #454545);
+    border-top-color: var(--vscode-focusBorder, #007acc);
+    border-radius: 50%;
+    animation: img-spin 0.8s linear infinite;
+}
+
+@keyframes img-spin {
+    to { transform: rotate(360deg); }
+}
+
 /* 图片加载失败占位符 */
 .img-error-placeholder {
     align-items: center;

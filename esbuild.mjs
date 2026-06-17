@@ -22,7 +22,7 @@ const extensionBuild = {
     external: ['vscode'],
 };
 
-// WebView 前端（Browser）- ESM + code splitting，Mermaid 等懒加载
+// WebView 前端（Browser）
 const webviewBuild = {
     ...commonOptions,
     entryPoints: { webview: 'webview/index.ts' },
@@ -30,13 +30,18 @@ const webviewBuild = {
     platform: 'browser',
     target: 'es2020',
     format: 'esm',
-    splitting: true,
-    chunkNames: 'chunks/[name]-[hash]',
     loader: {
         '.ttf': 'dataurl',
+        '.woff': 'dataurl',
+        '.woff2': 'dataurl',
     },
     alias: {
         '@': path.resolve('./webview'),
+    },
+    define: {
+        __VUE_OPTIONS_API__: 'true',
+        __VUE_PROD_DEVTOOLS__: 'false',
+        __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: 'false',
     },
 };
 

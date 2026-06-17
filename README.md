@@ -1,18 +1,24 @@
-# epytor
+# epytor🦖
+
+[![Version](https://img.shields.io/github/package-json/v/peiyucn/epytor?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=peiyucn.epytor-vscode)
+[![VS Marketplace](https://img.shields.io/badge/VS%20Marketplace-epytor-blue?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=peiyucn.epytor-vscode)
+[![License](https://img.shields.io/github/license/peiyucn/epytor?style=for-the-badge)](https://github.com/peiyucn/epytor/blob/main/LICENSE)
 
 > Forked from [git-xing/md-wysiwyg-editor](https://github.com/git-xing/md-wysiwyg-editor) (MIT)
-> 
-> The upstream project updates slowly. This fork focuses on bug fixes and restrained feature additions, with no current plans to submit PRs upstream.
+>
+> Thanks to the original author 😀
+>
+> This fork focuses on bug fixes and feature additions, with no current plans to submit PRs upstream.
 
 [简体中文](README.zh-CN.md) | English | [GitHub](https://github.com/peiyucn/epytor)
 
 A VSCode WYSIWYG Markdown editor extension powered by [Milkdown](https://milkdown.dev/) (ProseMirror). Edit `.md` / `.markdown` files as rich text and save as standard Markdown — fully compatible with any text editor.
 
-### Project Origin
+## Project Origin
 
-The initial release is **1.0.0**, built on upstream [v0.1.6](https://github.com/git-xing/md-wysiwyg-editor/releases/tag/v0.1.6). Key additions include word count in the status bar, enhanced TOC panel, and a fix for blank-line drift during editing. All identifiers (viewType, commands, config keys) use `epytor.*` and can coexist with the original extension.
+The initial release is **1.0.0**, built on upstream [v0.1.6](https://github.com/git-xing/md-wysiwyg-editor/releases/tag/v0.1.6). Key additions include word count in the status bar, enhanced TOC panel, and a fix for blank-line drift during editing. All identifiers (viewType, commands, config keys) use `epytor.*`.
 
-***
+---
 
 ## Features
 
@@ -81,7 +87,7 @@ The initial release is **1.0.0**, built on upstream [v0.1.6](https://github.com/
 - Can be disabled; manual save shows `●` in the tab title
 - External file changes (e.g. `git checkout`, other editors) sync automatically to the editor
 
-***
+---
 
 ## Getting Started
 
@@ -99,7 +105,7 @@ After installing the extension, open any `.md` / `.markdown` file in VS Code —
 | Search in document       | `Cmd+F` (macOS) / `Ctrl+F` (Windows)                           |
 | Manual save              | `Cmd+S` (macOS) / `Ctrl+S` (Windows)                           |
 
-***
+---
 
 ## Settings
 
@@ -114,17 +120,20 @@ After installing the extension, open any `.md` / `.markdown` file in VS Code —
 | `epytor.imageStorage`       | string  | `"local"`   | Image storage mode: `local` (save to disk) or `server` (upload to custom URL)             |
 | `epytor.imageLocalPath`     | string  | `""`        | Relative path (from workspace root) for local image storage                               |
 
-***
+---
 
 ## Requirements
 
 - VS Code **1.80.0** or later
 
-***
+---
 
 ## Known Limitations
 
 - Some advanced Markdown extensions (footnotes, math formulas) are not yet supported
+
 - **Undo in link popup input** (`Cmd+Z` / `Ctrl+Z`): undo is intercepted by VS Code's Electron layer and does not work inside the link URL / text input fields
+
 - **Table cell line numbers** (Send to Claude): when a table cell is selected, the reported line range may be slightly off due to ProseMirror node index misalignment with the source line map
+
 - **Global search navigation**: clicking a search result for a `.md` file may not scroll to the matched line in WYSIWYG mode when multiple `.md` files are open simultaneously

@@ -138,22 +138,8 @@
     background: var(--vscode-list-hoverBackground, rgba(128, 128, 128, 0.15));
 }
 
-.toc-item--h1 {
-    font-weight: 600;
-}
-.toc-item--h2 {
-    opacity: 0.92;
-}
-.toc-item--h3 {
-    opacity: 0.84;
-    font-size: 11.5px;
-}
-.toc-item--h4,
-.toc-item--h5,
-.toc-item--h6 {
-    opacity: 0.72;
-    font-size: 11px;
-}
+.toc-item--h1 { font-weight: 600; }
+/* h2-h6 文字大小统一，不做区别 */
 
 .toc-empty {
     padding: 16px 12px;
