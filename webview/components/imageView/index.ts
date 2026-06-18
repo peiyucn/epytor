@@ -196,7 +196,18 @@ export function createImageView(
     errorPlaceholder.className = "img-error-placeholder";
     errorPlaceholder.style.display = "none";
 
+    let retryCount = 0;
     img.addEventListener("error", () => {
+        if (retryCount < 5) {
+            retryCount++;
+            const delay = Math.min(200 * retryCount, 2000);
+            setTimeout(() => {
+                const src = img.src;
+                img.src = "";
+                img.src = src.replace(/([?&])_r=\d+/, "") + (src.includes("?") ? "&" : "?") + "_r=" + Date.now();
+            }, delay);
+            return;
+        }
         imgErrored = true;
         img.style.display = "none";
         loadingPlaceholder.style.display = "none";
@@ -278,7 +289,7 @@ export function createImageView(
     const captionBtn = createButton({
         className: "img-tb-btn",
         tabIndex: -1,
-        label: "CAP",
+        label: "CAP/ALT",
         title: t("Edit Caption"),
         tooltipPlacement: "above",
         onClick: () => startCaptionEdit(),
@@ -433,17 +444,17 @@ export function createImageView(
             isEditingCaption = false;
             const newCaption = input.value.trim();
             cleanup();
-            if (newCaption !== caption) {
-                const pos = getPos();
-                if (pos !== undefined) {
-                    const newTitle = encodeRatio(newCaption, currentRatio);
-                    captionEl.textContent = newCaption;
-                    view.dispatch(view.state.tr.setNodeMarkup(pos, null, {
-                        ...currentNode.attrs,
-                        title: newTitle,
-                    }));
-                }
-            }
+            const pos = getPos();
+            if (pos === undefined) return;
+            const newTitle = encodeRatio(newCaption, currentRatio);
+            // 始终同步 alt：有 caption 就设 alt，没有就保留原值
+            view.dispatch(view.state.tr.setNodeMarkup(pos, null, {
+                ...currentNode.attrs,
+                title: newCaption !== caption ? newTitle : currentNode.attrs.title,
+                alt: newCaption || "",
+            }));
+            img.alt = newCaption || "";
+            captionEl.textContent = newCaption;
             view.focus();
         }
 

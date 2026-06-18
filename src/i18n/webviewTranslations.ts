@@ -60,6 +60,9 @@ export const ZH_CN_WEBVIEW: Record<string, string> = {
     'Loading...': '加载中...',
     'No images found': '未找到图片',
     'Failed to load images': '图片加载失败',
+    'Project Images': '项目图片',
+    'Click or drag image here': '点击选择或拖拽图片到此处',
+    'Insert': '插入',
     'Selected': '已选',
     'Enlarge': '放大',
     // imageView 工具栏

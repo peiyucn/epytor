@@ -73,7 +73,7 @@ body {
        用户在设置中显式设定宽度时，--editor-max-width 生效，覆盖默认 */
     max-width: var(--editor-max-width, min(1400px, 92vw));
     margin: 0 auto;
-    padding: 37px 48px 80px;
+    padding: 52px 48px 80px;
     min-height: 100vh;
     outline: none;
 }
@@ -703,6 +703,7 @@ body.epytor-modifier-active .milkdown .ProseMirror a:hover {
 
 /* ─── 选中浮动工具栏：匹配顶部工具栏样式 ─── */
 .milkdown .milkdown-toolbar {
+    z-index: 103 !important;
     background: color-mix(in srgb, color-mix(in srgb, var(--vscode-editor-background) 93%, #808080) 88%, transparent) !important;
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);

@@ -33,6 +33,7 @@ import {
     getWebviewState,
     setWebviewState,
 } from "./messaging";
+import { showImagePicker } from "./components/imagePicker";
 import { setupPathLink } from "./components/pathLink";
 import { initPathComplete, dispatchPathSuggestions } from "./components/pathLink/pathComplete";
 import { dispatchImgPathSuggestions, dispatchImagePathResolved } from "./components/imageView/imgPathComplete";
@@ -402,7 +403,32 @@ if (editorContainer) {
 	            });
 	        });
 	    }, true);
-	    document.addEventListener('epytor:insertImage', () => notifyGetProjectImages('toolbar'));
+	    // 工具栏图片插入 → 弹出选择器（上传 + 项目图片库 + URL）
+    document.addEventListener('epytor:insertImage', () => {
+        showImagePicker(
+            (file) => {
+                handleImageFile(file, '').then(url => insertImageNode(url, '')).catch(() => {});
+            },
+            (relPath) => {
+                insertImageNode(relPath, '');
+            },
+            (url) => {
+                insertImageNode(url, '');
+            },
+            () => {
+                const id = `gimgs_${Date.now().toString(36)}`;
+                return new Promise<any>((resolve) => {
+                    _pendingGetImages.set(id, { resolve, reject: () => {} });
+                    notifyGetProjectImages(id);
+                });
+            },
+        );
+    });
+    // 保留快速上传 file input（供拖拽和粘贴复用）
+    const imgFileInput = document.createElement('input');
+    imgFileInput.type = 'file'; imgFileInput.accept = 'image/*';
+    imgFileInput.style.display = 'none';
+    document.body.appendChild(imgFileInput);
     document.addEventListener('epytor:openSettings', () => notifyOpenSettings());
     setupPathLink(editorContainer);
     initHeadingIds(editorContainer);
@@ -619,19 +645,24 @@ function enhanceCodeBlocks(container: HTMLElement): void {
 /** 为 Crepe top-bar 按钮添加自定义 tooltip（i18n 翻译，无快捷键） */
 function setupTopBarTooltips(container: HTMLElement): void {
     const TOOLTIPS = [
-        t('Bold'),
-        t('Italic'),
-        t('Strikethrough'),
-        t('Inline Code'),
-        t('Bullet List'),
-        t('Ordered List'),
-        t('Task List'),
-        t('Insert/Edit Link'),
-        t('Insert Table'),
-        t('Code Block'),
-        t('Math Formula'),     // 见 webviewTranslations.ts
-        t('Blockquote'),
-        t('Horizontal Rule'),
+        t('Undo'),             // history: undo
+        t('Redo'),             // history: redo
+        t('Bold'),             // formatting: bold
+        t('Italic'),           // formatting: italic
+        t('Strikethrough'),    // formatting: strikethrough
+        t('Inline Code'),      // formatting: code
+        t('Clear Formatting'), // formatting: clear-format
+        t('Bullet List'),      // list: bullet
+        t('Ordered List'),     // list: ordered
+        t('Task List'),        // list: task
+        t('Insert/Edit Link'), // insert: link
+        t('Insert Image'),     // insert: image
+        t('Insert Table'),     // insert: table
+        t('Code Block'),       // block: code-block
+        t('Math Formula'),     // block: math
+        t('Blockquote'),       // more: quote
+        t('Horizontal Rule'),  // more: hr
+        t('Settings'),         // settings
     ];
 
     const applyAll = () => {
