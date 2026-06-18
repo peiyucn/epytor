@@ -414,7 +414,6 @@ export function createImageView(
         input.className = "img-rename-input";
         input.value = caption;
         input.placeholder = t("Caption");
-        input.style.width = "160px";
         isolateInput(input);
 
         const confirmBtn = createButton({ className: "img-tb-btn", tabIndex: -1, icon: IconCheck, onClick: confirm });
@@ -477,7 +476,6 @@ export function createImageView(
         // 显示相对路径（rawSrc 可能是 webviewUri，转换后更易读）
         input.value = toDisplayPath(rawSrc);
         input.placeholder = t("Image path or URL");
-        input.style.width = "240px";
         isolateInput(input);
 
         const confirmBtn = createButton({ className: "img-tb-btn", tabIndex: -1, icon: IconCheck, onClick: confirm });

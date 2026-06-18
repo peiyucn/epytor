@@ -149,7 +149,7 @@ export function initFindBar(getEditorEl: () => HTMLElement | null): FindBarContr
         const node = r.startContainer;
         const el = node instanceof Element ? node : (node as ChildNode).parentElement;
         if (el) {
-            const topbarH = document.querySelector(".editor-topbar")?.getBoundingClientRect().height ?? 40;
+            const topbarH = document.querySelector(".milkdown-top-bar")?.getBoundingClientRect().height ?? 40;
             const rect = el.getBoundingClientRect();
             if (rect.top < topbarH + 8 || rect.bottom > window.innerHeight - 8) {
                 window.scrollTo({ top: rect.top + window.scrollY - topbarH - 60 });

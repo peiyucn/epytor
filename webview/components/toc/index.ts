@@ -32,9 +32,9 @@ export function initToc(getEditorView: () => EditorView | null): {
 
     // ── 全部折叠/展开按钮 ───────────────────────────────────
     const collapseAllBtn = document.createElement("button");
-    collapseAllBtn.className = "toc-pin-btn"; // 复用 pin btn 样式
+    collapseAllBtn.className = "toc-pin-btn";
     collapseAllBtn.tabIndex = -1;
-    collapseAllBtn.title = t("Collapse all");
+    const collapseAllTip = applyTooltip(collapseAllBtn, t("Collapse all"), { placement: "below" });
 
     function updateCollapseBtn(): void {
         const headings = getHeadings();
@@ -42,7 +42,7 @@ export function initToc(getEditorView: () => EditorView | null): {
             (h, i) => hasChildren(headings, i) && !collapsedHeadings.has(h.pos),
         );
         collapseAllBtn.innerHTML = anyExpanded ? IconChevronsUp : IconChevronsDown;
-        collapseAllBtn.title = anyExpanded ? t("Collapse all") : t("Expand all");
+        collapseAllTip.setText(anyExpanded ? t("Collapse all") : t("Expand all"));
     }
 
     // ── 固定按钮 ──────────────────────────────────────────────
@@ -50,7 +50,7 @@ export function initToc(getEditorView: () => EditorView | null): {
     pinBtn.className = "toc-pin-btn";
     pinBtn.tabIndex = -1;
     pinBtn.innerHTML = IconPin;
-    pinBtn.title = t("Pin panel");
+    applyTooltip(pinBtn, t("Pin panel"), { placement: "below" });
 
     header.appendChild(headerTitle);
     header.appendChild(collapseAllBtn);
@@ -62,7 +62,7 @@ export function initToc(getEditorView: () => EditorView | null): {
     panel.appendChild(header);
     panel.appendChild(list);
 
-    // ── 右侧收起/展开 Tab（独立 fixed 元素，不受 panel overflow:hidden 影响）──
+    // ── 右侧 Tab（独立 fixed 元素，JS 同步 left 对齐 panel 右边缘）──
     const tabEl = document.createElement("button");
     tabEl.className = "toc-toggle-tab";
     tabEl.tabIndex = -1;
@@ -130,53 +130,6 @@ export function initToc(getEditorView: () => EditorView | null): {
         updateCollapseBtn();
         refresh();
     });
-
-    // ── 宽度拖拽手柄 ───────────────────────────────────────────
-    const resizeHandle = document.createElement("div");
-    resizeHandle.className = "toc-resize-handle";
-    panel.appendChild(resizeHandle);
-
-    resizeHandle.addEventListener("mousedown", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const startX = e.clientX;
-        const startWidth = panelWidth;
-        document.body.classList.add("toc-resizing");
-
-        function onMouseMove(ev: MouseEvent) {
-            const delta = ev.clientX - startX;
-            const newWidth = Math.min(
-                TOC_MAX_WIDTH,
-                Math.max(TOC_MIN_WIDTH, startWidth + delta),
-            );
-            if (newWidth !== panelWidth) {
-                panelWidth = newWidth;
-                panel.style.width = `${panelWidth}px`;
-                updateTab();
-                if (isPinned && isOpen) syncBodyPadding();
-            }
-        }
-
-        function onMouseUp() {
-            document.body.classList.remove("toc-resizing");
-            document.removeEventListener("mousemove", onMouseMove);
-            document.removeEventListener("mouseup", onMouseUp);
-            setWebviewState({
-                ...(getWebviewState() ?? {}),
-                tocPinned: isPinned,
-                tocWidth: panelWidth,
-            });
-        }
-
-        document.addEventListener("mousemove", onMouseMove);
-        document.addEventListener("mouseup", onMouseUp);
-    });
-
-    function updateTab(): void {
-        tabEl.textContent = isOpen ? "‹" : "›";
-        tabEl.style.left = isOpen ? `${panelWidth}px` : "0px";
-    }
-    updateTab();
 
     // ── 从 ProseMirror 文档中提取所有 heading 节点 ────────
     function getHeadings(): HeadingEntry[] {
@@ -298,7 +251,7 @@ export function initToc(getEditorView: () => EditorView | null): {
                     }
                     if (el) {
                         const topbar = document.querySelector(
-                            ".editor-topbar",
+                            ".milkdown-top-bar",
                         ) as HTMLElement | null;
                         const topbarH =
                             topbar?.getBoundingClientRect().height ?? 40;
@@ -330,15 +283,18 @@ export function initToc(getEditorView: () => EditorView | null): {
     function syncBodyPadding(): void {
         const active = isPinned && isOpen;
         document.body.classList.toggle("toc-pinned", active);
+        const topbar = document.querySelector<HTMLElement>(".milkdown-top-bar");
         if (active) {
             document.body.style.paddingLeft = `${panelWidth}px`;
-            const topbar = document.querySelector<HTMLElement>(".editor-topbar");
-            if (topbar) topbar.style.left = `${panelWidth}px`;
+            if (topbar) topbar.style.paddingLeft = `${panelWidth}px`;
         } else {
-            document.body.style.paddingLeft = "";
-            const topbar = document.querySelector<HTMLElement>(".editor-topbar");
-            if (topbar) topbar.style.left = "";
+            document.body.style.paddingLeft = '';
+            if (topbar) topbar.style.paddingLeft = '';
         }
+    }
+
+    function updateTabPos(): void {
+        tabEl.style.left = isOpen ? `${panelWidth}px` : '0px';
     }
 
     function close(): void {
@@ -346,7 +302,7 @@ export function initToc(getEditorView: () => EditorView | null): {
         isAutoShown = false;
         panel.classList.remove("toc-panel--open");
         document.removeEventListener("mousedown", outsideClickHandler);
-        updateTab();
+        updateTabPos();
         syncBodyPadding();
     }
 
@@ -355,7 +311,7 @@ export function initToc(getEditorView: () => EditorView | null): {
         isAutoShown = auto;
         panel.classList.add("toc-panel--open");
         refresh();
-        updateTab();
+        updateTabPos();
         syncBodyPadding();
         if (!auto && !isPinned) {
             // 手动打开才注册外部点击关闭（自动展开时或钉住时 TOC 持久显示）
@@ -373,11 +329,41 @@ export function initToc(getEditorView: () => EditorView | null): {
         }
     }
 
-    // Tab 点击：始终调用 toggle
+    // Tab：关闭时点按=toggle，展开时点按=toggle / 拖拽=调整宽度
+    let tabDragStart = 0;
+    let tabDragWidth = 0;
+    let tabDragging = false;
     tabEl.addEventListener("mousedown", (e) => {
         e.preventDefault();
         e.stopPropagation();
-        toggle();
+        // 关闭状态：不进入拖拽，直接 toggle
+        if (!isOpen) { toggle(); return; }
+        tabDragStart = e.clientX;
+        tabDragWidth = panelWidth;
+        tabDragging = false;
+        document.body.classList.add("toc-resizing");
+
+        function onMove(ev: MouseEvent) {
+            const delta = ev.clientX - tabDragStart;
+            if (!tabDragging && Math.abs(delta) < 3) return;
+            tabDragging = true;
+            const newWidth = Math.min(TOC_MAX_WIDTH, Math.max(TOC_MIN_WIDTH, tabDragWidth + delta));
+            if (newWidth !== panelWidth) {
+                panelWidth = newWidth;
+                panel.style.width = `${panelWidth}px`;
+                updateTabPos();
+                syncBodyPadding();
+            }
+        }
+        function onUp() {
+            document.body.classList.remove("toc-resizing");
+            document.removeEventListener("mousemove", onMove);
+            document.removeEventListener("mouseup", onUp);
+            if (!tabDragging) toggle();
+            setWebviewState({ ...(getWebviewState() ?? {}), tocPinned: isPinned, tocWidth: panelWidth });
+        }
+        document.addEventListener("mousemove", onMove);
+        document.addEventListener("mouseup", onUp);
     });
 
     // ── 自动展开检测 ──────────────────────────────────────
@@ -400,21 +386,15 @@ export function initToc(getEditorView: () => EditorView | null): {
 
     // ── 动态对齐到 topbar 底部，同步 tab 垂直位置 ──────────
     function updatePanelPosition(): void {
-        const topbar = document.querySelector(
-            ".editor-topbar",
-        ) as HTMLElement | null;
-        const topbarBottom = topbar?.getBoundingClientRect().bottom ?? 40;
-        panel.style.top = `${topbarBottom}px`;
-        panel.style.height = `calc(100vh - ${topbarBottom}px)`;
-        // tab 垂直居中于面板
-        const tabTop =
-            topbarBottom + (window.innerHeight - topbarBottom) / 2 - 24;
-        tabEl.style.top = `${tabTop}px`;
+        // TOC 吸顶：从视口最顶部开始，全高
+        panel.style.top = '36px';
+        panel.style.height = 'calc(100vh - 36px)';
+        // tab 全高细竖条，CSS 已处理
     }
 
+    updateTabPos();
     requestAnimationFrame(() => {
         updatePanelPosition();
-        // 钉住状态下遮罩初始展开（不受窗口宽度限制）
         if (isPinned && !isOpen) {
             openPanel(true);
         }
@@ -426,5 +406,5 @@ export function initToc(getEditorView: () => EditorView | null): {
         checkAutoShow();
     });
 
-    return { panel, toggle, refresh };
+    return { panel, toggle, refresh, updatePosition: updatePanelPosition };
 }

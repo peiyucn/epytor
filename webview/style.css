@@ -12,13 +12,13 @@ body {
     color: var(--vscode-editor-foreground);
     font-family: var(
         --custom-font-family,
-        var(
-            --vscode-editor-font-family,
-            -apple-system,
-            BlinkMacSystemFont,
-            "Segoe UI",
-            sans-serif
-        )
+        "PingFang SC",
+        "Microsoft YaHei",
+        "Noto Sans SC",
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif
     );
     font-size: var(--vscode-editor-font-size, 14px);
     line-height: 1.6;
@@ -29,7 +29,7 @@ body {
 .frontmatter-panel {
     max-width: var(--editor-max-width, min(1400px, 92vw));
     margin: 0 auto;
-    padding: 56px 48px 0;
+    padding: 8px 48px 0;
 }
 
 .frontmatter-table {
@@ -73,7 +73,7 @@ body {
        用户在设置中显式设定宽度时，--editor-max-width 生效，覆盖默认 */
     max-width: var(--editor-max-width, min(1400px, 92vw));
     margin: 0 auto;
-    padding: 56px 48px 80px;
+    padding: 37px 48px 80px;
     min-height: 100vh;
     outline: none;
 }
@@ -107,11 +107,11 @@ body {
     /* 字体：覆盖 Crepe 的 serif/sans，统一用 VSCode 编辑器字体 */
     --crepe-font-default: var(
         --custom-font-family,
-        var(--vscode-editor-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif)
+        "PingFang SC", "Microsoft YaHei", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif
     );
     --crepe-font-title: var(
         --custom-font-family,
-        var(--vscode-editor-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif)
+        "PingFang SC", "Microsoft YaHei", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif
     );
     --crepe-font-code: var(--vscode-editor-font-family, monospace);
 }
@@ -121,7 +121,7 @@ body {
 .milkdown .ProseMirror {
     font-family: var(
         --custom-font-family,
-        var(--vscode-editor-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif)
+        "PingFang SC", "Microsoft YaHei", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif
     ) !important;
     caret-color: var(--vscode-editorCursor-foreground, auto);
     font-size: var(--vscode-editor-font-size, 14px) !important;
@@ -232,6 +232,11 @@ body {
 /* 代码块 */
 /* ─── 代码块（基于 Crepe CodeMirror）─── */
 
+/* 字体与 VSCode 编辑器一致 */
+.milkdown .milkdown-code-block .cm-editor .cm-content {
+    font-family: var(--vscode-editor-font-family, monospace) !important;
+}
+
 /* active line / selection 用 VSCode 变量 */
 .milkdown .milkdown-code-block .cm-editor .cm-activeLine {
     background: var(--vscode-editor-lineHighlightBackground, rgba(128,128,128,0.08)) !important;
@@ -297,7 +302,7 @@ body {
     text-transform: capitalize;
 }
 .milkdown .milkdown-code-block .tools .language-button:hover {
-    border-color: var(--vscode-focusBorder, #007acc);
+    border-color: transparent;
 }
 /* 下拉箭头可见 */
 .milkdown .milkdown-code-block .expand-icon svg {
@@ -308,14 +313,15 @@ body {
 /* 语言下拉 — 极简紧凑 */
 .milkdown .milkdown-code-block .language-picker {
     z-index: 1000;
-    padding-top: 4px; /* 缩小与按钮的间距 */
+    padding-top: 4px;
 }
 .milkdown .milkdown-code-block .list-wrapper {
-    width: 160px;
+    width: auto;
     padding: 0 !important;
-    border: 1px solid var(--vscode-focusBorder, #007acc);
-    border-radius: 4px;
+    border: none;
+    border-radius: 6px;
     background: var(--vscode-dropdown-background, var(--vscode-editorWidget-background));
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
     overflow: hidden;
 }
 /* 搜索区 — 满宽底色分隔 */
@@ -329,7 +335,7 @@ body {
 }
 /* 打开下拉时语言按钮保持蓝边框 */
 .milkdown .milkdown-code-block .language-button[data-expanded="true"] {
-    border-color: var(--vscode-focusBorder, #007acc) !important;
+    border-color: var(--vscode-toolbar-hoverOutline, transparent) !important;
 }
 .milkdown .milkdown-code-block .search-box input {
     font-size: 12px;
@@ -370,6 +376,10 @@ body {
 .milkdown .milkdown-code-block .tools .tools-button-group {
     gap: 4px;
 }
+/* 按钮固定顺序：预览 → 复制 → 全屏（用 order 声明式控制，不依赖 DOM 顺序） */
+.milkdown .milkdown-code-block .tools .preview-toggle-button { order: 0; }
+.milkdown .milkdown-code-block .tools .copy-button { order: 1; }
+.milkdown .milkdown-code-block .tools .epytor-fullscreen-btn { order: 2; }
 .milkdown .milkdown-code-block .tools .tools-button-group > button:first-child,
 .milkdown .milkdown-code-block .tools .tools-button-group > button:last-child {
     border-radius: 3px !important;
@@ -473,47 +483,36 @@ body {
 
 /* ─── 引用块 ──────────────────────────────────────────── */
 .milkdown .ProseMirror blockquote {
-    background: var(--vscode-textBlockQuote-background, rgba(128,128,128,0.04));
+    background: var(--vscode-editorWidget-background, var(--vscode-editor-background));
     border-radius: 6px;
-    padding: 6px 10px 6px 20px !important;
+    padding: 8px 12px 8px 36px !important;
     color: var(--vscode-editor-foreground);
     border: none !important;
 }
 .milkdown .ProseMirror blockquote::before {
     background: var(--vscode-editor-foreground) !important;
-    opacity: 0.25;
+    opacity: 0.15;
     left: 8px !important;
 }
 
-/* 列表 */
-.milkdown .ProseMirror ul,
-.milkdown .ProseMirror ol {
-    padding-left: 1.8em !important;
-    margin: 0 0 0.75em !important;
-}
-
-.milkdown .ProseMirror li {
+/* ── 列表（Crepe list-item NodeView，div 结构非原生 ul/ol）── */
+.milkdown .milkdown-list-item-block {
+    padding-left: 0 !important;
     margin: 0.2em 0 !important;
 }
 
-/* 有序列表多层级数字样式 */
-.milkdown .ProseMirror ol {
-    list-style-type: decimal;
+/* 嵌套缩进 */
+.milkdown .milkdown-list-item-block .milkdown-list-item-block {
+    padding-left: 1.5em !important;
 }
 
-.milkdown .ProseMirror ol ol {
-    list-style-type: lower-alpha;
+/* 复选框颜色 */
+.milkdown .milkdown-list-item-block .label-wrapper {
+    color: var(--vscode-editor-foreground) !important;
 }
-
-.milkdown .ProseMirror ol ol ol {
-    list-style-type: lower-roman;
+.milkdown .milkdown-list-item-block .label-wrapper svg {
+    fill: var(--vscode-editor-foreground) !important;
 }
-
-.milkdown .ProseMirror ol ol ol ol {
-    list-style-type: decimal;
-}
-
-/* ── 任务列表（Milkdown v7 实际 DOM）───────────────────── */
 
 /* 链接 */
 .milkdown .ProseMirror a {
@@ -550,6 +549,272 @@ body.epytor-modifier-active .milkdown .ProseMirror a:hover {
 }
 
 
+/* 旧顶栏容器不再使用（Crepe top-bar 在 .milkdown 内） */
+.editor-topbar { display: none; }
+
+/* ─── 工具栏左侧品牌标识（纯 CSS） ─── */
+/* ─── 品牌标识：左上角固定 ─── */
+.milkdown .milkdown-top-bar::after {
+    content: 'EPYTOR🦖';
+    position: fixed;
+    top: 0;
+    line-height: 36px;
+    left: 12px;
+    font-size: 13px;
+    font-style: italic;
+    font-weight: 600;
+    color: var(--vscode-editor-foreground);
+    user-select: none;
+    pointer-events: none;
+}
+
+/* ─── Crepe top-bar：position:fixed 吸顶 ─── */
+.milkdown .milkdown-top-bar {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    padding: 0 48px;
+    background: color-mix(in srgb, color-mix(in srgb, var(--vscode-editor-background) 93%, #808080) 85%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: none !important;
+    flex-wrap: nowrap;
+}
+
+.milkdown .milkdown-top-bar .top-bar-inner {
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: nowrap;
+}
+
+.milkdown .milkdown-top-bar .top-bar-item {
+    min-width: 26px !important;
+    width: auto !important;
+    height: 24px !important;
+    margin: 0 2px !important;
+    padding: 0 4px !important;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    transition: background 0.1s, border-color 0.1s;
+}
+.milkdown .milkdown-top-bar .top-bar-item:hover {
+    background: var(--vscode-toolbar-hoverBackground, rgba(128,128,128,0.2));
+    border-color: var(--vscode-toolbar-hoverOutline, transparent);
+}
+.milkdown .milkdown-top-bar .top-bar-item.active {
+    background: var(--vscode-toolbar-activeBackground, rgba(128,128,128,0.3));
+}
+
+.milkdown .milkdown-top-bar .top-bar-item svg {
+    color: var(--vscode-editor-foreground) !important;
+    fill: var(--vscode-editor-foreground) !important;
+    width: 18px !important;
+    height: 18px !important;
+}
+.milkdown .milkdown-top-bar .top-bar-item.active svg {
+    color: var(--vscode-focusBorder, #007acc) !important;
+    fill: var(--vscode-focusBorder, #007acc) !important;
+}
+
+.milkdown .milkdown-top-bar .top-bar-divider {
+    width: 1px;
+    height: 18px;
+    margin: 0 4px;
+    background: var(--vscode-panel-border, rgba(128,128,128,0.3));
+    flex-shrink: 0;
+}
+
+.milkdown .milkdown-top-bar .top-bar-heading-selector {
+    position: relative;
+    flex-shrink: 0;
+    padding: 0;
+}
+.milkdown .milkdown-top-bar .top-bar-heading-button {
+    display: flex !important;
+    align-items: center;
+    gap: 2px;
+    height: 24px !important;
+    padding: 0 4px 0 8px !important;
+    background: transparent;
+    color: var(--vscode-editor-foreground) !important;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    font-size: 12px !important;
+    box-sizing: border-box !important;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.1s;
+}
+.milkdown .milkdown-top-bar .top-bar-heading-button:hover {
+    background: var(--vscode-toolbar-hoverBackground, rgba(128,128,128,0.2));
+}
+.milkdown .milkdown-top-bar .top-bar-heading-label {
+    display: inline-block !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    width: 22px !important;
+    min-width: 22px !important;
+    text-align: center;
+    line-height: 20px !important;
+    color: var(--vscode-editor-foreground) !important;
+}
+.milkdown .milkdown-top-bar .top-bar-heading-button .top-bar-chevron {
+    width: 14px;
+    height: 14px;
+}
+.milkdown .milkdown-top-bar .top-bar-heading-button .top-bar-chevron svg {
+    width: 12px !important;
+    height: 12px !important;
+    color: var(--vscode-editor-foreground) !important;
+    fill: var(--vscode-editor-foreground) !important;
+}
+.milkdown .milkdown-top-bar .top-bar-heading-dropdown {
+    margin-top: 4px;
+    min-width: 100% !important;
+    width: auto !important;
+    background: var(--vscode-dropdown-background, var(--vscode-editorWidget-background));
+    border: none;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    border-radius: 6px;
+    padding: 4px;
+}
+.milkdown .milkdown-top-bar .top-bar-heading-option {
+    font-size: 12px;
+    padding: 4px 10px;
+    color: var(--vscode-editor-foreground);
+    line-height: 18px;
+    border-radius: 4px;
+}
+.milkdown .milkdown-top-bar .top-bar-heading-option:hover {
+    background: var(--vscode-list-hoverBackground);
+}
+.milkdown .milkdown-top-bar .top-bar-heading-option.active {
+    color: var(--vscode-focusBorder, #007acc);
+}
+
+/* ─── 选中浮动工具栏：匹配顶部工具栏样式 ─── */
+.milkdown .milkdown-toolbar {
+    background: color-mix(in srgb, color-mix(in srgb, var(--vscode-editor-background) 93%, #808080) 88%, transparent) !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--vscode-panel-border, rgba(128,128,128,0.2)) !important;
+    border-radius: 6px !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25) !important;
+    overflow: visible !important;
+    padding: 4px 6px !important;
+    gap: 2px;
+}
+.milkdown .milkdown-toolbar .toolbar-item {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 26px !important;
+    height: 24px !important;
+    margin: 0 !important;
+    padding: 0 4px !important;
+    border-radius: 3px !important;
+    border: 1px solid transparent;
+}
+.milkdown .milkdown-toolbar .toolbar-item:hover {
+    background: var(--vscode-toolbar-hoverBackground, rgba(128,128,128,0.2)) !important;
+}
+.milkdown .milkdown-toolbar .toolbar-item:active {
+    background: var(--vscode-toolbar-activeBackground, rgba(128,128,128,0.3)) !important;
+}
+.milkdown .milkdown-toolbar .toolbar-item svg {
+    width: 18px !important;
+    height: 18px !important;
+    color: var(--vscode-editor-foreground) !important;
+    fill: var(--vscode-editor-foreground) !important;
+}
+.milkdown .milkdown-toolbar .toolbar-item.active svg {
+    color: var(--vscode-focusBorder, #007acc) !important;
+    fill: var(--vscode-focusBorder, #007acc) !important;
+}
+.milkdown .milkdown-toolbar .divider {
+    width: 1px;
+    height: 18px;
+    margin: 0 4px !important;
+    background: var(--vscode-panel-border, rgba(128,128,128,0.3)) !important;
+}
+
+/* ─── Crepe link-tooltip：对齐工具栏风格 ──────────────── */
+.milkdown .milkdown-link-preview > .link-preview,
+.milkdown .milkdown-link-edit > .link-edit {
+    height: auto !important;
+    min-height: 32px;
+    padding: 3px 6px !important;
+    justify-content: flex-start !important;
+    background: var(--vscode-editorWidget-background, var(--vscode-editor-background)) !important;
+    border: 1px solid var(--vscode-editorWidget-border, rgba(128,128,128,0.35)) !important;
+    border-radius: 6px !important;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.3) !important;
+    gap: 2px !important;
+}
+.milkdown .milkdown-link-preview .link-icon,
+.milkdown .milkdown-link-preview .button,
+.milkdown .milkdown-link-edit .button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px !important;
+    width: auto !important;
+    height: 24px !important;
+    padding: 0 3px !important;
+    background: transparent;
+    border: 1px solid transparent !important;
+    border-radius: 3px !important;
+    transition: background 0.1s, border-color 0.1s;
+    opacity: 1;
+}
+.milkdown .milkdown-link-preview .link-icon svg,
+.milkdown .milkdown-link-preview .button svg,
+.milkdown .milkdown-link-edit .button svg {
+    width: 16px !important;
+    height: 16px !important;
+    color: var(--vscode-editor-foreground) !important;
+    fill: var(--vscode-editor-foreground) !important;
+}
+.milkdown .milkdown-link-preview .link-icon:hover,
+.milkdown .milkdown-link-preview .button:hover,
+.milkdown .milkdown-link-edit .button:hover {
+    background: var(--vscode-toolbar-hoverBackground, rgba(128,128,128,0.2)) !important;
+    border-color: var(--vscode-toolbar-hoverOutline, transparent) !important;
+}
+.milkdown .milkdown-link-preview .link-display {
+    width: auto !important;
+    font-size: 12px !important;
+    color: var(--vscode-textLink-foreground, #4ea6ea) !important;
+    line-height: 24px !important;
+    max-width: 280px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.milkdown .milkdown-link-edit .input-area {
+    height: 24px !important;
+    padding: 0 6px !important;
+    min-width: 160px;
+    font-size: 12px !important;
+    color: var(--vscode-input-foreground, var(--vscode-editor-foreground)) !important;
+    background: var(--vscode-input-background, rgba(128,128,128,0.1)) !important;
+    border: 1px solid var(--vscode-input-border, rgba(128,128,128,0.3)) !important;
+    border-radius: 3px !important;
+    outline: none;
+}
+.milkdown .milkdown-link-edit .input-area:focus {
+    border-color: var(--vscode-focusBorder, #007acc) !important;
+}
+
 /* ─── 表格：按钮形状 + 背景 ───────────────────────────────── */
 .milkdown .milkdown-table-block .cell-handle {
     background-color: var(--vscode-editor-background);
@@ -565,22 +830,6 @@ body.epytor-modifier-active .milkdown .ProseMirror a:hover {
 /* 光标 */
 .milkdown .ProseMirror-focused {
     outline: none;
-}
-
-/* ─── 顶部工具栏 ─── */
-.editor-topbar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 100;
-    display: flex;
-    align-items: center;
-    padding: 5px 48px;
-    background-color: var(--vscode-editor-background);
-    border-bottom: 1px solid
-        var(--vscode-panel-border, rgba(128, 128, 128, 0.2));
-    user-select: none;
 }
 
 /* ─── 自定义 Tooltip ─── */

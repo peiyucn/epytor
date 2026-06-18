@@ -3,14 +3,14 @@
 All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [1.0.1] - 2026-06-16
+## \[1.0.1] - 2026-06-16
 
 ### Changed
 
 - README: English is now the default language (Chinese → `README.zh-CN.md`)
 - CHANGELOG: switched to English
 
-## [1.0.0] - 2026-06-16
+## \[1.0.0] - 2026-06-16
 
 Initial release, forked from [git-xing/md-wysiwyg-editor](https://github.com/git-xing/md-wysiwyg-editor) v0.1.6 (MIT).
 

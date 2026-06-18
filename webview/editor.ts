@@ -22,6 +22,7 @@ import { liftListItem } from "@milkdown/kit/prose/schema-list";
 import { CellSelection, TableMap } from "@milkdown/kit/prose/tables";
 import { $prose } from "@milkdown/kit/utils";
 import { CrepeBuilder } from "@milkdown/crepe";
+import { linkTooltip } from "@milkdown/crepe/feature/link-tooltip";
 
 // 调试日志开关（由 index.ts setDebugMode 消息驱动）
 let logTableSel = false;
@@ -33,13 +34,15 @@ export function setLogTableSel(enabled: boolean): void {
 // 以下 feature 由 @milkdown/crepe 官方维护，替换我们的自定义实现：
 //   feature/table       → 替换 addButtons + handles + toolbar（1,562 行）
 //   feature/code-mirror → 替换 codeBlock NodeView + Prism（1,909 行）
-//   feature/toolbar     → 替换 selectionToolbar + 格式化按钮（~1,800 行）
+//   feature/toolbar     → 选中文字浮动工具栏（启用）
 //   feature/latex       → 全新：KaTeX 数学公式支持
 // feature/code-mirror → 换回自定义实现（复制反馈、全屏、样式更精致）
 import { codeMirror } from "@milkdown/crepe/feature/code-mirror";
 import { latex } from "@milkdown/crepe/feature/latex";
 import { listItem } from "@milkdown/crepe/feature/list-item";
 import { table } from "@milkdown/crepe/feature/table";
+import { topBar } from "@milkdown/crepe/feature/top-bar";
+import { toolbar } from "@milkdown/crepe/feature/toolbar";
 import { Compartment } from "@codemirror/state";
 import { EditorView as CMEditorView } from "@codemirror/view";
 import { oneDark } from "@codemirror/theme-one-dark";
@@ -58,12 +61,12 @@ const WANTED_LANGS = new Set([
 const codeLanguages = allCodeLanguages.filter(
     (l: { alias: string[] }) => l.alias.some((a) => WANTED_LANGS.has(a))
 );
-// Mermaid 不在 @codemirror/language-data 中，手动添加
+// Mermaid 不在 @codemirror/language-data 中，手动添加（仅标签，无语法高亮）
 codeLanguages.push({
     name: "Mermaid",
     alias: ["mermaid"],
     extensions: ["mmd"],
-    load: async () => undefined, // 无语法高亮，仅语言标签
+    load: async () => undefined,
 });
 // feature/toolbar 暂不启用（与自定义工具栏冲突）
 
@@ -480,6 +483,7 @@ export async function createEditor(
     initialMarkdown: string,
     onUpdate: (markdown: string) => void,
     onRenameImage?: (webviewUri: string, newBasename: string) => Promise<void>,
+    onTocToggle?: () => void,
 ): Promise<Editor> {
     _hasUserInteracted = false;
     setupInteractionTracking();
@@ -557,12 +561,19 @@ export async function createEditor(
 
     // Mermaid 预览渲染
     const renderPreview = (lang: string, code: string, apply: (v: string | null) => void) => {
-        if (lang !== "mermaid") { apply(null); return; }
+        if (lang.toLowerCase() !== "mermaid") return null;
         const key = `m-${++mermaidSeq}`;
         mermaidCodeMap.set(key, code);
         apply(`<div data-mermaid-key="${key}"></div>`);
         const el = () => document.querySelector(`[data-mermaid-key="${key}"]`);
-        renderMermaid(code).then((svg) => { const e = el(); if (e) e.innerHTML = svg; }).catch(() => {});
+        renderMermaid(code).then((svg) => {
+            const e = el();
+            if (e) e.innerHTML = svg;
+        }).catch((err) => {
+            console.warn('[mermaid] render failed:', err);
+            const e = el();
+            if (e) e.innerHTML = `<span style="color:var(--vscode-errorForeground)">Mermaid: ${err}</span>`;
+        });
     };
 
     crepe
@@ -572,9 +583,22 @@ export async function createEditor(
             renderPreview,
         })
         .addFeature(listItem)
+        .addFeature(topBar, {
+            headingOptions: [
+                { label: 'P', level: null },
+                { label: 'H1', level: 1 },
+                { label: 'H2', level: 2 },
+                { label: 'H3', level: 3 },
+                { label: 'H4', level: 4 },
+                { label: 'H5', level: 5 },
+                { label: 'H6', level: 6 },
+            ],
+        })
+        .addFeature(toolbar)
         .addFeature(table)
-        .addFeature(latex);       // 全新：KaTeX 数学公式
-    // feature/toolbar 暂时禁用（与自定义工具栏冲突，后续整合）
+        .addFeature(latex)       // 全新：KaTeX 数学公式
+        .addFeature(linkTooltip)
+    // 已启用：feature/toolbar → 选中文字浮动工具栏
 
     // 注入保留的自定义配置
     crepe.editor
@@ -589,6 +613,7 @@ export async function createEditor(
                         createImageView(node, view, getPos, undefined, undefined, onRenameImage),
                 ],
             ]);
+
         })
         .use(listener)              // 追加 listener 用于 markdownUpdated
         .use(listLiftPlugin)        // 保留：列表 backspace

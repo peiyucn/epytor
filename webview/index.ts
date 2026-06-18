@@ -5,6 +5,9 @@ import "@milkdown/crepe/theme/common/code-mirror.css";
 import "@milkdown/crepe/theme/common/latex.css";
 import "@milkdown/crepe/theme/common/list-item.css";
 import "@milkdown/crepe/theme/common/table.css";
+import "@milkdown/crepe/theme/common/top-bar.css";
+import "@milkdown/crepe/theme/common/toolbar.css";
+import "@milkdown/crepe/theme/common/link-tooltip.css";
 import "./style.css"; // 必须在 Crepe CSS 之后加载，用 VSCode 变量覆盖 Crepe 主题
 import {
     createEditor,
@@ -24,21 +27,19 @@ import {
     notifyGetProjectImages,
     notifyRenameImage,
     notifyWordCount,
+    notifyOpenUrl,
+    notifyOpenFile,
     getWebviewState,
     setWebviewState,
 } from "./messaging";
-
-import { setupLinkPopup } from "./components/linkPopup";
 import { setupPathLink } from "./components/pathLink";
 import { initPathComplete, dispatchPathSuggestions } from "./components/pathLink/pathComplete";
 import { dispatchImgPathSuggestions, dispatchImagePathResolved } from "./components/imageView/imgPathComplete";
 import { setImageUriMap, showGlobalLightbox } from "./components/imageView";
 import { initFindBar } from "./components/findBar";
 import { initHeadingIds } from "./headingIds";
-import { initToolbar } from "./components/toolbar";
 import { initToc } from "./components/toc";
 import {
-    setupSelectionToolbar,
     getBlockContainerText,
     findLineInOriginalSource,
     getCellRowSourceLine,
@@ -47,6 +48,7 @@ import { CellSelection } from "@milkdown/kit/prose/tables";
 import type { Editor } from "@milkdown/kit/core";
 import { editorViewCtx } from "@milkdown/kit/core";
 import { applyTooltip } from "./ui/tooltip";
+import { t } from "./i18n";
 
 let currentEditor: Editor | null = null;
 let currentLineMap: number[] = [];
@@ -81,7 +83,7 @@ function scrollToSourceLine(view: EditorView, lineMap: number[], targetLine: num
     if (blockIdx >= children.length) { return; }
     const el = children[blockIdx] as HTMLElement;
     if (!el) { return; }
-    const topbarH = document.querySelector(".editor-topbar")?.getBoundingClientRect().height ?? 40;
+    const topbarH = document.querySelector(".milkdown-top-bar")?.getBoundingClientRect().height ?? 40;
     console.log('[scrollToLine] targetLine:', targetLine, 'blockIdx:', blockIdx, 'lineMap[blockIdx]:', lineMap[blockIdx]);
     window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - topbarH - 16 });
 }
@@ -89,7 +91,7 @@ function scrollToSourceLine(view: EditorView, lineMap: number[], targetLine: num
 /** 检测视口顶部对应的源码行号（1-indexed），供切换到文本编辑器时定位用 */
 function getFirstVisibleSourceLine(view: EditorView, lineMap: number[]): number {
     if (!lineMap.length) { return 1; }
-    const topbarH = document.querySelector(".editor-topbar")?.getBoundingClientRect().height ?? 40;
+    const topbarH = document.querySelector(".milkdown-top-bar")?.getBoundingClientRect().height ?? 40;
     const children = view.dom.children;
     for (let i = 0; i < children.length && i < lineMap.length; i++) {
         const rect = (children[i] as HTMLElement).getBoundingClientRect();
@@ -354,32 +356,56 @@ async function initEditor(
             updateWordCount(); // 更新字数统计
         },
         handleRenameImage,
+        () => toc.toggle(),
     );
+    toc.updatePosition(); // 工具栏已就绪，更新 TOC 吸顶位置
     toc.refresh(); // 编辑器初始化完成后刷新一次
     updateWordCount(); // 编辑器初始化完成后统计一次
 }
 
-// 工具栏（传入 TOC 切换回调 + 图片上传回调）
-const topbar = document.querySelector<HTMLElement>(".editor-topbar");
-const topbarTb = topbar
-    ? initToolbar(
-          topbar,
-          () => currentEditor,
-          () => toc.toggle(),
-          { getLineMap, getMarkdownSource },
-          async (file: File, altText: string) => handleImageFile(file, altText),
-          async (id: string) => handleGetProjectImages(id),
-      )
-    : null;
-
-// 链接 Hover 弹框 + 表格行列添加按钮（在 #editor 容器上监听）
+// 链接 Hover 弹框（在 #editor 容器上监听）
 const editorContainer = document.getElementById("editor");
 if (editorContainer) {
-    setupLinkPopup(editorContainer, () => getEditorView());
-    setupPathLink(editorContainer);
+	    // 阻止链接默认跳转 + Cmd/Ctrl+Click 打开 + 锚点跳转
+	    // 阻止链接默认跳转 + Ctrl/Cmd+Click 打开 + 锚点跳转
+	    editorContainer.addEventListener("click", (e) => {
+	        const anchor = (e.target as Element).closest("a");
+	        if (!anchor) return;
+	        const href = anchor.getAttribute("href") ?? "";
+	        e.preventDefault();
+	        e.stopImmediatePropagation();
+	        if (href.startsWith("#")) {
+	            const el = document.getElementById(href.slice(1));
+	            if (el) {
+	                const tb = document.querySelector(".milkdown-top-bar") as HTMLElement | null;
+	                const th = tb?.getBoundingClientRect().height ?? 40;
+	                window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - th - 8, behavior: "smooth" });
+	            }
+	            return;
+	        }
+	        if (e.ctrlKey || e.metaKey) {
+	            const clean = href.split("#")[0];
+	            if (/^[a-zA-Z][a-zA-Z0-9+\-.]*:\/\//.test(clean)) notifyOpenUrl(clean);
+	            else notifyOpenFile(clean);
+	        }
+	    }, true);
+		    // 滚动时关闭 link tooltip：先解除 hover 锁定，再隐藏
+	    window.addEventListener("scroll", () => {
+	        document.querySelectorAll(
+	            ".milkdown-link-preview, .milkdown-link-edit"
+	        ).forEach(el => {
+	            el.dispatchEvent(new PointerEvent("pointerleave", { bubbles: true }));
+	            requestAnimationFrame(() => {
+	                const htmlEl = el as HTMLElement;
+	                htmlEl.dataset.show = "false";
+	            });
+	        });
+	    }, true);
+	    setupPathLink(editorContainer);
     initHeadingIds(editorContainer);
     initPathComplete(() => getEditorView());
     enhanceCodeBlocks(editorContainer);
+    setupTopBarTooltips(editorContainer);
 
     // 图片 lightbox：双击/Ctrl+Click 图片放大查看
     editorContainer.addEventListener("mousedown", (e) => {
@@ -485,33 +511,27 @@ function enhanceCodeBlocks(container: HTMLElement): void {
         const btn = (e.target as Element).closest('.copy-button') as HTMLElement | null;
         if (!btn) return;
         setTimeout(() => {
-            const tip = applyTooltip(btn, '✔ Copied!');
+            const tip = applyTooltip(btn, '✔ ' + t('Copied!'));
             tip.show();
-            setTimeout(() => tip.setText('Copy'), 1500);
+            setTimeout(() => tip.setText(t('Copy Code')), 1500);
         }, 100);
     });
 
     // ── 全屏按钮（我们的自定义功能，不是 Crepe 的，直接创建）─────────────
     const addFullscreenBtn = (block: Element): void => {
-        // 原生按钮加 tooltip（只做一次）
         const copyBtn = block.querySelector('.copy-button') as HTMLElement | null;
-        if (copyBtn && !copyBtn.dataset.tip) { copyBtn.dataset.tip = '1'; applyTooltip(copyBtn, 'Copy'); }
+        if (copyBtn && !copyBtn.dataset.tip) { copyBtn.dataset.tip = '1'; applyTooltip(copyBtn, t('Copy Code')); }
         const previewBtn = block.querySelector('.preview-toggle-button') as HTMLElement | null;
-        if (previewBtn && !previewBtn.dataset.tip) { previewBtn.dataset.tip = '1'; applyTooltip(previewBtn, 'Toggle preview'); }
+        if (previewBtn && !previewBtn.dataset.tip) { previewBtn.dataset.tip = '1'; applyTooltip(previewBtn, t('Toggle preview')); }
 
         if (block.querySelector('.epytor-fullscreen-btn')) return;
         const btnGroup = block.querySelector('.tools-button-group');
         if (!btnGroup) return;
 
-        // 预览按钮放在最前面
-        if (previewBtn && btnGroup.firstChild !== previewBtn) {
-            btnGroup.insertBefore(previewBtn, btnGroup.firstChild);
-        }
-
         const fsBtn = document.createElement('button');
         fsBtn.className = 'epytor-fullscreen-btn';
         fsBtn.innerHTML = ICON_MAXIMIZE;
-        applyTooltip(fsBtn, 'Fullscreen');
+        applyTooltip(fsBtn, t('View Fullscreen'));
         fsBtn.addEventListener('mousedown', (ev) => {
             ev.preventDefault(); ev.stopPropagation();
             const cmEditor = block.querySelector('.cm-editor') as HTMLElement | null;
@@ -555,6 +575,14 @@ function enhanceCodeBlocks(container: HTMLElement): void {
     new MutationObserver(() => requestAnimationFrame(scanBlocks))
         .observe(container, { childList: true, subtree: true });
 
+    // 搜索框 placeholder 国际化（语言下拉是动态渲染的）
+    new MutationObserver(() => {
+        const input = container.querySelector<HTMLInputElement>('.search-box input');
+        if (input && input.placeholder !== t('Search...')) {
+            input.placeholder = t('Search...');
+        }
+    }).observe(container, { childList: true, subtree: true });
+
     // 语言搜索框键盘导航
     container.addEventListener('keydown', (e) => {
         const input = e.target as HTMLElement;
@@ -585,17 +613,45 @@ function enhanceCodeBlocks(container: HTMLElement): void {
     });
 }
 
+/** 为 Crepe top-bar 按钮添加自定义 tooltip（i18n 翻译，无快捷键） */
+function setupTopBarTooltips(container: HTMLElement): void {
+    const TOOLTIPS = [
+        t('Bold'),
+        t('Italic'),
+        t('Strikethrough'),
+        t('Inline Code'),
+        t('Bullet List'),
+        t('Ordered List'),
+        t('Task List'),
+        t('Insert/Edit Link'),
+        t('Insert Table'),
+        t('Code Block'),
+        t('Math Formula'),     // 见 webviewTranslations.ts
+        t('Blockquote'),
+        t('Horizontal Rule'),
+    ];
 
-// 选中文字浮动工具栏 + 表格工具栏
-const selTb = setupSelectionToolbar(
-    () => getEditorView(),
-    () => currentEditor,
-    getLineMap,
-    getMarkdownSource,
-);
-registerSelectionChangeHandler((view) => {
-    selTb.onSelectionChange(view);
-    topbarTb?.onSelectionChange(view);
+    const applyAll = () => {
+        const topBar = container.querySelector('.milkdown-top-bar');
+        if (!topBar) return;
+        const items = topBar.querySelectorAll<HTMLElement>('.top-bar-item');
+        items.forEach((item, idx) => {
+            if (item.dataset.tip) return;
+            const text = TOOLTIPS[idx];
+            if (text) {
+                item.dataset.tip = '1';
+                applyTooltip(item, text, { placement: 'below' });
+            }
+        });
+    };
+
+    requestAnimationFrame(applyAll);
+    new MutationObserver(() => requestAnimationFrame(applyAll))
+        .observe(container, { childList: true, subtree: true });
+}
+
+registerSelectionChangeHandler((_view) => {
+    // 选区变更回调保留，供后续扩展使用
 });
 
 // Cmd/Ctrl+F：打开查找栏（预填当前选区文字）
@@ -844,7 +900,6 @@ onMessage(async (msg) => {
         currentLineMap = msg.lineMap;
     } else if (msg.type === "setDebugMode") {
         setLogTableSel(msg.enabled);
-        topbarTb?.setDebugMode(msg.enabled);
     } else if (msg.type === "imageUploaded") {
         const cb = _pendingUploads.get(msg.id);
         if (cb) {

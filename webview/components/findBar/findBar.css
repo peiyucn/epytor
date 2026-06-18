@@ -3,7 +3,7 @@
 /* 容器 */
 .find-bar {
     position: fixed;
-    top: calc(var(--editor-topbar-height, 40px) + 6px);
+    top: calc(var(--milkdown-topbar-height, 40px) + 6px);
     right: 16px;
     z-index: 200;
     display: flex;

@@ -38,7 +38,7 @@
     z-index: 600;
     align-items: center;
     gap: 2px;
-    padding: 3px 5px;
+    padding: 2px 4px;
     background: var(--vscode-editorHoverWidget-background, #252526);
     border: 1px solid var(--vscode-editorHoverWidget-border, #454545);
     border-radius: 5px;
@@ -98,7 +98,7 @@
 /* 重命名 inline 输入框 */
 .img-rename-input {
     height: 20px;
-    padding: 0 5px;
+    padding: 0 4px;
     background: var(--vscode-input-background, rgba(128, 128, 128, 0.15));
     color: var(--vscode-input-foreground, var(--vscode-editor-foreground));
     border: 1px solid var(--vscode-focusBorder, #007acc);
@@ -106,7 +106,6 @@
     font-size: 11px;
     font-family: inherit;
     outline: none;
-    width: 130px;
 }
 
 /* 信息区可编辑输入框（本地图片文件名）*/
