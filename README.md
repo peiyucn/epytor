@@ -130,10 +130,10 @@ After installing the extension, open any `.md` / `.markdown` file in VS Code —
 
 ## Known Limitations
 
-- Some advanced Markdown extensions (footnotes, math formulas) are not yet supported
+- Some advanced Markdown extensions (footnotes) are not yet supported
 
-- **Undo in link popup input** (`Cmd+Z` / `Ctrl+Z`): undo is intercepted by VS Code's Electron layer and does not work inside the link URL / text input fields
+- **Ordered list multi-level numbering**: all nested levels use decimal (1. 2. 3.) — Milkdown kernel limitation
 
-- **Table cell line numbers** (Send to Claude): when a table cell is selected, the reported line range may be slightly off due to ProseMirror node index misalignment with the source line map
+- **Undo in link input** (`Cmd+Z` / `Ctrl+Z`): undo is intercepted by VS Code's Electron layer and does not work inside the link URL input field
 
 - **Global search navigation**: clicking a search result for a `.md` file may not scroll to the matched line in WYSIWYG mode when multiple `.md` files are open simultaneously
