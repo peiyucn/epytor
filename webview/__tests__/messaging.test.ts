@@ -11,7 +11,6 @@ const {
     notifyUpdate,
     notifyOpenUrl,
     notifyOpenFile,
-    notifySendToClaudeChat,
     notifySwitchToTextEditor,
     notifyUploadImage,
     notifyGetProjectImages,
@@ -52,16 +51,6 @@ describe("messaging — postMessage 格式验证", () => {
         expect(mockVscodeApi.postMessage).toHaveBeenCalledWith({
             type: "openFile",
             path: "./docs/README.md",
-        });
-    });
-
-    it("notifySendToClaudeChat 携带 text/startLine/endLine", () => {
-        notifySendToClaudeChat("selected text", 10, 20);
-        expect(mockVscodeApi.postMessage).toHaveBeenCalledWith({
-            type: "sendToClaudeChat",
-            text: "selected text",
-            startLine: 10,
-            endLine: 20,
         });
     });
 

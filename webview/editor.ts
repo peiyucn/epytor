@@ -57,6 +57,7 @@ import { defaultHighlightStyle, syntaxHighlighting } from "@codemirror/language"
 import { languages as allCodeLanguages } from "@codemirror/language-data";
 import mermaid from "mermaid";
 import { onThemeChange } from "./utils/themeBus";
+import { t } from "./i18n";
 
 // 只保留常用语言（143 → ~40）
 const WANTED_LANGS = new Set([
@@ -588,6 +589,7 @@ export async function createEditor(
             languages: codeLanguages,
             theme: cmTheme.of(getCMTheme()),
             renderPreview,
+            searchPlaceholder: t('Search language...'),
         })
         .addFeature(listItem)
         .addFeature(topBar, {

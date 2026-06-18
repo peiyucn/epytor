@@ -1,11 +1,11 @@
 {
   "name": "epytor-vscode",
-  "displayName": "epytor",
+  "displayName": "EPYTOR",
   "description": "WYSIWYG Markdown editor",
   "version": "1.1.0",
   "publisher": "peiyucn",
   "engines": {
-    "vscode": "^1.80.0"
+    "vscode": "^1.93.0"
   },
   "packageManager": "pnpm@10.6.1",
   "extensionKind": [
@@ -38,7 +38,7 @@
     "customEditors": [
       {
         "viewType": "epytor.editor",
-        "displayName": "epytor",
+        "displayName": "EPYTOR",
         "selector": [
           {
             "filenamePattern": "*.md"
@@ -132,14 +132,14 @@
         "epytor.defaultMode": {
           "type": "string",
           "enum": [
-            "preview",
-            "markdown"
+            "wysiwyg",
+            "source"
           ],
           "enumDescriptions": [
-            "%config.defaultMode.preview%",
-            "%config.defaultMode.markdown%"
+            "%config.defaultMode.wysiwyg%",
+            "%config.defaultMode.source%"
           ],
-          "default": "preview",
+          "default": "wysiwyg",
           "description": "%config.defaultMode.description%"
         },
         "epytor.editorMaxWidth": {

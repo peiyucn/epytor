@@ -24,14 +24,12 @@ import {
     IconStrikethrough,
     IconCode,
     IconChevronDown,
-    IconSendChat,
     IconAlignLeft,
     IconAlignCenter,
     IconAlignRight,
     IconTrash2,
 } from "@/ui/icons";
 import { applyTooltip } from "@/ui/tooltip";
-import { notifySendToClaudeChat } from "@/messaging";
 import { t, kbd } from "@/i18n";
 import { createButton, createSeparator } from "@/ui/dom";
 import './selectionToolbar.css';
@@ -550,120 +548,6 @@ export function setupSelectionToolbar(
 
     const textInlineSep = sSep();
     toolbar.appendChild(textInlineSep);
-
-    // ── 发送到 Claude（始终存在）────────────────────
-    const sendBtn = sBtn(IconSendChat, t("Send to Claude"), () => {
-        const view = getView();
-        if (!view) {
-            return;
-        }
-        const { selection } = view.state;
-        let text = view.state.doc.textBetween(
-            selection.from,
-            selection.to,
-            "\n",
-        );
-
-        // CellSelection 内容为空（如选中空列）→ 回退到父表格内容
-        if (!text.trim() && selection instanceof CellSelection) {
-            const $anchor = (selection as CellSelection).$anchorCell;
-            for (let d = $anchor.depth; d >= 0; d--) {
-                if ($anchor.node(d).type.name === "table") {
-                    const tableStart = $anchor.before(d);
-                    const tableEnd = tableStart + $anchor.node(d).nodeSize;
-                    text = view.state.doc.textBetween(
-                        tableStart + 1,
-                        tableEnd - 1,
-                        "\n",
-                        "\t",
-                    );
-                    break;
-                }
-            }
-        }
-
-        if (!text.trim()) {
-            hideToolbar();
-            return;
-        }
-
-        // 行号计算：CellSelection 直接从表格结构算，其余用文本搜索
-        const $from = view.state.doc.resolve(selection.from);
-        const $to = view.state.doc.resolve(selection.to);
-        let startLine: number;
-        let endLine: number;
-        if (selection instanceof CellSelection) {
-            // 用 $anchorCell.pos / $headCell.pos 保证在单元格内部
-            // （selection.to-1 可能落在行间位置而非格内，导致 getCellRowSourceLine 返回 null）
-            const anchorLine = getCellRowSourceLine(
-                view.state.doc,
-                selection.$anchorCell.pos,
-                getMarkdownSource,
-            );
-            const headLine = getCellRowSourceLine(
-                view.state.doc,
-                selection.$headCell.pos,
-                getMarkdownSource,
-            );
-            if (anchorLine !== null && headLine !== null) {
-                startLine = Math.min(anchorLine, headLine);
-                endLine = Math.max(anchorLine, headLine);
-            } else {
-                startLine =
-                    anchorLine ?? headLine ?? getLineMap()[$from.index(0)] ?? 1;
-                endLine = startLine;
-            }
-        } else {
-            const source = getMarkdownSource();
-            const startBlockText = getBlockContainerText($from);
-            const endBlockText = getBlockContainerText($to);
-            startLine = findLineInOriginalSource(source, startBlockText);
-            endLine = findLineInOriginalSource(source, endBlockText);
-            if (startLine === -1) {
-                // 逐字搜索选中文本首行（适用于代码块内容等 normalizeForSearch 会破坏的场景）
-                const firstLine = text.trim().split("\n")[0].trim();
-                if (firstLine.length >= 2) {
-                    const srcLines = source.split("\n");
-                    const idx = srcLines.findIndex((l) =>
-                        l.includes(firstLine),
-                    );
-                    if (idx >= 0) {
-                        startLine = idx + 1;
-                    }
-                }
-            }
-            if (startLine === -1) {
-                const map = getLineMap();
-                const textBefore = view.state.doc.textBetween(
-                    0,
-                    selection.from,
-                    "\n",
-                );
-                const fallbackStart =
-                    (textBefore.match(/\n/g) ?? []).length + 1;
-                startLine = map[$from.index(0)] ?? fallbackStart;
-            }
-            if (endLine === -1) {
-                // 逐字搜索最后一行
-                const lastLine = text.trim().split("\n").slice(-1)[0].trim();
-                if (lastLine.length >= 2) {
-                    const srcLines = source.split("\n");
-                    const idx = srcLines.findIndex((l) => l.includes(lastLine));
-                    if (idx >= 0) {
-                        endLine = idx + 1;
-                    }
-                }
-            }
-            if (endLine === -1) {
-                const map = getLineMap();
-                endLine = map[$to.index(0)] ?? startLine;
-            }
-        }
-
-        notifySendToClaudeChat(text, startLine, endLine);
-        hideToolbar();
-    });
-    toolbar.appendChild(sendBtn);
 
     // ── 表格模式元素（对齐 + 删除，初始全部隐藏）──
     const tableSep = sSep();

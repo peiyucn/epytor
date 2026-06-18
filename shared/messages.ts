@@ -28,7 +28,6 @@ export type ToExtensionMessage =
     | { type: "openUrl"; url: string }
     | { type: "openFile"; path: string }
     | { type: "debug"; message: string }
-    | { type: "sendToClaudeChat"; text: string; startLine: number; endLine: number }
     | { type: "switchToTextEditor"; line?: number }
     | { type: "openSettings" }
     | { type: "uploadImage"; id: string; data: Uint8Array; mimeType: string; altText: string }

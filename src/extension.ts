@@ -1,17 +1,23 @@
 import * as vscode from "vscode";
 import { MarkdownEditorProvider } from "./MarkdownEditorProvider";
 
+function debugLog(...args: unknown[]): void {
+    if (vscode.workspace.getConfiguration("epytor").get<boolean>("debugMode", false)) {
+        console.log(...args);
+    }
+}
+
 /**
  * 根据 defaultMode 同步 workbench.editorAssociations：
- * - "markdown" → 注入 "*.md"/"*.markdown": "default"，让文本编辑器直接打开，不触发自定义编辑器
- * - "preview"  → 删除上述条目，恢复 package.json 中 priority:default 生效
+ * - "source"  → 注入 "*.md"/"*.markdown": "default"，让文本编辑器直接打开，不触发自定义编辑器
+ * - "wysiwyg" → 删除上述条目，恢复 package.json 中 priority:default 生效
  */
 function syncEditorAssociation(mode: string): void {
     const wbConfig = vscode.workspace.getConfiguration("workbench");
     const current: Record<string, string> = {
         ...(wbConfig.get<Record<string, string>>("editorAssociations") ?? {}),
     };
-    if (mode === "markdown") {
+    if (mode === "source") {
         current["*.md"] = "default";
         current["*.markdown"] = "default";
     } else {
@@ -23,27 +29,14 @@ function syncEditorAssociation(mode: string): void {
 }
 
 export function activate(context: vscode.ExtensionContext) {
-    // 追踪终端中运行的 claude 进程（Shell Integration）
-    const claudeTerminals = new Set<vscode.Terminal>();
     context.subscriptions.push(
-        vscode.window.onDidStartTerminalShellExecution((e) => {
-            if (/\bclaude\b/i.test(e.execution.commandLine?.value ?? ""))
-                claudeTerminals.add(e.terminal);
-        }),
-        vscode.window.onDidEndTerminalShellExecution((e) =>
-            claudeTerminals.delete(e.terminal),
-        ),
-        vscode.window.onDidCloseTerminal((t) => claudeTerminals.delete(t)),
-    );
-
-    context.subscriptions.push(
-        MarkdownEditorProvider.register(context, claudeTerminals),
+        MarkdownEditorProvider.register(context),
     );
 
     // 激活时同步一次 editorAssociations
     const initialMode = vscode.workspace
         .getConfiguration("epytor")
-        .get<string>("defaultMode", "preview");
+        .get<string>("defaultMode", "wysiwyg");
     syncEditorAssociation(initialMode);
 
     // priority:option 下不自动接管文件打开，用 onDidChangeTabs 监听文本 tab 并切换到 WYSIWYG
@@ -52,8 +45,8 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.window.tabGroups.onDidChangeTabs(async (event) => {
             const mode = vscode.workspace
                 .getConfiguration("epytor")
-                .get<string>("defaultMode", "preview");
-            if (mode !== "preview") { return; }
+                .get<string>("defaultMode", "wysiwyg");
+            if (mode !== "wysiwyg") { return; }
 
             for (const tab of event.opened) {
                 if (!(tab.input instanceof vscode.TabInputText)) { continue; }
@@ -69,7 +62,7 @@ export function activate(context: vscode.ExtensionContext) {
                 if (fragMatch) {
                     const fragLine = parseInt(fragMatch[1], 10);
                     if (fragLine >= 1) {
-                        console.log('[onDidChangeTabs] fragment line:', fragLine, 'fsPath:', uri.fsPath);
+                        debugLog('[onDidChangeTabs] fragment line:', fragLine, 'fsPath:', uri.fsPath);
                         MarkdownEditorProvider.current?.setPendingNavigation(uri.fsPath, fragLine);
                     }
                 }
@@ -110,7 +103,7 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand(
             'revealLine',
             (args: { lineNumber: number; at?: string }) => {
-                console.log('[revealLine] 触发，lineNumber:', args.lineNumber, 'at:', args.at);
+                debugLog('[revealLine] 触发，lineNumber:', args.lineNumber, 'at:', args.at);
                 const targetLine = args.lineNumber + 1; // 转为 1-indexed
                 // 始终写入全局兜底：确保 onDidChangeViewState（含延迟检查）能消费到
                 MarkdownEditorProvider.current?.setGlobalRevealLine(targetLine);
@@ -118,7 +111,7 @@ export function activate(context: vscode.ExtensionContext) {
                 // 避免仅靠 tab.isActive 判断（tab 切换和 revealLine 触发顺序不确定）
                 const mdPaths = MarkdownEditorProvider.current?.getAllMdFsPaths() ?? [];
                 if (mdPaths.length > 0) {
-                    console.log('[revealLine] 已注册 .md 面板数:', mdPaths.length, '行号:', targetLine);
+                    debugLog('[revealLine] 已注册 .md 面板数:', mdPaths.length, '行号:', targetLine);
                     for (const fsPath of mdPaths) {
                         MarkdownEditorProvider.current?.setPendingNavigation(fsPath, targetLine);
                     }
@@ -130,14 +123,14 @@ export function activate(context: vscode.ExtensionContext) {
                         if (tab.input instanceof vscode.TabInputCustom) {
                             const uri = (tab.input as vscode.TabInputCustom).uri;
                             if (uri.fsPath.endsWith('.md') && tab.isActive) {
-                                console.log('[revealLine] 找到 active .md 自定义 tab，fsPath:', uri.fsPath);
+                                debugLog('[revealLine] 找到 active .md 自定义 tab，fsPath:', uri.fsPath);
                                 MarkdownEditorProvider.current?.setPendingNavigation(uri.fsPath, targetLine);
                                 return;
                             }
                         }
                     }
                 }
-                console.log('[revealLine] 未找到 .md 面板，等待 viewState 延迟消费');
+                debugLog('[revealLine] 未找到 .md 面板，等待 viewState 延迟消费');
                 // 回退：文本编辑器使用 revealRange
                 const editor = vscode.window.activeTextEditor;
                 if (editor) {
@@ -194,7 +187,7 @@ export function activate(context: vscode.ExtensionContext) {
             if (e.affectsConfiguration("epytor.defaultMode")) {
                 const mode = vscode.workspace
                     .getConfiguration("epytor")
-                    .get<string>("defaultMode", "preview");
+                    .get<string>("defaultMode", "wysiwyg");
                 syncEditorAssociation(mode);
             }
             if (e.affectsConfiguration("epytor.debugMode")) {

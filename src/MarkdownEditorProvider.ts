@@ -99,7 +99,7 @@ export class MarkdownEditorProvider
         // 面板已存在且已初始化 → 直接发送，无需等待 onDidChangeViewState
         const uriKey = vscode.Uri.file(fsPath).toString();
         const initialized = this._initializedPanels.has(uriKey);
-        console.log('[setPendingNav] fsPath:', fsPath, 'line:', line, '| initialized:', initialized);
+        if (vscode.workspace.getConfiguration("epytor").get<boolean>("debugMode", false)) console.log('[setPendingNav] fsPath:', fsPath, 'line:', line, '| initialized:', initialized);
         if (initialized) {
             const panel = this._webviewPanels.get(uriKey);
             // 只在面板当前可见时立即发送（面板已隐藏说明用户刚切换走，不应回传行号）
@@ -142,9 +142,8 @@ export class MarkdownEditorProvider
 
     public static register(
         context: vscode.ExtensionContext,
-        claudeTerminals: Set<vscode.Terminal>,
     ): vscode.Disposable {
-        const provider = new MarkdownEditorProvider(context, claudeTerminals);
+        const provider = new MarkdownEditorProvider(context);
         MarkdownEditorProvider.current = provider;
         return vscode.window.registerCustomEditorProvider(
             MarkdownEditorProvider.viewType,
@@ -163,7 +162,6 @@ export class MarkdownEditorProvider
 
     constructor(
         private readonly context: vscode.ExtensionContext,
-        private readonly claudeTerminals: Set<vscode.Terminal>,
     ) {
         this._statusBarItem = vscode.window.createStatusBarItem(
             vscode.StatusBarAlignment.Right,
@@ -178,7 +176,7 @@ export class MarkdownEditorProvider
         _token: vscode.CancellationToken,
     ): Promise<MarkdownDocument> {
         // 调试：记录 URI fragment/query，排查全局搜索是否传递行号
-        console.log('[openCustomDocument] uri:', uri.toString(), '| fragment:', uri.fragment, '| query:', uri.query);
+        if (vscode.workspace.getConfiguration("epytor").get<boolean>("debugMode", false)) console.log('[openCustomDocument] uri:', uri.toString(), '| fragment:', uri.fragment, '| query:', uri.query);
         return MarkdownDocument.create(uri);
     }
 
@@ -258,7 +256,7 @@ export class MarkdownEditorProvider
             const line = this._consumePendingNavigation(document.uri.fsPath)
                 ?? this._consumeGlobalRevealLine();
             if (line !== undefined) {
-                console.log('[viewState] immediate scrollToLine:', line);
+                if (vscode.workspace.getConfiguration("epytor").get<boolean>("debugMode", false)) console.log('[viewState] immediate scrollToLine:', line);
                 p.webview.postMessage({ type: "scrollToLine", line });
                 return;
             }
@@ -273,7 +271,7 @@ export class MarkdownEditorProvider
                 const delayedLine = this._consumePendingNavigation(document.uri.fsPath)
                     ?? this._consumeGlobalRevealLine();
                 if (delayedLine !== undefined) {
-                    console.log('[viewState] delayed scrollToLine:', delayedLine);
+                    if (vscode.workspace.getConfiguration("epytor").get<boolean>("debugMode", false)) console.log('[viewState] delayed scrollToLine:', delayedLine);
                     p.webview.postMessage({ type: "scrollToLine", line: delayedLine });
                 }
             }, 1000);
@@ -291,7 +289,7 @@ export class MarkdownEditorProvider
                         // 消费 pending navigation（切换预览 / 全局搜索首次打开时设置）
                         const scrollToLine = this._consumePendingNavigation(document.uri.fsPath)
                             ?? this._consumeGlobalRevealLine();
-                        console.log('[ready] scrollToLine:', scrollToLine);
+                        if (vscode.workspace.getConfiguration("epytor").get<boolean>("debugMode", false)) console.log('[ready] scrollToLine:', scrollToLine);
                         // 重置稳定化基准（新的 init 意味着内容将重新从磁盘加载）
                         webviewPanel.webview.postMessage({
                             type: "init",
@@ -414,16 +412,6 @@ export class MarkdownEditorProvider
                         await vscode.window.showTextDocument(textDoc, opts);
                         break;
                     }
-                    case "sendToClaudeChat":
-                        if (message.text) {
-                            await this._handleSendToClaudeChat(
-                                document, webviewPanel,
-                                message.text,
-                                message.startLine ?? 1,
-                                message.endLine   ?? (message.startLine ?? 1),
-                            );
-                        }
-                        break;
                     case "openSettings":
                         vscode.commands.executeCommand('workbench.action.openSettings', 'epytor');
                         break;
@@ -554,111 +542,6 @@ export class MarkdownEditorProvider
                 undo: () => { /* TODO */ },
                 redo: () => { /* TODO */ },
             });
-        }
-    }
-
-    private async _handleSendToClaudeChat(
-        document: MarkdownDocument,
-        webviewPanel: vscode.WebviewPanel,
-        text: string,
-        startLine: number,
-        endLine: number,
-    ): Promise<void> {
-        const relPath = vscode.workspace.asRelativePath(document.uri);
-        const mentionStr = startLine === endLine
-            ? `@${relPath}#${startLine}`
-            : `@${relPath}#${startLine}-${endLine}`;
-        let success = false;
-        console.log('[sendToClaudeChat] 触发，文件:', relPath, '行:', startLine, '-', endLine);
-
-        try {
-            // 路径 A：终端 Claude
-            // 判断依据：state.shell 缺失 → VSCode 无法识别为标准 shell → 可能是 claude CLI
-            const isClaudeLikeTerminal = (t: vscode.Terminal) =>
-                !(t.state as { shell?: string }).shell;
-
-            const claudeTerminal =
-                [...this.claudeTerminals].at(-1)                          // ① Shell Integration 检测
-                ?? vscode.window.terminals.find(isClaudeLikeTerminal)     // ② state.shell 缺失
-                ?? undefined;  // 不兜底到 activeTerminal，避免误发到普通 shell
-            console.log(claudeTerminal,"终端:", vscode.window.terminals);
-
-            if (claudeTerminal) {
-                claudeTerminal.sendText(mentionStr, false);
-                await vscode.commands.executeCommand('workbench.action.terminal.focus');
-                success = true;
-                console.log('[sendToClaudeChat] 发送到终端完成');
-            }
-
-            // 路径 B：VSCode Claude 扩展
-            if (!success) {
-                // Fix 3：临时文本编辑器在同列打开（避免新建列导致布局闪烁）
-                // 使用 preview: false 避免替换处于预览状态的 custom editor tab
-                const textDoc    = await vscode.workspace.openTextDocument(document.uri);
-                const textEditor = await vscode.window.showTextDocument(textDoc, {
-                    viewColumn:    webviewPanel.viewColumn,
-                    preview:       false,
-                    preserveFocus: false,
-                });
-                const setSelection = () => {
-                    textEditor.selection = new vscode.Selection(
-                        new vscode.Position(startLine - 1, 0),
-                        new vscode.Position(endLine   - 1, 9999),
-                    );
-                };
-                setSelection();
-
-                // Fix 2：检查 Claude 是否已打开，分两条路径避免 activeTextEditor 丢失
-                const claudeOpen = vscode.window.tabGroups.all.some(g =>
-                    g.tabs.some(t =>
-                        t.input instanceof vscode.TabInputWebview &&
-                        (t.input as vscode.TabInputWebview).viewType.includes('claudeVSCodePanel')
-                    )
-                );
-                console.log('[sendToClaudeChat] claudeOpen:', claudeOpen);
-
-                if (claudeOpen) {
-                    await vscode.commands.executeCommand('claude-vscode.focus');
-                } else {
-                    await vscode.commands.executeCommand('claude-vscode.editor.openLast');
-                    await new Promise(r => setTimeout(r, 700));
-                    await vscode.window.showTextDocument(textDoc, {
-                        viewColumn:    textEditor.viewColumn,
-                        preview:       false,
-                        preserveFocus: false,
-                    });
-                    setSelection();
-                    await vscode.commands.executeCommand('claude-vscode.insertAtMention');
-                }
-                success = true;
-
-                // 关闭临时文本编辑器
-                for (const group of vscode.window.tabGroups.all) {
-                    for (const tab of group.tabs) {
-                        if (tab.input instanceof vscode.TabInputText &&
-                            (tab.input as vscode.TabInputText).uri.toString() === document.uri.toString()) {
-                            await vscode.window.tabGroups.close(tab);
-                            break;
-                        }
-                    }
-                }
-                // 将 custom editor 带回前台（避免临时文本编辑器关闭后 custom editor 不可见）
-                webviewPanel.reveal(webviewPanel.viewColumn, false);
-                console.log('[sendToClaudeChat] 完成');
-            }
-        } catch (_e) {
-            console.log('[sendToClaudeChat] 失败:', _e);
-        }
-
-        if (!success) {
-            // 路径 C：兜底 VSCode 内置 chat
-            const query = `@${relPath}\n\n${text}`;
-            console.log('[sendToClaudeChat] 兜底 chat.open');
-            try {
-                await vscode.commands.executeCommand('workbench.action.chat.open', { query });
-            } catch (_e) {
-                vscode.window.showErrorMessage(vscode.l10n.t('Cannot open chat: please install Claude extension or GitHub Copilot'));
-            }
         }
     }
 

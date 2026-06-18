@@ -29,7 +29,6 @@ export const ZH_CN_WEBVIEW: Record<string, string> = {
     'Heading 4': '标题 4',
     'Heading 5': '标题 5',
     'Heading 6': '标题 6',
-    'Send to Claude': '发送到 Claude',
     'Align Left': '左对齐',
     'Align Center': '居中对齐',
     'Align Right': '右对齐',

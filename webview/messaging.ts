@@ -30,14 +30,6 @@ export function notifyOpenFile(relativePath: string): void {
     vscode.postMessage({ type: "openFile", path: relativePath });
 }
 
-export function notifySendToClaudeChat(
-    text: string,
-    startLine: number,
-    endLine: number,
-): void {
-    vscode.postMessage({ type: "sendToClaudeChat", text, startLine, endLine });
-}
-
 export function notifySwitchToTextEditor(line?: number): void {
     vscode.postMessage({ type: "switchToTextEditor", ...(line !== undefined ? { line } : {}) });
 }

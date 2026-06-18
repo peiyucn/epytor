@@ -227,6 +227,8 @@ body {
     padding: 0.15em 0.4em;
     font-family: var(--vscode-editor-font-family, monospace);
     font-size: 0.9em;
+    word-break: break-word;
+    overflow-wrap: break-word;
 }
 
 /* 代码块 */

@@ -1,139 +1,57 @@
-# epytor🦖
+# EPYTOR🦖
 
 [![Version](https://img.shields.io/github/package-json/v/peiyucn/epytor?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=peiyucn.epytor-vscode)
 [![VS Marketplace](https://img.shields.io/badge/VS%20Marketplace-epytor-blue?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=peiyucn.epytor-vscode)
 [![License](https://img.shields.io/github/license/peiyucn/epytor?style=for-the-badge)](https://github.com/peiyucn/epytor/blob/main/LICENSE)
 
-> Forked from [git-xing/md-wysiwyg-editor](https://github.com/git-xing/md-wysiwyg-editor) (MIT)
->
-> Thanks to the original author 😀
->
-> This fork focuses on bug fixes and feature additions, with no current plans to submit PRs upstream.
-
 [简体中文](README.zh-CN.md) | English | [GitHub](https://github.com/peiyucn/epytor)
 
-A VSCode WYSIWYG Markdown editor extension powered by [Milkdown](https://milkdown.dev/) (ProseMirror). Edit `.md` / `.markdown` files as rich text and save as standard Markdown — fully compatible with any text editor.
+A WYSIWYG Markdown editor for VS Code, powered by [Milkdown](https://milkdown.dev/). Edit `.md` / `.markdown` as rich text, saved as standard Markdown.
 
-## Project Origin
-
-The initial release is **1.0.0**, built on upstream [v0.1.6](https://github.com/git-xing/md-wysiwyg-editor/releases/tag/v0.1.6). Key additions include word count in the status bar, enhanced TOC panel, and a fix for blank-line drift during editing. All identifiers (viewType, commands, config keys) use `epytor.*`.
-
----
+> **Project starts at v1.1.0**, forked from [git-xing/md-wysiwyg-editor](https://github.com/git-xing/md-wysiwyg-editor) (MIT) v0.1.6.
+>
+> v0.1.6 → v1.1.0: rebuilt foundations (Milkdown 7.21.2 + Crepe / CodeMirror 6), new features (LaTeX math / image resize & caption / image picker), streamlined bloat, fixed bugs (incl. blank-line accumulation). See [CHANGELOG](CHANGELOG.md).
 
 ## Features
 
-### Rich Text Editing
-
-- **Headings** (H1–H6), **bold**, *italic*, ~~strikethrough~~, `inline code`, blockquote, horizontal rule
-- **Ordered / Unordered / Task lists** (click checkbox to toggle completion)
-- **Links**: hover to show a popup for editing link text and URL inline; supports `@/` workspace paths, `#anchor` in-page jumps, and `file.md#27` line-number links
-- **Path autocomplete**: type `@/`, `./`, or `../` inside inline code to get smart path suggestions — browse directories level by level with color-coded file-type icons
-
-### Tables
-
-- Full GFM table support
-- Hover row/column borders to show **+ insert lines** — click to insert a row or column anywhere
-- **Drag handles** on rows/columns: click to select, drag to reorder
-- Insert lines and handles update in real time as the table grows
-
-### Code Blocks
-
-- Syntax highlighting for 20+ languages: Bash, C, C++, C#, CSS, Go, HTML, Java, JavaScript, JSON, Markdown, PHP, Python, Ruby, Rust, SQL, Swift, TypeScript, YAML
-- Language picker with search filter
-- One-click copy button
-- Drag the bottom handle to resize the code block height
-- Full-screen editor with syntax highlighting; writes back to document on close
-
-### Mermaid Diagrams
-
-- Flowcharts, sequence diagrams, Gantt charts, class diagrams, and more rendered inline
-- Toggle between source code and rendered preview
-- Zoom, pan (drag / trackpad pinch), and full-screen lightbox
-
-### Images
-
-- **Paste** an image from the clipboard, **drag-and-drop** a file, or use the **file picker** to insert images
-- Local storage with MD5 deduplication, or configure a custom server upload endpoint
-- Click an image to select it; click again to open a lightbox preview
-- Toolbar for editing alt text, renaming the file, or deleting the image
-
-### Table of Contents (TOC)
-
-- Auto-generated from document headings
-- Auto-opens when the window is wide enough; toggle manually via the side tab
-- Click an entry to smooth-scroll to the heading
-
-### Toolbars
-
-- **Top toolbar**: heading level, bold, italic, strikethrough, ordered/unordered list, task list, blockquote, code block, table
-- **Floating selection toolbar**: appears on text selection; supports quick formatting and Send to Claude
-- **Table toolbar**: appears on row/column selection; supports alignment and delete operations
-
-### Claude Integration
-
-- **`Option+K`** (macOS) / **`Alt+K`** (Windows): sends the paragraph under the cursor to Claude with precise file line numbers
-- Select text and click "Send to Claude" in the toolbar — also attaches line range
-- Automatically detects Claude terminal / Claude VSCode extension / VS Code built-in Chat with three-level fallback
-
-### In-Editor Search
-
-- **`Cmd+F`** (macOS) / **`Ctrl+F`** (Windows): opens the FindBar to search within the document
-- Matches highlighted in real time using the CSS Custom Highlight API
-- Navigate matches with `Enter` / `Shift+Enter`, dismiss with `Esc`
-
-### Auto Save
-
-- Automatically writes to disk **1 second** after editing stops — no need to press `Cmd+S` / `Ctrl+S`
-- Can be disabled; manual save shows `●` in the tab title
-- External file changes (e.g. `git checkout`, other editors) sync automatically to the editor
-
----
-
-## Getting Started
-
-After installing the extension, open any `.md` / `.markdown` file in VS Code — it opens in WYSIWYG mode automatically.
-
-| Action                   | How                                                            |
-| ------------------------ | -------------------------------------------------------------- |
-| Switch to text editor    | Click the 👁 icon in the title bar, or right-click → Open With |
-| Switch back to WYSIWYG   | Click the 👁 icon in the title bar                             |
-| Insert row/column        | Hover a table row/column border, click **+**                   |
-| Reorder rows/columns     | Hover the **⠿** handle, then drag                              |
-| Select entire row/column | Click the **⠿** handle                                         |
-| Path autocomplete        | Type `@/`, `./`, or `../` inside inline code                   |
-| Send paragraph to Claude | `Option+K` (macOS) / `Alt+K` (Windows)                         |
-| Search in document       | `Cmd+F` (macOS) / `Ctrl+F` (Windows)                           |
-| Manual save              | `Cmd+S` (macOS) / `Ctrl+S` (Windows)                           |
-
----
+- **Rich text**: headings, bold, italic, strikethrough, inline code, blockquote, horizontal rule, lists
+- **LaTeX math**: inline `$...$` / block `$$...$$`, KaTeX rendering
+- **Tables**: GFM tables, insert/delete rows & columns, drag reorder, column alignment
+- **Code blocks**: CodeMirror 6 highlighting, language picker, copy, fullscreen
+- **Mermaid diagrams**: inline rendering, source/preview toggle
+- **Images**: paste/drag/picker insert, drag resize, caption, load retry
+- **TOC**: auto-generated, pinnable, click to navigate
+- **Path autocomplete**: `@/`, `./`, `../` triggers directory browsing
+- **Toolbars**: sticky top bar + floating selection toolbar
+- **Auto save**: writes to disk 1s after editing stops
 
 ## Settings
 
-| Setting                              | Type    | Default     | Description                                                                               |
-| ------------------------------------ | ------- | ----------- | ----------------------------------------------------------------------------------------- |
-| `epytor.autoSave`           | boolean | `true`      | Automatically save to disk after editing                                                  |
-| `epytor.autoSaveDelay`      | number  | `1000`      | Debounce delay in milliseconds for auto-save                                              |
-| `epytor.defaultMode`        | string  | `"preview"` | Default mode when opening `.md`: `preview` (WYSIWYG) or `markdown` (text editor)          |
-| `epytor.codeBlockMaxHeight` | number  | `600`       | Maximum code block height in pixels                                                       |
-| `epytor.editorMaxWidth`     | number  | `900`       | Maximum editor content width in pixels                                                    |
-| `epytor.fontFamily`         | string  | `""`        | Editor font family; leave empty to inherit VS Code editor font. Example: `Georgia, serif` |
-| `epytor.imageStorage`       | string  | `"local"`   | Image storage mode: `local` (save to disk) or `server` (upload to custom URL)             |
-| `epytor.imageLocalPath`     | string  | `""`        | Relative path (from workspace root) for local image storage                               |
+| Setting | Default | Description |
+|---|---|---|
+| `epytor.autoSave` | `true` | Auto save on edit |
+| `epytor.autoSaveDelay` | `1000` | Auto save delay (ms) |
+| `epytor.defaultMode` | `"wysiwyg"` | Default open mode |
+| `epytor.editorMaxWidth` | `900` | Editor max width (px) |
+| `epytor.fontFamily` | `""` | Editor font family |
+| `epytor.codeBlockMaxHeight` | `600` | Code block max height (px) |
+| `epytor.imageStorage` | `"local"` | Image storage: `local` / `server` |
+| `epytor.imageLocalPath` | `""` | Local image path |
+| `epytor.debugMode` | `false` | Debug mode |
 
----
+> See Settings UI for all options (`epytor.*`).
 
 ## Requirements
 
-- VS Code **1.80.0** or later
-
----
+- VS Code **1.93.0**+
 
 ## Known Limitations
 
-- Some advanced Markdown extensions (footnotes) are not yet supported
+- Table cell click-selection temporarily disabled (Crepe upstream instability — clicks go to edit mode instead)
+- Ordered list multi-level numbering uses decimal only (Milkdown kernel limitation)
+- Global search may not scroll precisely with multiple `.md` files open
+- Some extended Markdown syntax (footnotes, inline HTML, etc.) not yet supported
 
-- **Ordered list multi-level numbering**: all nested levels use decimal (1. 2. 3.) — Milkdown kernel limitation
+---
 
-- **Undo in link input** (`Cmd+Z` / `Ctrl+Z`): undo is intercepted by VS Code's Electron layer and does not work inside the link URL input field
-
-- **Global search navigation**: clicking a search result for a `.md` file may not scroll to the matched line in WYSIWYG mode when multiple `.md` files are open simultaneously
+![](./images/icon.png "ratio:0.09")  ***EPYTOR, Coding with DeepSeek V4 Pro powered by Claude Code.***

@@ -21,7 +21,6 @@ import {
     notifyReady,
     notifyUpdate,
     onMessage,
-    notifySendToClaudeChat,
     notifySwitchToTextEditor,
     notifyUploadImage,
     notifyGetProjectImages,
@@ -41,12 +40,6 @@ import { setImageUriMap, showGlobalLightbox } from "./components/imageView";
 import { initFindBar } from "./components/findBar";
 import { initHeadingIds } from "./headingIds";
 import { initToc } from "./components/toc";
-import {
-    getBlockContainerText,
-    findLineInOriginalSource,
-    getCellRowSourceLine,
-} from "./components/selectionToolbar";
-import { CellSelection } from "@milkdown/kit/prose/tables";
 import type { Editor } from "@milkdown/kit/core";
 import { editorViewCtx } from "@milkdown/kit/core";
 import { applyTooltip } from "./ui/tooltip";
@@ -54,6 +47,7 @@ import { t } from "./i18n";
 
 let currentEditor: Editor | null = null;
 let currentLineMap: number[] = [];
+let _debugLog = false;
 
 // 修饰键监听：按住 Ctrl/Meta 时给 body 加 class，链接 hover 显示小手
 document.addEventListener('keydown', (e) => {
@@ -86,7 +80,7 @@ function scrollToSourceLine(view: EditorView, lineMap: number[], targetLine: num
     const el = children[blockIdx] as HTMLElement;
     if (!el) { return; }
     const topbarH = document.querySelector(".milkdown-top-bar")?.getBoundingClientRect().height ?? 40;
-    console.log('[scrollToLine] targetLine:', targetLine, 'blockIdx:', blockIdx, 'lineMap[blockIdx]:', lineMap[blockIdx]);
+    if (_debugLog) console.log('[scrollToLine] targetLine:', targetLine, 'blockIdx:', blockIdx, 'lineMap[blockIdx]:', lineMap[blockIdx]);
     window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - topbarH - 16 });
 }
 
@@ -99,13 +93,13 @@ function getFirstVisibleSourceLine(view: EditorView, lineMap: number[]): number 
         const rect = (children[i] as HTMLElement).getBoundingClientRect();
         if (rect.bottom > topbarH + 8) {
             const result = lineMap[i] ?? 1;
-            console.log('[getFirstVisible] result:', result, 'blockIdx:', i, 'rect.bottom:', rect.bottom.toFixed(0));
+            if (_debugLog) console.log('[getFirstVisible] result:', result, 'blockIdx:', i, 'rect.bottom:', rect.bottom.toFixed(0));
             return result;
         }
     }
     // 全部块都在视口上方（理论上不会发生）→ 返回最后一块
     const fallback = lineMap[Math.min(lineMap.length - 1, children.length - 1)] ?? 1;
-    console.log('[getFirstVisible] fallback result:', fallback, 'lineMap.length:', lineMap.length);
+    if (_debugLog) console.log('[getFirstVisible] fallback result:', fallback, 'lineMap.length:', lineMap.length);
     return fallback;
 }
 
@@ -604,14 +598,6 @@ function enhanceCodeBlocks(container: HTMLElement): void {
     new MutationObserver(() => requestAnimationFrame(scanBlocks))
         .observe(container, { childList: true, subtree: true });
 
-    // 搜索框 placeholder 国际化（语言下拉是动态渲染的）
-    new MutationObserver(() => {
-        const input = container.querySelector<HTMLInputElement>('.search-box input');
-        if (input && input.placeholder !== t('Search...')) {
-            input.placeholder = t('Search...');
-        }
-    }).observe(container, { childList: true, subtree: true });
-
     // 语言搜索框键盘导航
     container.addEventListener('keydown', (e) => {
         const input = e.target as HTMLElement;
@@ -713,112 +699,6 @@ window.addEventListener("keydown", (e) => {
         const view = getEditorView();
         const line = view ? getFirstVisibleSourceLine(view, currentLineMap) : undefined;
         notifySwitchToTextEditor(line);
-    }
-});
-
-// Option+K 快捷键：把光标所在顶层块发送给 Claude
-// 有文字选区时发送选中文字 + 精确行号；无选区时发送整个顶层块
-window.addEventListener("keydown", (e) => {
-    if (e.altKey && e.code === "KeyK") {
-        e.preventDefault();
-        const view = getEditorView();
-        if (!view) {
-            return;
-        }
-        const { selection } = view.state;
-        const $from = view.state.doc.resolve(selection.from);
-        const topBlockIdx = $from.index(0);
-        const topBlock = view.state.doc.child(topBlockIdx);
-        const map = currentLineMap;
-        const textBefore = view.state.doc.textBetween(0, $from.before(1), "\n");
-        const fallbackStart = (textBefore.match(/\n/g) ?? []).length + 1;
-        const blockStartLine = map[topBlockIdx] ?? fallbackStart;
-
-        if (!selection.empty) {
-            // 有文字选区：发送选中文字 + 精确行号
-            const text = view.state.doc.textBetween(
-                selection.from,
-                selection.to,
-                "\n",
-            );
-            if (!text.trim()) {
-                return;
-            }
-
-            const source = markdownSource;
-            let startLine: number;
-            let endLine: number;
-
-            if (selection instanceof CellSelection) {
-                // 用 $anchorCell.pos / $headCell.pos 保证在单元格内部
-                // （selection.to-1 可能落在行间位置而非格内，导致 getCellRowSourceLine 返回 null）
-                const anchorLine = getCellRowSourceLine(
-                    view.state.doc,
-                    selection.$anchorCell.pos,
-                    () => source,
-                );
-                const headLine = getCellRowSourceLine(
-                    view.state.doc,
-                    selection.$headCell.pos,
-                    () => source,
-                );
-                if (anchorLine !== null && headLine !== null) {
-                    startLine = Math.min(anchorLine, headLine);
-                    endLine = Math.max(anchorLine, headLine);
-                } else {
-                    startLine = anchorLine ?? headLine ?? blockStartLine;
-                    endLine = startLine;
-                }
-            } else {
-                // 普通文本选区：优先用文本搜索，失败时降级 lineMap+偏移
-                const $fromPos = view.state.doc.resolve(selection.from);
-                const $toPos = view.state.doc.resolve(selection.to);
-                const startBlockText = getBlockContainerText($fromPos);
-                const endBlockText = getBlockContainerText($toPos);
-                startLine = findLineInOriginalSource(source, startBlockText);
-                endLine = findLineInOriginalSource(source, endBlockText);
-
-                if (startLine === -1) {
-                    // 逐字搜索选中文本首行（适用于代码块内容等 normalizeForSearch 会破坏的场景）
-                    const firstLine = text.trim().split("\n")[0].trim();
-                    if (firstLine.length >= 2) {
-                        const idx = source
-                            .split("\n")
-                            .findIndex((l) => l.includes(firstLine));
-                        if (idx >= 0) {
-                            startLine = idx + 1;
-                        }
-                    }
-                }
-                if (startLine === -1) {
-                    const isFenced = topBlock.type.name === "code_block";
-                    const blockContentStart = $from.before(1) + 1;
-                    const textBeforeInBlock = view.state.doc.textBetween(
-                        blockContentStart,
-                        selection.from,
-                        "\n",
-                    );
-                    const linesIntoBlock = (
-                        textBeforeInBlock.match(/\n/g) ?? []
-                    ).length;
-                    startLine =
-                        blockStartLine + (isFenced ? 1 : 0) + linesIntoBlock;
-                }
-                if (endLine === -1) {
-                    endLine = startLine + (text.match(/\n/g) ?? []).length;
-                }
-            }
-
-            notifySendToClaudeChat(text, startLine, endLine);
-        } else {
-            // 无选区：发送整个顶层块（原有行为）
-            const text = topBlock.textContent;
-            if (!text.trim()) {
-                return;
-            }
-            const endLine = blockStartLine + text.split("\n").length - 1;
-            notifySendToClaudeChat(text, blockStartLine, endLine);
-        }
     }
 });
 
@@ -933,6 +813,7 @@ onMessage(async (msg) => {
     } else if (msg.type === "lineMapUpdate") {
         currentLineMap = msg.lineMap;
     } else if (msg.type === "setDebugMode") {
+        _debugLog = msg.enabled;
         setLogTableSel(msg.enabled);
     } else if (msg.type === "imageUploaded") {
         const cb = _pendingUploads.get(msg.id);
