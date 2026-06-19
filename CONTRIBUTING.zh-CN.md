@@ -155,9 +155,11 @@ pnpm test:coverage   # 运行测试并生成覆盖率报告（coverage/）
 ## 提交变更
 
 1. Fork 本仓库
-2. 从 `main` 分支创建新分支：`git checkout -b feature/your-feature`
+2. 从 `dev` 分支创建新分支：`git checkout -b feature/your-feature`
 3. 编写代码、测试，执行 `pnpm test` + `pnpm build` 验证
-4. 向 **`main`** 分支发起 Pull Request
+4. 向 **`dev`** 分支发起 Pull Request
+
+> **说明：** `dev` 是活跃开发分支，`main` 是稳定发布分支——请勿向 `main` 发起 PR。
 
 ## 报告 Bug
 

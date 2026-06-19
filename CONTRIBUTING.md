@@ -155,9 +155,11 @@ pnpm test:coverage   # Run tests with coverage report (coverage/)
 ## Submitting Changes
 
 1. Fork the repository
-2. Create a branch from `main`: `git checkout -b feature/your-feature`
+2. Create a branch from `dev`: `git checkout -b feature/your-feature`
 3. Make changes, write tests, and run `pnpm test` + `pnpm build`
-4. Open a Pull Request against the **`main`** branch
+4. Open a Pull Request against the **`dev`** branch
+
+> **Note:** `dev` is the active development branch. `main` is the stable release branch — do not target PRs there.
 
 ## Reporting Bugs
 
