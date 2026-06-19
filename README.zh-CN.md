@@ -3,6 +3,8 @@
 [![Version](https://img.shields.io/github/package-json/v/peiyucn/epytor?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=peiyucn.epytor-vscode)
 [![VS Marketplace](https://img.shields.io/badge/VS%20Marketplace-epytor-blue?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=peiyucn.epytor-vscode)
 [![License](https://img.shields.io/github/license/peiyucn/epytor?style=for-the-badge)](https://github.com/peiyucn/epytor/blob/main/LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)]()
+[![pnpm](https://img.shields.io/badge/pnpm-F69220?style=for-the-badge&logo=pnpm&logoColor=white)]()
 
 简体中文 | [English](README.md) | [GitHub](https://github.com/peiyucn/epytor)
 
@@ -50,13 +52,7 @@
 ## 已知限制
 
 * 表格单击选中整格暂时关闭（Crepe 上游行为不稳定，改为单击直接编辑）
-
 * 有序列表多层级编号均为十进制（Milkdown 内核限制）
-
 * 全局搜索跳转：多文件同时打开时可能无法精确定位
-
 * 部分扩展语法（脚注等）尚未支持
 
-***
-
-<img src="./images/icon.png" width="48" alt="EPYTOR">  ***EPYTOR, Coding with DeepSeek V4 Pro powered by Claude Code.***

@@ -3,6 +3,8 @@
 [![Version](https://img.shields.io/github/package-json/v/peiyucn/epytor?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=peiyucn.epytor-vscode)
 [![VS Marketplace](https://img.shields.io/badge/VS%20Marketplace-epytor-blue?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=peiyucn.epytor-vscode)
 [![License](https://img.shields.io/github/license/peiyucn/epytor?style=for-the-badge)](https://github.com/peiyucn/epytor/blob/main/LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)]()
+[![pnpm](https://img.shields.io/badge/pnpm-F69220?style=for-the-badge&logo=pnpm&logoColor=white)]()
 
 [简体中文](README.zh-CN.md) | English | [GitHub](https://github.com/peiyucn/epytor)
 
@@ -16,16 +18,16 @@ A WYSIWYG Markdown editor for VS Code, powered by [Milkdown](https://milkdown.de
 
 ## Features
 
-- **Rich text**: headings, bold, italic, strikethrough, inline code, blockquote, horizontal rule, lists
-- **LaTeX math**: inline `$...$` / block `$$...$$`, KaTeX rendering
-- **Tables**: GFM tables, insert/delete rows & columns, drag reorder, column alignment
-- **Code blocks**: CodeMirror 6 highlighting, language picker, copy, fullscreen
-- **Mermaid diagrams**: inline rendering, source/preview toggle
-- **Images**: paste/drag/picker insert, drag resize, caption, load retry
-- **TOC**: auto-generated, pinnable, click to navigate
-- **Path autocomplete**: `@/`, `./`, `../` triggers directory browsing
-- **Toolbars**: sticky top bar + floating selection toolbar
-- **Auto save**: writes to disk 1s after editing stops
+* **Rich text**: headings, bold, italic, strikethrough, inline code, blockquote, horizontal rule, lists
+* **LaTeX math**: inline `$...$` / block `$$...$$`, KaTeX rendering
+* **Tables**: GFM tables, insert/delete rows & columns, drag reorder, column alignment
+* **Code blocks**: CodeMirror 6 highlighting, language picker, copy, fullscreen
+* **Mermaid diagrams**: inline rendering, source/preview toggle
+* **Images**: paste/drag/picker insert, drag resize, caption, load retry
+* **TOC**: auto-generated, pinnable, click to navigate
+* **Path autocomplete**: `@/`, `./`, `../` triggers directory browsing
+* **Toolbars**: sticky top bar + floating selection toolbar
+* **Auto save**: writes to disk 1s after editing stops
 
 ## Settings
 
@@ -45,15 +47,12 @@ A WYSIWYG Markdown editor for VS Code, powered by [Milkdown](https://milkdown.de
 
 ## Requirements
 
-- VS Code **1.93.0**+
+* VS Code **1.93.0**+
 
 ## Known Limitations
 
-- Table cell click-selection temporarily disabled (Crepe upstream instability — clicks go to edit mode instead)
-- Ordered list multi-level numbering uses decimal only (Milkdown kernel limitation)
-- Global search may not scroll precisely with multiple `.md` files open
-- Some extended Markdown syntax (footnotes, inline HTML, etc.) not yet supported
+* Table cell click-selection temporarily disabled (Crepe upstream instability — clicks go to edit mode instead)
+* Ordered list multi-level numbering uses decimal only (Milkdown kernel limitation)
+* Global search may not scroll precisely with multiple `.md` files open
+* Some extended Markdown syntax (footnotes, inline HTML, etc.) not yet supported
 
----
-
-<img src="./images/icon.png" width="48" alt="EPYTOR">  ***EPYTOR, Coding with DeepSeek V4 Pro powered by Claude Code.***
