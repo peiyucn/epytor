@@ -19,6 +19,7 @@ import { undo, redo } from "@milkdown/kit/prose/history";
 import { keymap } from "@milkdown/kit/prose/keymap";
 import { Plugin, NodeSelection, TextSelection } from "@milkdown/kit/prose/state";
 import { liftListItem } from "@milkdown/kit/prose/schema-list";
+import { lift, wrapIn } from "prosemirror-commands";
 import { CellSelection, TableMap } from "@milkdown/kit/prose/tables";
 import { $prose } from "@milkdown/kit/utils";
 import { CrepeBuilder } from "@milkdown/crepe";
@@ -619,21 +620,49 @@ export async function createEditor(
                     active: (ctx: any) => {
                         const v = ctx.get(editorViewCtx);
                         const { from, to, empty } = v.state.selection;
-                        if (empty) return false;
-                        let has = false;
-                        v.state.doc.nodesBetween(from, to, (n: any) => { if (n.marks.length) { has = true; return false; } return true; });
-                        return has;
+                        if (!empty) {
+                            let has = false;
+                            v.state.doc.nodesBetween(from, to, (n: any) => { if (n.marks.length) { has = true; return false; } return true; });
+                            return has;
+                        }
+                        // 无选区时：光标在链接内即为 active
+                        const linkType = v.state.schema.marks['link'];
+                        if (!linkType) return false;
+                        return linkType.isInSet(v.state.doc.resolve(from).marks()) !== undefined;
                     },
                     onRun: (ctx: any) => {
                         const v = ctx.get(editorViewCtx);
-                        const { from, to } = v.state.selection;
+                        let { from, to, empty } = v.state.selection;
                         const tr = v.state.tr;
+                        const linkType = v.state.schema.marks['link'];
+
+                        // 光标在链接内（无选区）→ 取消整个链接
+                        if (empty && linkType) {
+                            const $from = v.state.doc.resolve(from);
+                            if (linkType.isInSet($from.marks())) {
+                                while (from > 0 && v.state.doc.rangeHasMark(from - 1, from, linkType)) from--;
+                                const docSize = v.state.doc.content.size;
+                                while (to < docSize && v.state.doc.rangeHasMark(to, to + 1, linkType)) to++;
+                                tr.removeMark(from, to, linkType);
+                                v.dispatch(tr);
+                                return;
+                            }
+                        }
+
+                        // 有选区 → 扩展链接边界后清除所有标记
+                        if (linkType) {
+                            while (from > 0 && v.state.doc.rangeHasMark(from - 1, from, linkType)) from--;
+                            const docSize = v.state.doc.content.size;
+                            while (to < docSize && v.state.doc.rangeHasMark(to, to + 1, linkType)) to++;
+                        }
+
                         v.state.doc.nodesBetween(from, to, (n: any, pos: number) => {
                             if (n.marks.length) {
                                 const s = Math.max(pos, from), e = Math.min(pos + n.nodeSize, to);
                                 n.marks.forEach((m: any) => tr.removeMark(s, e, m.type));
                             }
                         });
+                        if (linkType) tr.removeMark(from, to, linkType);
                         v.dispatch(tr);
                     },
                 } as any);
@@ -652,6 +681,39 @@ export async function createEditor(
                         },
                     } as any);
                     if (tableItem) g.addItem('table', tableItem);
+                }
+                // 引用块一键退出：在引用内点击 → lift 解包，否则 → 包裹
+                {
+                    const isInBlockquote = (state: any) => {
+                        const bqType = state.schema.nodes['blockquote'];
+                        if (!bqType) return false;
+                        const { $from } = state.selection;
+                        for (let d = $from.depth; d >= 0; d--) {
+                            if ($from.node(d).type === bqType) return true;
+                        }
+                        return false;
+                    };
+
+                    const moreG = builder.getGroup('more');
+                    const moreItems = moreG.group.items;
+                    const quoteItem = moreItems.find((i: any) => i.key === 'quote');
+                    const hrItem = moreItems.find((i: any) => i.key === 'hr');
+                    const quoteIcon = (quoteItem as any)?.icon;
+                    moreG.clear();
+                    moreG.addItem('quote', {
+                        icon: quoteIcon,
+                        active: (ctx: any) => isInBlockquote(ctx.get(editorViewCtx).state),
+                        onRun: (ctx: any) => {
+                            const v = ctx.get(editorViewCtx);
+                            if (isInBlockquote(v.state)) {
+                                lift(v.state, v.dispatch);
+                            } else {
+                                const bq = v.state.schema.nodes['blockquote'];
+                                if (bq) wrapIn(bq)(v.state, v.dispatch);
+                            }
+                        },
+                    } as any);
+                    if (hrItem) moreG.addItem('hr', hrItem);
                 }
                 // 目录切换 — 设置前独立组
                 builder.addGroup('toc', '').addItem('toc', {

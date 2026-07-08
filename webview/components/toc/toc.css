@@ -22,6 +22,7 @@
     transform: translateX(-100%);
     transition: transform 0.2s ease;
     overflow: visible;
+    visibility: hidden; /* 等 toolbar 就绪后再显示 */
 }
 
 .toc-panel--open {
@@ -90,10 +91,18 @@
     flex: 1;
     overflow-y: auto;
     padding: 4px 0;
-    scrollbar-width: none;
+    scrollbar-width: thin;
+    scrollbar-color: var(--vscode-scrollbarSlider-background, rgba(128,128,128,0.4)) transparent;
 }
 .toc-list::-webkit-scrollbar {
-    display: none;
+    width: 6px;
+}
+.toc-list::-webkit-scrollbar-thumb {
+    background: var(--vscode-scrollbarSlider-background, rgba(128,128,128,0.4));
+    border-radius: 3px;
+}
+.toc-list::-webkit-scrollbar-track {
+    background: transparent;
 }
 
 .toc-item {
@@ -170,6 +179,7 @@
     transition: left 0.2s ease, background 0.2s ease;
     font-size: 0;
     color: transparent;
+    visibility: hidden; /* 等 toolbar 就绪后再显示 */
 }
 
 .toc-toggle-tab:hover {

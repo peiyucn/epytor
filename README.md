@@ -55,4 +55,5 @@ A WYSIWYG Markdown editor for VS Code, powered by [Milkdown](https://milkdown.de
 * Ordered list multi-level numbering uses decimal only (Milkdown kernel limitation)
 * Global search may not scroll precisely with multiple `.md` files open
 * Some extended Markdown syntax (footnotes, inline HTML, etc.) not yet supported
+* Narrow window (< 720px): toolbar auto-wraps — usable but less compact
 

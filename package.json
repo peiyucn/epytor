@@ -239,6 +239,7 @@
     "@codemirror/view": "^6.43.1",
     "@milkdown/crepe": "7.21.2",
     "@milkdown/kit": "7.21.2",
-    "mermaid": "^11.15.0"
+    "mermaid": "^11.15.0",
+    "prosemirror-commands": "^1.7.1"
   }
 }

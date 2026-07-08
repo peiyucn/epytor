@@ -1,22 +1,22 @@
-# Claude 项目指令 — epytor
+# 项目指令 — epytor
 
 ## 语言规范
 
-- **始终用简体中文回复**
+* **始终用简体中文回复**
 
 ## 项目基本规则
 
-- **包管理器**：必须用 `pnpm`，禁止 npm/yarn
-- **构建**：修改代码后执行 `pnpm build` 验证编译无误
-- **调试**：F5 启动扩展调试实例（`.vscode/launch.json`）
-- **语言**：全部 TypeScript；Extension 端用 `tsconfig.json`，WebView 端用 `tsconfig.webview.json`
-- **双目标构建**：`dist/extension.js`（Node.js）+ `dist/webview.js`（Browser），由 `esbuild.mjs` 完成
-- **打包发布**：VSIX 包必须输出到 `releases/` 文件夹，命令：`pnpm run package`
-- **Git commit 规范**：commit 描述部分必须用**中文**，类型前缀（`feat:`、`fix:`、`refactor:`、`chore:`、`docs:` 等）保留英文。例：`feat: 新增XXXX功能`、`fix: 修复XXXX问题`
-- **诚实原则**：不确定的事直接说"不确定"，禁止编造 URL、issue 编号、API 接口、文档引用或任何事实性信息。如果引用外部资源，必须先验证其存在。
-- **优雅原则**：禁止 hack 式或补丁式写法（如硬编码字符串映射表、MutationObserver 改 DOM、多层覆写对抗框架默认行为）。优先使用框架/库的官方 API、CSS 变量、配置回调等正路方案，保持代码简洁可维护。
+* **包管理器**：必须用 `pnpm`，禁止 npm/yarn
+* **构建**：修改代码后执行 `pnpm build` 验证编译无误
+* **调试**：F5 启动扩展调试实例（`.vscode/launch.json`）
+* **语言**：全部 TypeScript；Extension 端用 `tsconfig.json`，WebView 端用 `tsconfig.webview.json`
+* **双目标构建**：`dist/extension.js`（Node.js）+ `dist/webview.js`（Browser），由 `esbuild.mjs` 完成
+* **打包发布**：VSIX 包必须输出到 `releases/` 文件夹，命令：`pnpm run package`
+* **Git commit 规范**：commit 描述部分必须用**中文**，类型前缀（`feat:`、`fix:`、`refactor:`、`chore:`、`docs:` 等）保留英文。例：`feat: 新增XXXX功能`、`fix: 修复XXXX问题`
+* **诚实原则**：不确定的事直接说"不确定"，禁止编造 URL、issue 编号、API 接口、文档引用或任何事实性信息。如果引用外部资源，必须先验证其存在。
+* **优雅原则**：禁止 hack 式或补丁式写法（如硬编码字符串映射表、MutationObserver 改 DOM、多层覆写对抗框架默认行为）。优先使用框架/库的官方 API、CSS 变量、配置回调等正路方案，保持代码简洁可维护。
 
----
+***
 
 ## 关键文件速查
 
@@ -44,16 +44,16 @@ docs/specs/                              — 功能 spec 文档
 docs/roadmap.md                          — 项目路线图
 ```
 
----
+***
 
 ## 架构约束
 
-- WebView ↔ Extension 通信**只通过** `webview/messaging.ts` 中封装的函数
-- WebView 侧不直接 `import` VSCode API，通过 `acquireVsCodeApi()` 获取句柄
-- CSS 必须使用 `--vscode-*` 变量以适配亮/暗主题
-- 不在模块外部维护全局状态（单例除外，如 editor view）
+* WebView ↔ Extension 通信**只通过** `webview/messaging.ts` 中封装的函数
+* WebView 侧不直接 `import` VSCode API，通过 `acquireVsCodeApi()` 获取句柄
+* CSS 必须使用 `--vscode-*` 变量以适配亮/暗主题
+* 不在模块外部维护全局状态（单例除外，如 editor view）
 
----
+***
 
 ## 开发留痕规范
 
@@ -61,16 +61,16 @@ docs/roadmap.md                          — 项目路线图
 
 ### /devlog Skill 说明
 
-- **已知 Bug**：加 `bug` + `known-limitation` label，仅记录开发完成后仍未修复的问题
-- **功能需求**：加 `enhancement` + `roadmap` label，记录计划功能（含完善度、实现思路、涉及文件）
-- Skill 定义：`.claude/skills/devlog/SKILL.md`
-- 触发方式：用户说"记录 bug"、"记录需求"、"功能需求"，或直接输入 `/devlog`
+* **已知 Bug**：加 `bug` + `known-limitation` label，仅记录开发完成后仍未修复的问题
+* **功能需求**：加 `enhancement` + `roadmap` label，记录计划功能（含完善度、实现思路、涉及文件）
+* Skill 定义：`.claude/skills/devlog/SKILL.md`
+* 触发方式：用户说"记录 bug"、"记录需求"、"功能需求"，或直接输入 `/devlog`
 
 ### 若阶段进度有变化，同步更新 `docs/roadmap.md`
 
 ### 更新 `~/.claude/projects/-Users-liuyaoming-code-vsocde-expand-markdownView/memory/MEMORY.md` 中的"当前状态"
 
----
+***
 
 ## 测试规范
 
@@ -102,9 +102,9 @@ shared/__tests__/        — 共享类型测试
 __mocks__/vscode.ts      — vscode API 统一 mock
 ```
 
-- 测试文件命名：`<模块名>.test.ts`，与被测文件同名
-- 测试结构遵循 **AAA 原则**（Arrange / Act / Assert），`describe` → `it` 两层
-- `it` 描述格式：`输入条件 应该 期望结果`（中文）
+* 测试文件命名：`<模块名>.test.ts`，与被测文件同名
+* 测试结构遵循 **AAA 原则**（Arrange / Act / Assert），`describe` → `it` 两层
+* `it` 描述格式：`输入条件 应该 期望结果`（中文）
 
 ### 覆盖率要求
 
@@ -135,8 +135,8 @@ __mocks__/vscode.ts      — vscode API 统一 mock
 
 #### git push 前
 
-- **必须**执行 `pnpm test`，全部通过才允许推送
-- CI 的 `unit-test` job 会在每次 push/PR 时自动运行（`.github/workflows/ci.yml`），失败则阻断构建
+* **必须**执行 `pnpm test`，全部通过才允许推送
+* CI 的 `unit-test` job 会在每次 push/PR 时自动运行（`.github/workflows/ci.yml`），失败则阻断构建
 
 ### 测试失败处理流程
 
@@ -152,18 +152,18 @@ __mocks__/vscode.ts      — vscode API 统一 mock
 
 **禁止行为**：
 
-- 禁止跳过（`it.skip`）或注释失败的测试用例来让 CI 通过
-- 禁止修改测试预期值来掩盖 bug（除非实现有意变更且经过评审）
-- 禁止在未运行测试的情况下 push 到 `main` 或 `dev` 分支
+* 禁止跳过（`it.skip`）或注释失败的测试用例来让 CI 通过
+* 禁止修改测试预期值来掩盖 bug（除非实现有意变更且经过评审）
+* 禁止在未运行测试的情况下 push 到 `main` 或 `dev` 分支
 
 ### Mock 规范
 
-- 每个 `describe` 块在 `beforeEach` 中调用 `vi.clearAllMocks()` 重置 mock 状态
-- 文件系统操作统一 mock `vscode.workspace.fs`（禁止使用真实 fs 写磁盘）
-- 依赖时间的逻辑使用 `vi.useFakeTimers()` / `vi.useRealTimers()`，禁止 `setTimeout` 真实等待
-- 禁止测试 `private` 类方法，通过公共接口验证行为
+* 每个 `describe` 块在 `beforeEach` 中调用 `vi.clearAllMocks()` 重置 mock 状态
+* 文件系统操作统一 mock `vscode.workspace.fs`（禁止使用真实 fs 写磁盘）
+* 依赖时间的逻辑使用 `vi.useFakeTimers()` / `vi.useRealTimers()`，禁止 `setTimeout` 真实等待
+* 禁止测试 `private` 类方法，通过公共接口验证行为
 
----
+***
 
 ## 自动保存设置
 
@@ -171,3 +171,4 @@ __mocks__/vscode.ts      — vscode API 统一 mock
 | ------------------------------- | ------- | ------ | -------- |
 | `epytor.autoSave`      | boolean | `true` | 编辑后自动写盘  |
 | `epytor.autoSaveDelay` | number  | `1000` | 防抖延迟（ms） |
+

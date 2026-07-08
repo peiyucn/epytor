@@ -555,14 +555,12 @@ body.epytor-modifier-active .milkdown .ProseMirror a:hover {
 /* 旧顶栏容器不再使用（Crepe top-bar 在 .milkdown 内） */
 .editor-topbar { display: none; }
 
-/* ─── 工具栏左侧品牌标识（纯 CSS） ─── */
-/* ─── 品牌标识：左上角固定 ─── */
-.milkdown .milkdown-top-bar::after {
-    content: 'EPYTOR🦖';
-    position: fixed;
+/* ─── 工具栏左侧品牌标识（绝对定位，不参与 flex 流） ─── */
+.epytor-brand {
+    position: absolute;
+    left: 12px;
     top: 0;
     line-height: 36px;
-    left: 12px;
     font-size: 13px;
     font-style: italic;
     font-weight: 600;
@@ -577,17 +575,18 @@ body.epytor-modifier-active .milkdown .ProseMirror a:hover {
     top: 0;
     left: 0;
     right: 0;
-    z-index: 100;
+    z-index: 102;
     display: flex;
     align-items: center;
     justify-content: center;
     min-height: 36px;
-    padding: 0 48px;
+    padding: 0 12px 0 85px;
     background: color-mix(in srgb, color-mix(in srgb, var(--vscode-editor-background) 93%, #808080) 85%, transparent);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: none !important;
     flex-wrap: nowrap;
+    container-type: inline-size;
 }
 
 .milkdown .milkdown-top-bar .top-bar-inner {
@@ -596,6 +595,14 @@ body.epytor-modifier-active .milkdown .ProseMirror a:hover {
     align-items: center;
     justify-content: center;
     flex-wrap: nowrap;
+    overflow: hidden;
+}
+/* 宽度 < 720px 时工具栏按钮允许换行（~19 个按钮 + 分隔线的最小宽度） */
+@container (max-width: 720px) {
+    .milkdown .milkdown-top-bar .top-bar-inner {
+        flex-wrap: wrap;
+        overflow: visible;
+    }
 }
 
 .milkdown .milkdown-top-bar .top-bar-item {

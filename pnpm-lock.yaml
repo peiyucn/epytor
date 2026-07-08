@@ -32,6 +32,9 @@ importers:
       mermaid:
         specifier: ^11.15.0
         version: 11.15.0
+      prosemirror-commands:
+        specifier: ^1.7.1
+        version: 1.7.1
     devDependencies:
       '@types/jsdom':
         specifier: ^21.1.0
@@ -5574,7 +5577,7 @@ snapshots:
 
   prosemirror-commands@1.7.1:
     dependencies:
-      prosemirror-model: 1.25.4
+      prosemirror-model: 1.25.9
       prosemirror-state: 1.4.4
       prosemirror-transform: 1.11.0
 
@@ -5636,9 +5639,9 @@ snapshots:
 
   prosemirror-state@1.4.4:
     dependencies:
-      prosemirror-model: 1.25.4
+      prosemirror-model: 1.25.9
       prosemirror-transform: 1.11.0
-      prosemirror-view: 1.41.6
+      prosemirror-view: 1.41.9
 
   prosemirror-tables@1.8.5:
     dependencies:
