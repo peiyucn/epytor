@@ -68,7 +68,7 @@ export function getMarkdownSource(): string {
     return markdownSource;
 }
 
-/** 将 lineMap 中的源码行号（1-indexed）对应的块滚动到视口顶部 */
+/** 将 lineMap 中的源码行号（1-indexed）对应的块滚动到视口顶部，段内做比例插值 */
 function scrollToSourceLine(view: EditorView, lineMap: number[], targetLine: number): void {
     if (!lineMap.length) { return; }
     let blockIdx = 0;
@@ -80,9 +80,21 @@ function scrollToSourceLine(view: EditorView, lineMap: number[], targetLine: num
     if (blockIdx >= children.length) { return; }
     const el = children[blockIdx] as HTMLElement;
     if (!el) { return; }
+
+    // 段内比例插值：目标行在段落源码中的位置比例 → 对应渲染块中的滚动偏移
+    const blockStartLine = lineMap[blockIdx];
+    const totalSourceLines = getMarkdownSource().split('\n').length;
+    const nextBlockStartLine = blockIdx + 1 < lineMap.length ? lineMap[blockIdx + 1] : totalSourceLines + 1;
+    const blockLineCount = nextBlockStartLine - blockStartLine;
+    const lineOffset = targetLine - blockStartLine;
+    const proportion = blockLineCount > 1 ? Math.min(lineOffset / (blockLineCount - 1), 1) : 0;
+
     const topbarH = document.querySelector(".milkdown-top-bar")?.getBoundingClientRect().height ?? 40;
-    if (_debugLog) console.log('[scrollToLine] targetLine:', targetLine, 'blockIdx:', blockIdx, 'lineMap[blockIdx]:', lineMap[blockIdx]);
-    window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - topbarH - 16 });
+    const elRect = el.getBoundingClientRect();
+    const scrollTarget = elRect.top + window.scrollY + elRect.height * proportion - topbarH - 16;
+
+    if (_debugLog) console.log('[scrollToLine] targetLine:', targetLine, 'blockIdx:', blockIdx, 'lineMap[blockIdx]:', lineMap[blockIdx], 'proportion:', proportion.toFixed(2));
+    window.scrollTo({ top: scrollTarget });
 }
 
 /** 检测视口顶部对应的源码行号（1-indexed），供切换到文本编辑器时定位用 */
@@ -357,6 +369,7 @@ async function initEditor(
     );
     toc.updatePosition(); // 工具栏已就绪，更新 TOC 吸顶位置
     toc.refresh(); // 编辑器初始化完成后刷新一次
+    toc.show();    // toolbar 就绪，显示 TOC 面板
     updateWordCount(); // 编辑器初始化完成后统计一次
 }
 
@@ -430,6 +443,7 @@ if (editorContainer) {
     initPathComplete(() => getEditorView());
     enhanceCodeBlocks(editorContainer);
     setupTopBarTooltips(editorContainer);
+    setupTopBarBrand(editorContainer);
 
     // 图片 lightbox：双击/Ctrl+Click 图片放大查看
     editorContainer.addEventListener("mousedown", (e) => {
@@ -668,6 +682,21 @@ function setupTopBarTooltips(container: HTMLElement): void {
 
     requestAnimationFrame(applyAll);
     new MutationObserver(() => requestAnimationFrame(applyAll))
+        .observe(container, { childList: true, subtree: true });
+}
+
+/** 将 EPYTOR🦖 品牌标识注入为 top-bar 真实 flex 子元素（替代 CSS ::after） */
+function setupTopBarBrand(container: HTMLElement): void {
+    const inject = () => {
+        const topBar = container.querySelector('.milkdown-top-bar');
+        if (!topBar || topBar.querySelector('.epytor-brand')) return;
+        const brand = document.createElement('span');
+        brand.className = 'epytor-brand';
+        brand.textContent = 'EPYTOR🦖';
+        topBar.insertBefore(brand, topBar.firstChild);
+    };
+    requestAnimationFrame(inject);
+    new MutationObserver(() => requestAnimationFrame(inject))
         .observe(container, { childList: true, subtree: true });
 }
 

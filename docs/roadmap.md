@@ -1,10 +1,10 @@
 # EPYTOR 路线图
 
-> 最后更新：2026-06-23
+> 最后更新：2026-07-08
 
 ***
 
-## v1.1.0 — 当前版本
+## v1.1.0 🚀
 
 ### 架构升级
 
@@ -19,6 +19,25 @@
 * [x] 工具栏毛玻璃吸顶 + 品牌标识、Undo/Redo/清除格式/设置按钮
 * [x] Mermaid 深浅主题、TOC 面板优化、编辑器上边距 52px
 * [x] H1-H6 标题样式打磨：h1 字重 700、h4 1.15em、h6 字重 400 + 灰色
+
+### 待修复 Bug
+
+* [x] **清除格式不彻底** — `clear-format` 按钮只清粗体/斜体/删除线/行内代码，需验证链接是否也能清除；定位：[editor.ts:616-639](../webview/editor.ts#L616)
+* [x] **TOC 点击定位不准** — `domAtPos(pos + 1)` 在标题有行内格式时可能找不到 `<h1>`-`<h6>` 元素，改用 `view.nodeDOM(pos)`；定位：[toc/index.ts:238-268](../webview/components/toc/index.ts#L238)
+
+### 待完成功能
+
+* [x] **引用块一键退出** — blockquote 工具栏按钮改为 toggle：在引用内点击 → `lift` 解包退出，不在引用内 → 包裹。不支持嵌套引用；定位：[editor.ts](../webview/editor.ts) blockquote 按钮 onRun/active
+* [x] **源代码/渲染切换行定位改进** — 当前 `computeLineMap` 段落粒度导致段内行无法定位。方案：`scrollToSourceLine` 中按段内行数做比例插值滚动；定位：[lineMap.ts](../src/utils/lineMap.ts)、[index.ts:72-86](../webview/index.ts#L72)
+
+### 待优化
+
+* [x] **窄窗口工具栏换行** — 窗口较窄时工具栏 `flex-wrap: nowrap` 导致按钮不换行，与 "EPYTOR🦖" logo 重叠。改为限定最小宽度阈值，低于阈值时 `flex-wrap: wrap` + 自动增高；定位：[style.css:574-591](../webview/style.css#L574)、品牌标识 [style.css:560-572](../webview/style.css#L560)
+
+### 设计决策
+
+* 行定位方案：段内比例插值（方案 A），不改 `computeLineMap` 格式，改动最小
+* 引用回退：用 ProseMirror 原生 `lift` 命令解包，需从 `prosemirror-commands` 导入
 
 ### 技术债务
 
@@ -60,25 +79,4 @@
 * [ ] **共享类型测试**：`shared/__tests__/` 目录不存在（CLAUDE.md 要求）。
 * [ ] **集成测试**：`@vscode/test-electron + Mocha` 未搭建（CLAUDE.md 标注"计划中"）。
 * [ ] **Spec skill**：创建 `.claude/skills/spec/` — 管理 spec 文档生命周期。
-
-***
-
-## v1.2.0 — 计划中
-
-### Bug 修复
-
-* [ ] **清除格式不彻底** — `clear-format` 按钮只清粗体/斜体/删除线/行内代码，需验证链接是否也能清除；定位：[editor.ts:616-639](../webview/editor.ts#L616)
-* [ ] **TOC 点击定位不准** — `domAtPos(pos + 1)` 在标题有行内格式时可能找不到 `<h1>`-`<h6>` 元素，改用 `view.nodeDOM(pos)`；定位：[toc/index.ts:238-268](../webview/components/toc/index.ts#L238)
-
-### 功能改进
-
-* [ ] **引用块一键退出** — blockquote 工具栏按钮改为 toggle：在引用内点击 → `lift` 解包退出，不在引用内 → 包裹。不支持嵌套引用；定位：[editor.ts](../webview/editor.ts) blockquote 按钮 onRun/active
-* [ ] **源码/渲染切换行定位改进** — 当前 `computeLineMap` 段落粒度导致段内行无法定位。方案：`scrollToSourceLine` 中按段内行数做比例插值滚动；定位：[lineMap.ts](../src/utils/lineMap.ts)、[index.ts:72-86](../webview/index.ts#L72)
-* [ ] **TOC 当前章节高亮** — 新增 scroll 事件监听（100ms 防抖），遍历标题 DOM 元素找最接近视口顶部者，在 TOC 中标记 `.toc-item--active`；定位：[toc/index.ts](../webview/components/toc/index.ts)
-
-### 设计决策
-
-* TOC 高亮方案：scroll 事件 + 动态 `getBoundingClientRect` 查询，不用 IntersectionObserver（避免 ProseMirror DOM 重建导致的 observer 失效）
-* 行定位方案：段内比例插值（方案 A），不改 `computeLineMap` 格式，改动最小
-* 引用回退：用 ProseMirror 原生 `lift` 命令解包，需从 `prosemirror-commands` 导入
 

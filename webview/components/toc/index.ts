@@ -19,6 +19,8 @@ export function initToc(getEditorView: () => EditorView | null): {
     panel: HTMLElement;
     toggle: () => void;
     refresh: () => void;
+    updatePosition: () => void;
+    show: () => void;
 } {
     const panel = document.createElement("div");
     panel.className = "toc-panel";
@@ -235,31 +237,34 @@ export function initToc(getEditorView: () => EditorView | null): {
                 placement: "above",
                 truncatedOnly: true,
             });
+            /** 根据 heading 在文档中的 pos 找到对应的 h1-h6 DOM 元素 */
+            function findHeadingElement(view: EditorView, pos: number): HTMLElement | null {
+                const dom = view.nodeDOM(pos) as HTMLElement | null;
+                if (dom && dom.matches("h1,h2,h3,h4,h5,h6")) return dom;
+
+                // 回退：pos 可能落在文本节点内，向上遍历找到标题元素
+                const { node } = view.domAtPos(pos + 1);
+                let el: HTMLElement | null =
+                    node.nodeType === Node.TEXT_NODE
+                        ? node.parentElement
+                        : (node as HTMLElement);
+                while (el && !el.matches("h1,h2,h3,h4,h5,h6")) {
+                    el = el.parentElement;
+                }
+                return el;
+            }
+
             label.addEventListener("mousedown", (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 const view = getEditorView();
                 if (!view) return;
                 try {
-                    const { node } = view.domAtPos(pos + 1);
-                    let el: HTMLElement | null =
-                        node.nodeType === Node.TEXT_NODE
-                            ? node.parentElement
-                            : (node as HTMLElement);
-                    while (el && !el.matches("h1,h2,h3,h4,h5,h6")) {
-                        el = el.parentElement;
-                    }
+                    const el = findHeadingElement(view, pos);
                     if (el) {
-                        const topbar = document.querySelector(
-                            ".milkdown-top-bar",
-                        ) as HTMLElement | null;
-                        const topbarH =
-                            topbar?.getBoundingClientRect().height ?? 40;
-                        const top =
-                            el.getBoundingClientRect().top +
-                            window.scrollY -
-                            topbarH -
-                            8;
+                        const topbar = document.querySelector(".milkdown-top-bar") as HTMLElement | null;
+                        const topbarH = topbar?.getBoundingClientRect().height ?? 40;
+                        const top = el.getBoundingClientRect().top + window.scrollY - topbarH - 8;
                         window.scrollTo({ top, behavior: "smooth" });
                     }
                 } catch {
@@ -406,5 +411,10 @@ export function initToc(getEditorView: () => EditorView | null): {
         checkAutoShow();
     });
 
-    return { panel, toggle, refresh, updatePosition: updatePanelPosition };
+    function show(): void {
+        panel.style.visibility = 'visible';
+        tabEl.style.visibility = 'visible';
+    }
+
+    return { panel, toggle, refresh, updatePosition: updatePanelPosition, show };
 }
