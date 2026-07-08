@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - **Milkdown**: 7.5.x → 7.21.2, `Editor.make()` → `CrepeBuilder`
 - **Syntax Highlighting**: Prism → CodeMirror 6 (highlighting, search/replace, fullscreen)
+- **Package size**: 8 MB → 3.1 MB (production build + code cleanup)
 
 ### Added
 

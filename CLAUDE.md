@@ -12,6 +12,7 @@
 * **语言**：全部 TypeScript；Extension 端用 `tsconfig.json`，WebView 端用 `tsconfig.webview.json`
 * **双目标构建**：`dist/extension.js`（Node.js）+ `dist/webview.js`（Browser），由 `esbuild.mjs` 完成
 * **打包发布**：VSIX 包必须输出到 `releases/` 文件夹，命令：`pnpm run package`
+* **发布流程**：发布新版本前必须先将 `dev` 合并到 `main`，从 `main` 分支打包发布
 * **Git commit 规范**：commit 描述部分必须用**中文**，类型前缀（`feat:`、`fix:`、`refactor:`、`chore:`、`docs:` 等）保留英文。例：`feat: 新增XXXX功能`、`fix: 修复XXXX问题`
 * **诚实原则**：不确定的事直接说"不确定"，禁止编造 URL、issue 编号、API 接口、文档引用或任何事实性信息。如果引用外部资源，必须先验证其存在。
 * **优雅原则**：禁止 hack 式或补丁式写法（如硬编码字符串映射表、MutationObserver 改 DOM、多层覆写对抗框架默认行为）。优先使用框架/库的官方 API、CSS 变量、配置回调等正路方案，保持代码简洁可维护。

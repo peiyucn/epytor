@@ -9,6 +9,7 @@
 
 * **Milkdown**：7.5.x → 7.21.2，`Editor.make()` → `CrepeBuilder`
 * **代码高亮**：Prism → CodeMirror 6（语法高亮、搜索替换、全屏编辑）
+* **包体积**：8 MB → 3.1 MB（生产构建 + 代码精简）
 
 ### 新增
 
