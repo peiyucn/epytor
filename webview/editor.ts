@@ -40,6 +40,7 @@ export function setLogTableSel(enabled: boolean): void {
 //   feature/latex       → 全新：KaTeX 数学公式支持
 // feature/code-mirror → 换回自定义实现（复制反馈、全屏、样式更精致）
 import { codeMirror } from "@milkdown/crepe/feature/code-mirror";
+import { cursor } from "@milkdown/crepe/feature/cursor";
 import { latex } from "@milkdown/crepe/feature/latex";
 import { listItem } from "@milkdown/crepe/feature/list-item";
 import { table } from "@milkdown/crepe/feature/table";
@@ -592,6 +593,7 @@ export async function createEditor(
             renderPreview,
             searchPlaceholder: t('Search language...'),
         })
+        .addFeature(cursor)
         .addFeature(listItem)
         .addFeature(topBar, {
             headingOptions: [

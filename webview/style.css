@@ -127,6 +127,12 @@ body {
     font-size: var(--vscode-editor-font-size, 14px) !important;
 }
 
+/* 虚拟光标 */
+.milkdown .ProseMirror.virtual-cursor-enabled {
+    caret-color: transparent;
+    --prosemirror-virtual-cursor-color: var(--vscode-editorCursor-foreground, auto);
+}
+
 /* Crepe 按钮/输入框基础重置（原 reset.css 提供，去掉 reset.css 后补上）*/
 .milkdown button,
 .milkdown input {
