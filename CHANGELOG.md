@@ -7,11 +7,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
-- **启用官方虚拟光标（Cursor Feature）**：`prosemirror-virtual-cursor` 提供 mark 边界光标指示器，左右箭头可在行内代码等样式边界切换内外侧，解决行内样式边界编辑体验问题。
+- **Cursor Feature enabled**: `prosemirror-virtual-cursor` provides mark boundary cursor indicator with arrow key navigation across inline style boundaries.
 
 ### Known Limitations
 
-- **行内样式尾部无法退出**：Milkdown 原生对空选区不处理，段落末尾的行内样式（粗体、斜体、删除线、行内代码等）无法直接退出输入普通文本。已向官方提 issue 跟踪，等待上游修复。
+- **Inline styles cannot exit at paragraph end**: Milkdown does not handle empty selection for inline marks. Inline styles (bold, italic, strikethrough, inline code, etc.) at paragraph end cannot exit to normal text input. Upstream issue filed, awaiting fix.
 
 ## [1.1.0] - 2026-07-08
 
