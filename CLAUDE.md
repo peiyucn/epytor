@@ -11,8 +11,7 @@
 * **调试**：F5 启动扩展调试实例（`.vscode/launch.json`）
 * **语言**：全部 TypeScript；Extension 端用 `tsconfig.json`，WebView 端用 `tsconfig.webview.json`
 * **双目标构建**：`dist/extension.js`（Node.js）+ `dist/webview.js`（Browser），由 `esbuild.mjs` 完成
-* **打包发布**：VSIX 包必须输出到 `releases/` 文件夹，命令：`pnpm run package`
-* **发布流程**：发布新版本前必须先将 `dev` 合并到 `main`，从 `main` 分支打包发布
+* **打包发布**：详见下方「文档与发布规范 → 发布流程」
 * **Git commit 规范**：commit 描述部分必须用**中文**，类型前缀（`feat:`、`fix:`、`refactor:`、`chore:`、`docs:` 等）保留英文。例：`feat: 新增XXXX功能`、`fix: 修复XXXX问题`
 * **诚实原则**：不确定的事直接说"不确定"，禁止编造 URL、issue 编号、API 接口、文档引用或任何事实性信息。如果引用外部资源，必须先验证其存在。
 * **优雅原则**：禁止 hack 式或补丁式写法（如硬编码字符串映射表、MutationObserver 改 DOM、多层覆写对抗框架默认行为）。优先使用框架/库的官方 API、CSS 变量、配置回调等正路方案，保持代码简洁可维护。
@@ -56,20 +55,38 @@ docs/roadmap.md                          — 项目路线图
 
 ***
 
-## 开发留痕规范
+## 文档与发布规范
 
-**已知 bug 和功能需求不再记录到本地文件，改用** **`/devlog`** **skill 直接提交为 GitHub Issue。**
+### 文档角色
 
-### /devlog Skill 说明
+| 文件 | 用途 | 更新时机 |
+|------|------|----------|
+| `README.md` / `README.zh-CN.md` | 用户文档：功能介绍、安装方式、配置项、**已知限制** | 功能变更或发现新限制时 |
+| `CHANGELOG.md` / `CHANGELOG.zh-CN.md` | 版本变更记录（[Keep a Changelog](https://keepachangelog.com/) 格式），**英文在前、中文在后** | **发布新版本时** |
+| `docs/roadmap.md` | 路线图：**仅记录未来计划**，不写已发布的版本内容 | 规划新功能时 |
+
+### 发布流程（必须严格按顺序）
+
+1. **确认所有改动已提交到 `dev` 分支**
+2. **更新 `CHANGELOG.md` 和 `CHANGELOG.zh-CN.md`**：新版本 section 放在文件最顶部
+3. **更新 `package.json` 版本号**
+4. **运行 `pnpm test` 确认全部通过**
+5. **运行 `pnpm build` 确认编译无误**
+6. **合并 `dev` → `main`**：`git checkout main && git merge dev`
+7. **推送两个分支**：`git push origin dev main`
+8. **打 tag 触发发布**：`git tag v<VERSION> && git push origin v<VERSION>`
+   - CI（`.github/workflows/release.yml`）将自动打包 VSIX 并发布到 VS Code Marketplace
+   - 同时自动创建 GitHub Release
+9. **切回 `dev`**：`git checkout dev`
+
+> **注意**：步骤 8 由 GitHub Actions 自动完成打包和发布。
+
+### Issue 管理
 
 * **已知 Bug**：加 `bug` + `known-limitation` label，仅记录开发完成后仍未修复的问题
-* **功能需求**：加 `enhancement` + `roadmap` label，记录计划功能（含完善度、实现思路、涉及文件）
-* Skill 定义：`.claude/skills/devlog/SKILL.md`
-* 触发方式：用户说"记录 bug"、"记录需求"、"功能需求"，或直接输入 `/devlog`
-
-### 若阶段进度有变化，同步更新 `docs/roadmap.md`
-
-### 更新 `~/.claude/projects/-Users-liuyaoming-code-vsocde-expand-markdownView/memory/MEMORY.md` 中的"当前状态"
+* **功能需求**：加 `enhancement` + `roadmap` label，记录计划功能
+* 触发方式：用户说"记录 bug"、"记录需求"、"功能需求"
+* 若阶段进度有变化，同步更新 `docs/roadmap.md`
 
 ***
 
