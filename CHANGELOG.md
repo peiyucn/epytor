@@ -3,6 +3,16 @@
 All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.1.1] - 2026-07-14
+
+### Fixed
+
+- **启用官方虚拟光标（Cursor Feature）**：`prosemirror-virtual-cursor` 提供 mark 边界光标指示器，左右箭头可在行内代码等样式边界切换内外侧，解决行内样式边界编辑体验问题。
+
+### Known Limitations
+
+- **行内样式尾部无法退出**：Milkdown 原生对空选区不处理，段落末尾的行内样式（粗体、斜体、删除线、行内代码等）无法直接退出输入普通文本。已向官方提 issue 跟踪，等待上游修复。
+
 ## [1.1.0] - 2026-07-08
 
 ### Architecture

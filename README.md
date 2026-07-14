@@ -56,4 +56,5 @@ A WYSIWYG Markdown editor for VS Code, powered by [Milkdown](https://milkdown.de
 * Global search may not scroll precisely with multiple `.md` files open
 * Some extended Markdown syntax (footnotes, inline HTML, etc.) not yet supported
 * Narrow window (< 720px): toolbar auto-wraps — usable but less compact
+* Inline styles (bold, italic, code, etc.) at paragraph end cannot exit to normal text (Milkdown upstream limitation, issue filed)
 

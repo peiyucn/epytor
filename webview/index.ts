@@ -2,6 +2,7 @@ import "@milkdown/crepe/theme/classic-dark.css";
 import "@milkdown/crepe/theme/common/prosemirror.css";
 import "@milkdown/crepe/theme/common/reset.css";
 import "@milkdown/crepe/theme/common/code-mirror.css";
+import "@milkdown/crepe/theme/common/cursor.css";
 import "@milkdown/crepe/theme/common/latex.css";
 import "@milkdown/crepe/theme/common/list-item.css";
 import "@milkdown/crepe/theme/common/table.css";
