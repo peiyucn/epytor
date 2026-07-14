@@ -74,9 +74,13 @@ docs/roadmap.md                          — 项目路线图
 4. **运行 `pnpm test` 确认全部通过**
 5. **运行 `pnpm build` 确认编译无误**
 6. **合并 `dev` → `main`**：`git checkout main && git merge dev`
-7. **打包 VSIX**：`pnpm run package`（输出到 `releases/`）
-8. **推送两个分支**：`git push origin dev main`
+7. **推送两个分支**：`git push origin dev main`
+8. **打 tag 触发发布**：`git tag v<VERSION> && git push origin v<VERSION>`
+   - CI（`.github/workflows/release.yml`）将自动打包 VSIX 并发布到 VS Code Marketplace
+   - 同时自动创建 GitHub Release
 9. **切回 `dev`**：`git checkout dev`
+
+> **注意**：步骤 8 由 GitHub Actions 自动完成打包和发布，无需手动执行 `pnpm run package`。
 
 ### Issue 管理
 
