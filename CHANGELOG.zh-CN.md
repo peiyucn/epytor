@@ -3,6 +3,12 @@
 本项目的所有重要变更都将记录在此文件中。
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)。
 
+## [1.1.2] - 2026-07-15
+
+### 修复
+
+* **虚拟光标在部分 VSCode 主题下不显示**：CSS 变量回退链 `--vscode-editorCursor-foreground` → `--vscode-editor-foreground` → `#fff`，解决部分主题缺少光标颜色变量导致虚拟光标透明的问题。
+
 ## [1.1.1] - 2026-07-14
 
 ### 修复
