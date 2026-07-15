@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.1.2] - 2026-07-15
+
+### Fixed
+
+- **Virtual cursor not visible on some VSCode themes**: fallback CSS variable chain `--vscode-editorCursor-foreground` → `--vscode-editor-foreground` → `#fff` prevents transparent cursor on themes missing cursor color variable.
+
 ## [1.1.1] - 2026-07-14
 
 ### Fixed
