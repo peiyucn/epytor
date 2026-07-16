@@ -10,11 +10,13 @@
 
 A WYSIWYG Markdown editor for VS Code, powered by [Milkdown](https://milkdown.dev/). Edit `.md` / `.markdown` as rich text, saved as standard Markdown.
 
-> **The true starting point of this project is v1.1.0**, forked from [git-xing/md-wysiwyg-editor](https://github.com/git-xing/md-wysiwyg-editor) (MIT) v0.1.6.
+> Originally based on [git-xing/md-wysiwyg-editor](https://github.com/git-xing/md-wysiwyg-editor) (MIT) v0.1.6.
 >
-> v0.1.6 → v1.0.0 / v1.0.1: adapted for VS Code Marketplace (icons, i18n, README), fixed critical issues (blank-line accumulation on paste, table-cell enter no newline).
+> v1.0.0 / v1.0.1: adapted for VS Code Marketplace, fixed critical issues (blank-line accumulation, table-cell enter).
 >
-> v0.1.6 → v1.1.0: rebuilt foundations (Milkdown 7.21.2 + Crepe / CodeMirror 6), new features (LaTeX math / image resize & caption / image picker), streamlined bloat. See [CHANGELOG](CHANGELOG.md).
+> v1.1.0: rebuilt foundations (Milkdown 7.21.2 + Crepe / CodeMirror 6), new features (LaTeX math, image enhancements, toolbar, TOC).
+>
+> **v1.1.3 onwards: independently developed.** See [CHANGELOG](CHANGELOG.md).
 
 ## Features
 
@@ -51,10 +53,14 @@ A WYSIWYG Markdown editor for VS Code, powered by [Milkdown](https://milkdown.de
 
 ## Known Limitations
 
-* Table cell click-selection temporarily disabled (Crepe upstream instability — clicks go to edit mode instead)
-* Ordered list multi-level numbering uses decimal only (Milkdown kernel limitation)
+* ⚠️ Upstream — Table cell click-selection temporarily disabled (Crepe instability, clicks go to edit mode)
+* ⚠️ Upstream — Ordered list multi-level numbering: decimal only (Milkdown kernel limitation)
+* ⚠️ Upstream — Inline styles at paragraph end cannot exit to normal text ([Milkdown#2413](https://github.com/Milkdown/milkdown/issues/2413))
 * Global search may not scroll precisely with multiple `.md` files open
 * Some extended Markdown syntax (footnotes, inline HTML, etc.) not yet supported
 * Narrow window (< 720px): toolbar auto-wraps — usable but less compact
-* Inline styles (bold, italic, code, etc.) at paragraph end cannot exit to normal text (Milkdown upstream limitation, issue filed)
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and submission guidelines. Coding and testing standards are maintained in [AGENTS.md](AGENTS.md).
 

@@ -226,6 +226,9 @@ export function initToc(getEditorView: () => EditorView | null): {
                     saveCollapsedState();
                     refresh();
                 });
+            } else {
+                toggle.textContent = "–";
+                toggle.style.cursor = "default";
             }
             item.appendChild(toggle);
 

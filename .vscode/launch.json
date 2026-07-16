@@ -8,7 +8,8 @@
             "args": ["--extensionDevelopmentPath=${workspaceFolder}"],
             "outFiles": ["${workspaceFolder}/dist/**/*.js"],
             "preLaunchTask": "pnpm: build",
-            "sourceMaps": true
+            "sourceMaps": true,
+            "internalConsoleOptions": "neverOpen"
         },
         {
             "name": "Run Extension (Watch)",
@@ -17,7 +18,8 @@
             "args": ["--extensionDevelopmentPath=${workspaceFolder}"],
             "outFiles": ["${workspaceFolder}/dist/**/*.js"],
             "preLaunchTask": "pnpm: watch",
-            "sourceMaps": true
+            "sourceMaps": true,
+            "internalConsoleOptions": "neverOpen"
         },
         {
             "name": "Run Extension (CN, Clean)",
@@ -30,7 +32,8 @@
             ],
             "outFiles": ["${workspaceFolder}/dist/**/*.js"],
             "preLaunchTask": "pnpm: watch",
-            "sourceMaps": true
+            "sourceMaps": true,
+            "internalConsoleOptions": "neverOpen"
         }
     ]
 }

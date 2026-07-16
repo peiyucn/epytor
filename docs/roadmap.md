@@ -76,7 +76,7 @@
 ### 工具链
 
 * [ ] **单元测试**：`webview/utils/themeBus.ts` 覆盖率 0%，需补齐。
-* [ ] **共享类型测试**：`shared/__tests__/` 目录不存在（CLAUDE.md 要求）。
-* [ ] **集成测试**：`@vscode/test-electron + Mocha` 未搭建（CLAUDE.md 标注"计划中"）。
+* [ ] **共享类型测试**：`shared/__tests__/` 目录不存在（AGENTS.md 要求）。
+* [ ] **集成测试**：`@vscode/test-electron + Mocha` 未搭建（AGENTS.md 标注"计划中"）。
 * [ ] **Spec skill**：创建 `.claude/skills/spec/` — 管理 spec 文档生命周期。
 

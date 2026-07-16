@@ -3,6 +3,20 @@
 All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.1.3] - 2026-07-16
+
+### Changed
+
+- **Milkdown**: 7.21.2 → 7.21.3
+
+### Fixed
+
+- **Virtual cursor invisible inside inline code on light themes**: removed `mix-blend-mode: difference`, use direct foreground color
+
+### Added
+
+- **TOC leaf nodes**: headings without children now show `–` for visual consistency
+
 ## [1.1.2] - 2026-07-15
 
 ### Fixed
@@ -17,7 +31,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Known Limitations
 
-- **Inline styles cannot exit at paragraph end**: Milkdown does not handle empty selection for inline marks. Inline styles (bold, italic, strikethrough, inline code, etc.) at paragraph end cannot exit to normal text input. Upstream issue filed, awaiting fix.
+- **Inline styles cannot exit at paragraph end**: Milkdown does not handle empty selection for inline marks. Inline styles (bold, italic, strikethrough, inline code, etc.) at paragraph end cannot exit to normal text input. [Milkdown#2413](https://github.com/Milkdown/milkdown/issues/2413), awaiting upstream fix.
 
 ## [1.1.0] - 2026-07-08
 
