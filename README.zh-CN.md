@@ -10,11 +10,13 @@
 
 基于 [Milkdown](https://milkdown.dev/) 的 VSCode 所见即所得 Markdown 编辑器。富文本编辑 `.md` / `.markdown`，保存为标准 Markdown。
 
-> **本项目真正的起点为 v1.1.0**，fork from [git-xing/md-wysiwyg-editor](https://github.com/git-xing/md-wysiwyg-editor) (MIT) v0.1.6。
+> 最初基于 [git-xing/md-wysiwyg-editor](https://github.com/git-xing/md-wysiwyg-editor) (MIT) v0.1.6 开发。
 >
-> v0.1.6 → v1.0.0 / v1.0.1：适配 VS Code Marketplace（图标、i18n、README），修复关键问题（粘贴空行累积、表格单元格回车不换行）。
+> v1.0.0 / v1.0.1：适配 VS Code Marketplace，修复关键问题（粘贴空行累积、表格单元格回车）。
 >
-> v0.1.6 → v1.1.0：重构根基（Milkdown 7.21.2 + Crepe / CodeMirror 6），新增功能（LaTeX 公式 / 图片缩放与 Caption / 图片选择器），精简冗余。详见 [CHANGELOG](CHANGELOG.zh-CN.md)。
+> v1.1.0：重构根基（Milkdown 7.21.2 + Crepe / CodeMirror 6），新增功能（LaTeX 公式、图片增强、工具栏、TOC）。
+>
+> **v1.1.3 起独立开发。** 详见 [CHANGELOG](CHANGELOG.zh-CN.md)。
 
 ## 功能
 
@@ -51,9 +53,13 @@
 
 ## 已知限制
 
-* 表格单击选中整格暂时关闭（Crepe 上游行为不稳定，改为单击直接编辑）
-* 有序列表多层级编号均为十进制（Milkdown 内核限制）
+* ⚠️ 上游 — 表格单击选中整格暂时关闭（Crepe 上游行为不稳定，改为单击直接编辑）
+* ⚠️ 上游 — 有序列表多层级编号均为十进制（Milkdown 内核限制）
+* ⚠️ 上游 — 行内样式尾部无后续内容时无法直接退出（[Milkdown#2413](https://github.com/Milkdown/milkdown/issues/2413)）
 * 全局搜索跳转：多文件同时打开时可能无法精确定位
 * 部分扩展语法（脚注等）尚未支持
-* 行内样式（粗体、斜体、行内代码等）尾部无后续内容时无法直接退出（Milkdown 上游限制，已提 issue 跟踪）
+
+## 参与贡献
+
+开发环境和提交流程见 [CONTRIBUTING.zh-CN.md](CONTRIBUTING.zh-CN.md)。编码和测试规范见 [AGENTS.md](AGENTS.md)。
 

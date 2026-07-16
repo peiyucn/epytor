@@ -33,8 +33,24 @@ jobs:
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
 
+      - name: Extract changelog for release
+        id: changelog
+        run: |
+          VERSION="${{ github.ref_name }}"
+          VERSION="${VERSION#v}"
+          # Extract the section for this version from CHANGELOG.md
+          awk -v ver="^## \\[${VERSION}\\]" '
+            BEGIN { found=0; lines="" }
+            $0 ~ ver { found=1; next }
+            found && /^## \[/ { exit }
+            found { lines = lines $0 "\n" }
+            END { printf "%s", lines }
+          ' CHANGELOG.md > /tmp/release-body.md
+          echo "body_path=/tmp/release-body.md" >> "$GITHUB_OUTPUT"
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          name: ${{ github.ref_name }}
+          body_path: /tmp/release-body.md
           files: releases/*.vsix
-          generate_release_notes: true

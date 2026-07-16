@@ -130,7 +130,7 @@ body {
 /* 虚拟光标 */
 .milkdown .ProseMirror.virtual-cursor-enabled {
     caret-color: transparent;
-    --prosemirror-virtual-cursor-color: var(--vscode-editorCursor-foreground, var(--vscode-editor-foreground, #fff));
+    --prosemirror-virtual-cursor-color: var(--vscode-editorCursor-foreground, var(--vscode-editor-foreground));
 }
 
 /* Crepe 按钮/输入框基础重置（原 reset.css 提供，去掉 reset.css 后补上）*/
