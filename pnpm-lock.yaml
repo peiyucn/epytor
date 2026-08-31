@@ -55,8 +55,8 @@ importers:
         specifier: ^28.0.3
         version: 28.0.3
       '@types/node':
-        specifier: ^26.1.2
-        version: 26.1.2
+        specifier: ^26.4.0
+        version: 26.4.0
       '@types/vscode':
         specifier: ^1.80.0
         version: 1.110.0
@@ -77,10 +77,10 @@ importers:
         version: 5.9.3
       vite:
         specifier: ^6
-        version: 6.4.3(@types/node@26.1.2)
+        version: 6.4.3(@types/node@26.4.0)
       vitest:
         specifier: ^4.1.10
-        version: 4.1.10(@types/node@26.1.2)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1)(vite@6.4.3(@types/node@26.1.2))
+        version: 4.1.10(@types/node@26.4.0)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1)(vite@6.4.3(@types/node@26.4.0))
 
 packages:
 
@@ -1134,8 +1134,8 @@ packages:
   '@types/ms@2.1.0':
     resolution: {integrity: sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA==}
 
-  '@types/node@26.1.2':
-    resolution: {integrity: sha512-Vu4a5UFA9rIIFJ7rB/Vaafh9lrCQszopTCx6KjFboXTGQbPNasehVR5TEiithSDGyd1DEiUByggTZsg8jukeIg==}
+  '@types/node@26.4.0':
+    resolution: {integrity: sha512-faiGnoIrLH/V8cibOMEAZ8pMw6oXqSukl29ra4mN8GdaB2ZewzeaLj+INpV5N+Z1eKWzY+IzaIZH2EIR6YZRNQ==}
 
   '@types/normalize-package-data@2.4.4':
     resolution: {integrity: sha512-37i+OaWTh9qeK4LSHPsyRC7NahnGotNuZvjLSgcPzblpHB3rrCJxAOgI5gCdKm7coonsaX1Of0ILiTcnZjbfxA==}
@@ -4370,7 +4370,7 @@ snapshots:
 
   '@types/jsdom@28.0.3':
     dependencies:
-      '@types/node': 26.1.2
+      '@types/node': 26.4.0
       '@types/tough-cookie': 4.0.5
       parse5: 8.0.1
       undici-types: 7.29.0
@@ -4389,7 +4389,7 @@ snapshots:
 
   '@types/ms@2.1.0': {}
 
-  '@types/node@26.1.2':
+  '@types/node@26.4.0':
     dependencies:
       undici-types: 8.3.0
 
@@ -4431,7 +4431,7 @@ snapshots:
       obug: 2.1.4
       std-env: 4.2.0
       tinyrainbow: 3.1.1
-      vitest: 4.1.10(@types/node@26.1.2)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1)(vite@6.4.3(@types/node@26.1.2))
+      vitest: 4.1.10(@types/node@26.4.0)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1)(vite@6.4.3(@types/node@26.4.0))
 
   '@vitest/expect@4.1.10':
     dependencies:
@@ -4442,13 +4442,13 @@ snapshots:
       chai: 6.2.2
       tinyrainbow: 3.1.1
 
-  '@vitest/mocker@4.1.10(vite@6.4.3(@types/node@26.1.2))':
+  '@vitest/mocker@4.1.10(vite@6.4.3(@types/node@26.4.0))':
     dependencies:
       '@vitest/spy': 4.1.10
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 6.4.3(@types/node@26.1.2)
+      vite: 6.4.3(@types/node@26.4.0)
 
   '@vitest/pretty-format@4.1.10':
     dependencies:
@@ -6617,7 +6617,7 @@ snapshots:
       '@types/unist': 3.0.3
       vfile-message: 4.0.3
 
-  vite@6.4.3(@types/node@26.1.2):
+  vite@6.4.3(@types/node@26.4.0):
     dependencies:
       esbuild: 0.25.12
       fdir: 6.5.0(picomatch@4.0.5)
@@ -6626,13 +6626,13 @@ snapshots:
       rollup: 4.62.4
       tinyglobby: 0.2.17
     optionalDependencies:
-      '@types/node': 26.1.2
+      '@types/node': 26.4.0
       fsevents: 2.3.3
 
-  vitest@4.1.10(@types/node@26.1.2)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1)(vite@6.4.3(@types/node@26.1.2)):
+  vitest@4.1.10(@types/node@26.4.0)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1)(vite@6.4.3(@types/node@26.4.0)):
     dependencies:
       '@vitest/expect': 4.1.10
-      '@vitest/mocker': 4.1.10(vite@6.4.3(@types/node@26.1.2))
+      '@vitest/mocker': 4.1.10(vite@6.4.3(@types/node@26.4.0))
       '@vitest/pretty-format': 4.1.10
       '@vitest/runner': 4.1.10
       '@vitest/snapshot': 4.1.10
@@ -6649,10 +6649,10 @@ snapshots:
       tinyexec: 1.3.0
       tinyglobby: 0.2.17
       tinyrainbow: 3.1.1
-      vite: 6.4.3(@types/node@26.1.2)
+      vite: 6.4.3(@types/node@26.4.0)
       why-is-node-running: 2.3.0
     optionalDependencies:
-      '@types/node': 26.1.2
+      '@types/node': 26.4.0
       '@vitest/coverage-v8': 4.1.10(vitest@4.1.10)
       jsdom: 30.0.1
     transitivePeerDependencies:
