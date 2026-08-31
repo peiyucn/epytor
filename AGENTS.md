@@ -178,6 +178,7 @@ __mocks__/vscode.ts      — vscode API 统一 mock
 * 禁止跳过（`it.skip`）或注释失败的测试用例来让 CI 通过
 * 禁止修改测试预期值来掩盖 bug（除非实现有意变更且经过评审）
 * 禁止在未运行测试的情况下 push 到 `main` 或 `dev` 分支
+* 分支保护：main 有 required CI 门禁 + 禁强推/删/重建，dev 有 rulesets 轻保护；外部 PR 需 CI 绿 + owner 审核合并（Squash-only）；统一安全基线（本仓库 **A 级**）见 pyai-meta-repo AGENTS.md
 
 ### Mock 规范
 
