@@ -82,7 +82,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Package extension (vsce)
-        run: pnpm run package
+        run: mkdir -p releases && pnpm run package
       - name: Verify VSIX artifact exists
         run: test -f releases/*.vsix || (echo "VSIX not produced" && exit 1)
 
