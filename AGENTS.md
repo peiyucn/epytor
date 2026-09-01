@@ -190,7 +190,7 @@ __mocks__/vscode.ts      — vscode API 统一 mock
 
 ### CI 自动化
 
-每次 push/PR 到 `main`/`dev` 自动运行 `typecheck` → `test`（覆盖率）→ `build` 三个标准过程 job，配置见 `.github/workflows/ci.yml`。
+每次 push/PR 到 `main`/`dev` 自动运行七过程 job：`typecheck` → `test`（覆盖率）→ `build` → `package`（vsce），`publish`/`deploy`/`sync` 空跑占位，配置见 `.github/workflows/ci.yml`。
 
 ***
 
@@ -244,7 +244,7 @@ __mocks__/vscode.ts      — vscode API 统一 mock
 
 ### CI 自动化
 
-推送 `v*.*.*` tag 后自动打包 VSIX、发布到 VS Code Marketplace、创建 GitHub Release，配置见 `.github/workflows/release.yml`。
+推送 `v*.*.*` tag 后自动打包 VSIX、发布到 VS Code Marketplace、创建 GitHub Release，配置见 `.github/workflows/publish.yml`。
 
 ***
 
