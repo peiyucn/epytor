@@ -202,7 +202,7 @@ __mocks__/vscode.ts      — vscode API 统一 mock
 | :--- | :--- | :--- |
 | `README.md` / `README.zh-CN.md` | 用户文档：功能介绍、安装方式、配置项、**已知限制** | 功能变更或发现新限制时 |
 | `CONTRIBUTING.md` / `CONTRIBUTING.zh-CN.md` | 贡献指南：开发环境、提交流程、Bug 报告 | 开发流程或分支策略变更时 |
-| `CHANGELOG.md` / `CHANGELOG.zh-CN.md` | 版本变更记录（[Keep a Changelog](https://keepachangelog.com/) 格式），**英文在前、中文在后** | **发布新版本时** |
+| `CHANGELOG.md` | 版本变更记录（[Keep a Changelog](https://keepachangelog.com/) 格式），单一文件、**每个版本条目英文在上、中文在下**（GitHub Release 说明直接取该条目） | **发布新版本时** |
 
 ### 发布流程（必须严格按顺序）
 
@@ -211,7 +211,7 @@ __mocks__/vscode.ts      — vscode API 统一 mock
 执行任何编辑操作前，必须将以下内容逐项展示给用户确认：
 
 1. `README.md` + `README.zh-CN.md` 是否有本次发布相关的改动
-2. `CHANGELOG.md` + `CHANGELOG.zh-CN.md` 新版本 section 的完整内容
+2. `CHANGELOG.md` 新版本 section 的完整内容（英文在上、中文在下）
 3. `docs/roadmap.md` 是否有条目需要标记完成或调整
 4. `package.json` 版本号
 5. 合并 commit message
@@ -222,7 +222,7 @@ __mocks__/vscode.ts      — vscode API 统一 mock
 **阶段二：编辑 & 验证**
 
 1. **确认所有改动已提交到** **`dev`** **分支**
-2. **更新** **`CHANGELOG.md`** **和** **`CHANGELOG.zh-CN.md`**：新版本 section 放在文件最顶部
+2. **更新** **`CHANGELOG.md`**：新版本 section 放在文件最顶部（英文在上、中文在下）
 3. **更新** **`package.json`** **版本号**
 4. **运行** **`pnpm test`** **确认全部通过**
 5. **运行** **`pnpm build`** **确认编译无误**
