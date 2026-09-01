@@ -51,7 +51,8 @@ import { toolbar } from "@milkdown/crepe/feature/toolbar";
 import { Compartment } from "@codemirror/state";
 import { EditorView as CMEditorView } from "@codemirror/view";
 import { oneDark } from "@codemirror/theme-one-dark";
-import { defaultHighlightStyle, syntaxHighlighting } from "@codemirror/language";
+import { defaultHighlightStyle, syntaxHighlighting, LanguageDescription, type LanguageSupport } from "@codemirror/language";
+import type { Ctx } from "@milkdown/kit/ctx";
 import { languages as allCodeLanguages } from "@codemirror/language-data";
 import mermaid from "mermaid";
 import { onThemeChange } from "./utils/themeBus";
@@ -65,21 +66,21 @@ const WANTED_LANGS = new Set([
     "sass", "scss", "sql", "swift", "toml", "typescript", "ts", "xml", "yaml", "yml",
 ]);
 const codeLanguages = allCodeLanguages.filter(
-    (l: { alias: string[] }) => l.alias.some((a) => WANTED_LANGS.has(a))
+    (l: { alias: readonly string[] }) => l.alias.some((a) => WANTED_LANGS.has(a))
 );
 // Mermaid 不在 @codemirror/language-data 中，手动添加（仅标签，无语法高亮）
-codeLanguages.unshift({
+codeLanguages.unshift(LanguageDescription.of({
     name: "Text",
     alias: ["text", "plaintext", "txt"],
     extensions: ["txt"],
-    load: async () => undefined,
-});
-codeLanguages.push({
+    load: async () => undefined as unknown as LanguageSupport,
+}));
+codeLanguages.push(LanguageDescription.of({
     name: "Mermaid",
     alias: ["mermaid"],
     extensions: ["mmd"],
-    load: async () => undefined,
-});
+    load: async () => undefined as unknown as LanguageSupport,
+}));
 // feature/toolbar 暂不启用（与自定义工具栏冲突）
 
 // ─── 保留的自定义插件 ────────────────────────────────────────────────────────
@@ -591,7 +592,7 @@ export async function createEditor(
     crepe
         .addFeature(codeMirror, {
             languages: codeLanguages,
-            theme: cmTheme.of(getCMTheme()),
+            theme: cmTheme.of(getCMTheme(false)),
             renderPreview,
             searchPlaceholder: t('Search language...'),
         })
@@ -611,12 +612,12 @@ export async function createEditor(
                 // Undo/Redo — 最前面独立组
                 builder.addGroup('history', '').addItem('undo', {
                     icon: TbUndo,
-                    active: (ctx) => undo(ctx.get(editorViewCtx).state),
-                    onRun: (ctx) => { const v = ctx.get(editorViewCtx); undo(v.state, v.dispatch, v); },
+                    active: (ctx: Ctx) => undo(ctx.get(editorViewCtx).state),
+                    onRun: (ctx: Ctx) => { const v = ctx.get(editorViewCtx); undo(v.state, v.dispatch, v); },
                 }).addItem('redo', {
                     icon: TbRedo,
-                    active: (ctx) => redo(ctx.get(editorViewCtx).state),
-                    onRun: (ctx) => { const v = ctx.get(editorViewCtx); redo(v.state, v.dispatch, v); },
+                    active: (ctx: Ctx) => redo(ctx.get(editorViewCtx).state),
+                    onRun: (ctx: Ctx) => { const v = ctx.get(editorViewCtx); redo(v.state, v.dispatch, v); },
                 });
                 // 清除格式 — formatting 组末尾（行内代码后面）
                 builder.getGroup('formatting').addItem('clear-format', {

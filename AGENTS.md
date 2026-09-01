@@ -121,21 +121,20 @@ __mocks__/vscode.ts      — vscode API 统一 mock
 
 ### 强制流程
 
-* **一键验证入口**：`pnpm run verify`（= `pnpm build` + `pnpm test`）；CI 额外跑 `test:coverage`（覆盖率门槛）
+* **一键验证入口**：`pnpm run verify`（= typecheck + test + 生产构建）；CI 拆三个标准 job：`typecheck` / `test`（覆盖率门槛）/ `build`
 
 **每次代码改动**（bug 修复、新功能、重构还债）必须完整走完以下流程：
 
 ```
-代码改动 → pnpm build → pnpm test → 输出手测清单 → vscode_askQuestions 逐项确认 → git commit
+代码改动 → pnpm run verify → 输出手测清单 → vscode_askQuestions 逐项确认 → git commit
 ```
 
 各阶段详细要求：
 
 **阶段一：自动化验证**
 
-1. 运行 `pnpm build` 确认编译无误
-2. 运行 `pnpm test` 确认全部测试通过
-3. 任一失败则先修复，不得跳过
+1. 运行 `pnpm run verify`（typecheck + test + 生产构建）确认全部通过
+2. 任一失败则先修复，不得跳过
 
 **阶段二：人工验收**
 
@@ -161,7 +160,7 @@ __mocks__/vscode.ts      — vscode API 统一 mock
 
 **git push 前**：
 
-* **必须**执行 `pnpm test`，全部通过才允许推送
+* **必须**执行 `pnpm run verify`，全部通过才允许推送
 
 ### 测试失败处理
 
@@ -191,7 +190,7 @@ __mocks__/vscode.ts      — vscode API 统一 mock
 
 ### CI 自动化
 
-每次 push/PR 到 `main`/`dev` 自动运行测试 + 覆盖率检查 + 构建验证，配置见 `.github/workflows/ci.yml`。
+每次 push/PR 到 `main`/`dev` 自动运行 `typecheck` → `test`（覆盖率）→ `build` 三个标准过程 job，配置见 `.github/workflows/ci.yml`。
 
 ***
 

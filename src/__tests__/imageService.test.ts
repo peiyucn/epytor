@@ -9,7 +9,7 @@ import * as vscode from "vscode";
 // 模块级 mock（Vitest 自动 hoist 至 import 之前）
 vi.mock("https", () => ({ request: vi.fn() }));
 vi.mock("http", () => ({ request: vi.fn() }));
-const mockFs = vscode.workspace.fs as {
+const mockFs = vscode.workspace.fs as unknown as {
     readFile: ReturnType<typeof vi.fn>;
     writeFile: ReturnType<typeof vi.fn>;
     readDirectory: ReturnType<typeof vi.fn>;

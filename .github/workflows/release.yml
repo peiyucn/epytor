@@ -6,8 +6,8 @@ on:
       - 'v*.*.*'
 
 jobs:
-  release:
-    name: Publish to VS Code Marketplace
+  publish:
+    name: publish
     runs-on: ubuntu-latest
     permissions:
       contents: write

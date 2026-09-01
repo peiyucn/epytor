@@ -214,7 +214,8 @@
   "scripts": {
     "vscode:prepublish": "node esbuild.mjs --production",
     "build": "node esbuild.mjs",
-    "verify": "pnpm build && pnpm test",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.webview.json --noEmit",
+    "verify": "pnpm run typecheck && pnpm test && pnpm run vscode:prepublish",
     "watch": "node esbuild.mjs --watch",
     "package": "vsce package --no-dependencies --out releases/ --baseContentUrl https://github.com/peiyucn/epytor/blob/main --baseImagesUrl https://github.com/peiyucn/epytor/raw/main",
     "test": "vitest run",

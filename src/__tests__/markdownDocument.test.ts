@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as vscode from "vscode";
 
-const mockFs = vscode.workspace.fs as {
+const mockFs = vscode.workspace.fs as unknown as {
     readFile: ReturnType<typeof vi.fn>;
     writeFile: ReturnType<typeof vi.fn>;
     delete: ReturnType<typeof vi.fn>;

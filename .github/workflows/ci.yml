@@ -10,26 +10,36 @@ permissions:
   contents: read
 
 jobs:
-  unit-test:
-    name: Unit Tests & Coverage
+  typecheck:
+    name: typecheck
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v7
-
       - uses: pnpm/action-setup@v6
-
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: 'pnpm'
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - name: Typecheck
+        run: pnpm run typecheck
 
+  test:
+    name: test
+    needs: typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
       - name: Run unit tests with coverage
         run: pnpm test:coverage
-
       - name: Upload coverage report
         uses: actions/upload-artifact@v7
         if: always()
@@ -39,26 +49,20 @@ jobs:
           retention-days: 7
 
   build:
-    name: Build
+    name: build
+    needs: [typecheck, test]
     runs-on: ubuntu-latest
-    needs: unit-test
-
     steps:
       - uses: actions/checkout@v7
-
       - uses: pnpm/action-setup@v6
-
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: 'pnpm'
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
       - name: Build (production)
         run: pnpm run vscode:prepublish
-
       - name: Verify output files
         run: |
           test -f dist/extension.js || (echo "dist/extension.js missing" && exit 1)
