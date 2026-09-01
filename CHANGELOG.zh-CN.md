@@ -3,7 +3,7 @@
 本项目的所有重要变更都将记录在此文件中。
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)。
 
-> English version: [CHANGELOG.md](CHANGELOG.md)。
+简体中文 | [English](CHANGELOG.md)
 
 ## [1.1.6] - 2026-08-06
 
