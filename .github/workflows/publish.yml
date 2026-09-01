@@ -9,6 +9,8 @@ jobs:
   publish:
     name: publish
     runs-on: ubuntu-latest
+    # 发布环境：Deployments 页留下每次发布记录（dsh-launcher-panel / dsh-sparrow 同款做法）
+    environment: marketplace-publish
     permissions:
       contents: write
 
