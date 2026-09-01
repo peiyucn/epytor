@@ -190,7 +190,7 @@ __mocks__/vscode.ts      — vscode API 统一 mock
 
 ### CI 自动化
 
-每次 push/PR 到 `main`/`dev` 自动运行七过程 job：`typecheck` → `test`（覆盖率）→ `build` → `package`（vsce），`publish`/`deploy`/`sync` 空跑占位，配置见 `.github/workflows/ci.yml`。
+每次 push/PR 到 `main`/`dev` 自动运行七过程 job **全串行链**：`typecheck` → `test`（覆盖率，Vitest Job Summary + artifact）→ `build` → `package`（vsce），`publish`/`deploy`/`sync` 空跑占位，配置见 `.github/workflows/ci.yml`。
 
 ***
 
