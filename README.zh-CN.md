@@ -16,7 +16,7 @@
 >
 > v1.1.0：重构根基（Milkdown 7.21.2 + Crepe / CodeMirror 6），新增功能（LaTeX 公式、图片增强、工具栏、TOC）。
 >
-> **v1.1.3 起独立开发。** 详见 [CHANGELOG](CHANGELOG.md)。
+> **v1.1.3 起独立开发。** 详见 [CHANGELOG](CHANGELOG.zh-CN.md)。
 
 ## 功能
 
