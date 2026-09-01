@@ -85,27 +85,3 @@ jobs:
         run: mkdir -p releases && pnpm run package
       - name: Verify VSIX artifact exists
         run: test -f releases/*.vsix || (echo "VSIX not produced" && exit 1)
-
-  publish:
-    name: publish
-    needs: package
-    runs-on: ubuntu-latest
-    steps:
-      - name: No-op
-        run: echo "publish 实质由 publish.yml 在 tag 触发时执行，此处空跑占位"
-
-  deploy:
-    name: deploy
-    needs: publish
-    runs-on: ubuntu-latest
-    steps:
-      - name: No-op
-        run: echo "deploy 空跑（本仓库无部署目标）"
-
-  sync:
-    name: sync
-    needs: deploy
-    runs-on: ubuntu-latest
-    steps:
-      - name: No-op
-        run: echo "sync 空跑（本仓库无数据同步）"
