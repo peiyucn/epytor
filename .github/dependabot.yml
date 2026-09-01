@@ -1,8 +1,0 @@
-# Dependabot 版本更新：仅 GitHub Actions（官方工具链，与业务代码无关）
-# npm 依赖改为手动升级（pnpm update），漏洞由 Dependabot 安全修复自动兜底
-version: 2
-updates:
-  - package-ecosystem: github-actions
-    directory: /
-    schedule:
-      interval: weekly
