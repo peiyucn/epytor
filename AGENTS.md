@@ -202,7 +202,7 @@ __mocks__/vscode.ts      — vscode API 统一 mock
 | :--- | :--- | :--- |
 | `README.md` / `README.zh-CN.md` | 用户文档：功能介绍、安装方式、配置项、**已知限制** | 功能变更或发现新限制时 |
 | `CONTRIBUTING.md` / `CONTRIBUTING.zh-CN.md` | 贡献指南：开发环境、提交流程、Bug 报告 | 开发流程或分支策略变更时 |
-| `CHANGELOG.md` / `CHANGELOG.zh-CN.md` | 版本变更记录（[Keep a Changelog](https://keepachangelog.com/) 格式），**英文在前、中文在后** | **发布新版本时** |
+| `CHANGELOG.md` / `CHANGELOG.zh-CN.md` | 版本变更记录（[Keep a Changelog](https://keepachangelog.com/) 格式），**中英双份、英文为默认、顶部互链**（GitHub Release 说明由 publish.yml 拼接两份当前版本条目） | **发布新版本时** |
 
 ### 发布流程（必须严格按顺序）
 

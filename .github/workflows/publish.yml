@@ -38,14 +38,22 @@ jobs:
         run: |
           VERSION="${{ github.ref_name }}"
           VERSION="${VERSION#v}"
-          # Extract the section for this version from CHANGELOG.md
-          awk -v ver="^## \\[${VERSION}\\]" '
-            BEGIN { found=0; lines="" }
-            $0 ~ ver { found=1; next }
-            found && /^## \[/ { exit }
-            found { lines = lines $0 "\n" }
-            END { printf "%s", lines }
-          ' CHANGELOG.md > /tmp/release-body.md
+          # 从两份 CHANGELOG 抽取本版本条目，英文在上、中文在下拼成发布说明
+          extract() {
+            awk -v ver="^## \\[${VERSION}\\]" '
+              BEGIN { found=0; lines="" }
+              $0 ~ ver { found=1; next }
+              found && /^## \[/ { exit }
+              found { lines = lines $0 "\n" }
+              END { printf "%s", lines }
+            ' "$1"
+          }
+          extract CHANGELOG.md > /tmp/release-body-en.md
+          extract CHANGELOG.zh-CN.md > /tmp/release-body-zh.md
+          {
+            if [[ -s /tmp/release-body-en.md ]]; then printf '### English\n\n'; cat /tmp/release-body-en.md; fi
+            if [[ -s /tmp/release-body-zh.md ]]; then printf '\n### 中文\n\n'; cat /tmp/release-body-zh.md; fi
+          } > /tmp/release-body.md
           echo "body_path=/tmp/release-body.md" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
