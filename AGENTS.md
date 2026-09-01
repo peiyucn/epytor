@@ -1,34 +1,28 @@
 # 项目指令 — epytor
 
+> 统一开发流程、统一安全基线、文档语言规范按 [pyai-meta-repo AGENTS.md](../AGENTS.md)，本文只记 epytor 专属约束；冲突以总规范为准。
+
 ## 语言
 
-* **始终用简体中文回复**
+* **始终用简体中文回复**（README / CHANGELOG 中英双份等文档语言规范按 pyai-meta-repo AGENTS.md）
 
-***
+## 项目概况
 
-## 需求
-
-* 新功能设计文档放在 `docs/specs/`，文件名 `YYYY-MM-DD-<功能名>.md`
-* 先写 spec 再开发——明确需求范围、交互边界、验收标准
-* 配置项参考见[开发 → 配置参考](#配置参考)
-
-***
+* VS Code「所见即所得」Markdown 编辑器，基于 Milkdown（Crepe）
 
 ## 开发
 
 ### 基本规则
 
 * **包管理器**：必须用 `pnpm`，禁止 npm/yarn
-* **构建**：修改代码后执行 `pnpm build` 验证编译无误
-* **调试**：F5 启动扩展调试实例（`.vscode/launch.json`）
-* **语言**：全部 TypeScript；Extension 端用 `tsconfig.json`，WebView 端用 `tsconfig.webview.json`
+* **语言**：全部 TypeScript；Extension 端 `tsconfig.json`，WebView 端 `tsconfig.webview.json`
 * **双目标构建**：`dist/extension.js`（Node.js）+ `dist/webview.js`（Browser），由 `esbuild.mjs` 完成
-* **Git commit 规范**：commit 描述用**中文**，类型前缀保留英文（`feat:`、`fix:`、`refactor:`、`chore:`、`docs:` 等）。例：`feat: 新增XXXX功能`、`fix: 修复XXXX问题`
-* **逐项提交**：todo list 中每完成一个独立任务**必须**单独 `git commit`，禁止多个 todo 混在一个 commit 中（方便出问题时精确回溯）
+* **调试**：F5 启动扩展调试实例（`.vscode/launch.json`）
+* **spec 先行**：新功能先写 spec（`docs/specs/YYYY-MM-DD-<功能名>.md`，明确需求范围、交互边界、验收标准）再开发；配置项参考见[配置参考](#配置参考)
 * **诚实原则**：不确定的事直接说"不确定"，禁止编造 URL、issue 编号、API 接口、文档引用或任何事实性信息
-* **优雅原则**：禁止 hack 或补丁式写法，优先使用框架/库官方 API、CSS 变量、配置回调等正路方案
-* **自检原则**：代码移动/提取后**必须**搜索确认旧位置已删除，不得留有死代码或同名遮蔽；标记 roadmap 条目完成前逐项列出实际完成项与未完成项，不得将部分完成标记为整体完成
-* **查证原则**：引用文件位置、函数名、调用关系时，若不确定则先 grep 确认再写，禁止凭记忆编造
+* **优雅原则**：禁止 hack 或补丁式写法，优先用框架/库官方 API、CSS 变量、配置回调等正路方案
+* **自检原则**：代码移动/提取后**必须**搜索确认旧位置已删除，不留死代码或同名遮蔽；标记 roadmap 条目完成前逐项列出实际完成项与未完成项，不得把部分完成标记为整体完成
+* **查证原则**：引用文件位置、函数名、调用关系时，不确定先 grep 确认再写，禁止凭记忆编造
 
 ### 架构约束
 
@@ -70,8 +64,6 @@ docs/tech-debt.md                        — 技术债务清单（面向开发�
 | :--- | :--- | :--- | :--- |
 | `epytor.autoSave` | boolean | `true` | 编辑后自动写盘 |
 | `epytor.autoSaveDelay` | number | `1000` | 防抖延迟（ms） |
-
-***
 
 ## 测试
 
@@ -121,19 +113,17 @@ __mocks__/vscode.ts      — vscode API 统一 mock
 
 ### 强制流程
 
-* **一键验证入口**：`pnpm run verify`（= typecheck + test + 生产构建）；CI 拆三个标准 job：`typecheck` / `test`（覆盖率门槛）/ `build`
+* **一键验证入口**：`pnpm run verify`（= typecheck + test + 生产构建）
 
-**每次代码改动**（bug 修复、新功能、重构还债）必须完整走完以下流程：
+**每次代码改动**（bug 修复、新功能、重构还债）必须完整走完：
 
 ```
 代码改动 → pnpm run verify → 输出手测清单 → vscode_askQuestions 逐项确认 → git commit
 ```
 
-各阶段详细要求：
-
 **阶段一：自动化验证**
 
-1. 运行 `pnpm run verify`（typecheck + test + 生产构建）确认全部通过
+1. 运行 `pnpm run verify` 确认全部通过
 2. 任一失败则先修复，不得跳过
 
 **阶段二：人工验收**
@@ -143,24 +133,13 @@ __mocks__/vscode.ts      — vscode API 统一 mock
 3. 开发者逐项选择「✅ 通过」或「🛑 有问题」
 4. 全部通过 → 进入阶段三；有任一未通过 → 修复后重新从阶段一开始
 
-**阶段三：提交**
+**阶段三：提交**：方可 `git commit`（逐项提交，见 pyai-meta-repo AGENTS.md）
 
-方可 `git commit`（遵循[逐项提交](#基本规则)规则）
+**附加要求**：
 
-***
-
-**功能开发后**附加要求：
-
-* 编写对应单元测试（核心逻辑、边界值、异常路径各至少一个用例）
-
-**Bug 修复后**附加要求：
-
-* 先补充**能复现该 bug 的测试用例**（写在修复同一 commit 内）
-* 确认该用例在修复前失败、修复后通过
-
-**git push 前**：
-
-* **必须**执行 `pnpm run verify`，全部通过才允许推送
+* **功能开发后**：编写对应单元测试（核心逻辑、边界值、异常路径各至少一个用例）
+* **Bug 修复后**：先补充**能复现该 bug 的测试用例**（写在修复同一 commit 内），确认该用例在修复前失败、修复后通过
+* **git push 前**：**必须**执行 `pnpm run verify`，全部通过才允许推送
 
 ### 测试失败处理
 
@@ -179,7 +158,7 @@ __mocks__/vscode.ts      — vscode API 统一 mock
 * 禁止跳过（`it.skip`）或注释失败的测试用例来让 CI 通过
 * 禁止修改测试预期值来掩盖 bug（除非实现有意变更且经过评审）
 * 禁止在未运行测试的情况下 push 到 `main` 或 `dev` 分支
-* 分支保护：main 禁强推/删/重建（CI 会跑但非硬门禁），dev 有 rulesets 轻保护；外部 PR 由 owner 审核合并（Squash-only，合并前确认 CI 绿）；统一安全基线见 pyai-meta-repo AGENTS.md
+* 分支保护、外部 PR 审核、安全开关按 pyai-meta-repo AGENTS.md《统一安全基线》
 
 ### Mock 规范
 
@@ -188,13 +167,7 @@ __mocks__/vscode.ts      — vscode API 统一 mock
 * 依赖时间的逻辑使用 `vi.useFakeTimers()` / `vi.useRealTimers()`，禁止 `setTimeout` 真实等待
 * 禁止测试 `private` 类方法，通过公共接口验证行为
 
-### CI 自动化
-
-每次 push/PR 到 `main`/`dev` 自动运行真实过程 `typecheck` → `test`（覆盖率，Vitest Job Summary + artifact）→ `build` → `package`（vsce），配置见 `.github/workflows/ci.yml`；publish 在 publish.yml（tag 触发）。
-
-***
-
-## 发布
+## Git 与发布
 
 ### 文档角色
 
@@ -202,7 +175,7 @@ __mocks__/vscode.ts      — vscode API 统一 mock
 | :--- | :--- | :--- |
 | `README.md` / `README.zh-CN.md` | 用户文档：功能介绍、安装方式、配置项、**已知限制** | 功能变更或发现新限制时 |
 | `CONTRIBUTING.md` / `CONTRIBUTING.zh-CN.md` | 贡献指南：开发环境、提交流程、Bug 报告 | 开发流程或分支策略变更时 |
-| `CHANGELOG.md` / `CHANGELOG.zh-CN.md` | 版本变更记录（[Keep a Changelog](https://keepachangelog.com/) 格式），**中英双份、英文为默认、顶部互链**（GitHub Release 说明由 publish.yml 拼接两份当前版本条目） | **发布新版本时** |
+| `CHANGELOG.md` / `CHANGELOG.zh-CN.md` | 版本变更记录（[Keep a Changelog](https://keepachangelog.com/) 格式；中英双份按文档语言规范） | **发布新版本时** |
 
 ### 发布流程（必须严格按顺序）
 
@@ -217,8 +190,6 @@ __mocks__/vscode.ts      — vscode API 统一 mock
 5. 合并 commit message
 6. Tag annotation 内容
 
-***
-
 **阶段二：编辑 & 验证**
 
 1. **确认所有改动已提交到** **`dev`** **分支**
@@ -227,30 +198,38 @@ __mocks__/vscode.ts      — vscode API 统一 mock
 4. **运行** **`pnpm test`** **确认全部通过**
 5. **运行** **`pnpm build`** **确认编译无误**
 
-***
-
 **阶段三：最终确认**（编辑后、发布前）
 
 所有编辑完成后，**再次将实际改动展示给用户确认**（CHANGELOG diff、版本号、commit message、tag annotation），用户确认后方可继续。
 
-***
-
 **阶段四：发布**
 
-6. **合并** **`dev`** **→** **`main`**：`git checkout main && git merge dev --no-ff -m "chore: 合并 dev → main，发布 v<VERSION>"`
-7. **推送两个分支**：`git push origin dev main`
-8. **打 tag 触发发布**：`git tag -a v<VERSION> -m "v<VERSION>: <简述>" && git push origin v<VERSION>`
-9. **切回** **`dev`**：`git checkout dev`
+1. **合并** **`dev`** **→** **`main`**：`git checkout main && git merge dev --no-ff -m "chore: 合并 dev → main，发布 v<VERSION>"`
+2. **推送两个分支**：`git push origin dev main`
+3. **打 tag 触发发布**：`git tag -a v<VERSION> -m "v<VERSION>: <简述>" && git push origin v<VERSION>`
+4. **切回** **`dev`**：`git checkout dev`
 
-### CI 自动化
+### 发布约定
 
-推送 `v*.*.*` tag 后自动打包 VSIX、发布到 VS Code Marketplace、创建 GitHub Release，配置见 `.github/workflows/publish.yml`。
+* publish job 已挂 `environment: marketplace-publish`——Deployments 页留每次发布记录；**不设审批门禁**（tag 即发布）；**无 release-control**
+* **发布红线**：已发布版本与 tag **不可覆盖、不可挪动**；市场同版本重发会被拒，错误只能**发新版本修正**；tag 一律 **annotated**（`git tag -a` 带一句话说明）
 
-***
+## GitHub / 网络
 
-## Issue 管理
+* 仓库：https://github.com/peiyucn/epytor
+* 非 Bug 功能的讨论引导至 [Discussions](https://github.com/peiyucn/epytor/discussions)
+* GitHub 操作走 `gh` CLI（pyai-meta-repo AGENTS.md 约定）；向上游提 issue 的注意事项见[上游限制](#上游限制)
 
-### 标签体系
+## CI
+
+* **ci.yml**（push/PR 到 `main`/`dev`）：真实过程 `typecheck` → `test`（覆盖率门槛，Vitest Job Summary + 覆盖率 artifact）→ `build` → `package`（vsce），配置见 `.github/workflows/ci.yml`
+* **publish.yml**（推送 `v*.*.*` tag）：打包 VSIX → 发布 VS Code Marketplace → 创建 GitHub Release（Release 说明由 publish.yml 拼接两份 CHANGELOG 当前版本条目），配置见 `.github/workflows/publish.yml`
+
+## 其他
+
+### Issue 管理
+
+**标签体系**：
 
 | 标签 | 用途 |
 | :--- | :--- |
@@ -259,12 +238,12 @@ __mocks__/vscode.ts      — vscode API 统一 mock
 | `enhancement` + `roadmap` | 计划功能（处于路线图中） |
 | `enhancement` | 其他功能改进 |
 
-### 与路线联动
+**与路线联动**：
 
 * Issue 状态变化影响路线时，同步更新 `docs/roadmap.md`
 * 路线图中的条目如有对应 Issue，在 roadmap 中标注 issue 编号
 
-### 模板
+**模板**：
 
 Issue 使用 `.yml` Issue Forms（结构化表单），模板文件见 `.github/ISSUE_TEMPLATE/`：
 
@@ -274,29 +253,19 @@ Issue 使用 `.yml` Issue Forms（结构化表单），模板文件见 `.github/
 | 功能需求 | `feature_request.yml` | `enhancement` |
 
 * `blank_issues_enabled: false`（`config.yml`），强制使用模板，不允许空白 issue
-
 * 标签由模板 `labels:` 字段自动设置，用户无需手动选择
-
-* 非 Bug 功能的讨论引导至 [Discussions](https://github.com/peiyucn/epytor/discussions)
-
-* **开发过程中触发**：当出现以下情况时，主动提醒用户创建 Issue：
-
+* **开发过程中触发**：出现以下情况时，主动提醒用户创建 Issue：
   * 发现无法在本次修复的 bug
   * 产生新功能想法但暂不开发
   * 发现需要记录的技术债务
   * 提示语示例："这个 bug 暂时修不了，需要创建一个 Issue 记录吗？"
 
-***
+### 路线
 
-## 路线
+* 项目路线图见 `docs/roadmap.md`，**仅记录未来计划**，不写已发布的版本内容
+* 规划新功能或阶段进度有变化时同步更新
 
-项目路线图见 `docs/roadmap.md`，**仅记录未来计划**，不写已发布的版本内容。
-
-规划新功能或阶段进度有变化时同步更新。
-
-***
-
-## 上游限制
+### 上游限制
 
 以下限制来自 Milkdown / Crepe / ProseMirror 等上游依赖，EPYTOR 无法自行修复。升级上游依赖时需逐项验证是否已解决。
 
@@ -312,4 +281,3 @@ Issue 使用 `.yml` Issue Forms（结构化表单），模板文件见 `.github/
 * 升级依赖版本时对照此表逐项验证，已解决的条目从表中移除，写入 CHANGELOG 的 Fixed
 * 优先在对应上游仓库提 issue，将链接填入"追踪"列
 * **向上游提 issue 时必须遵循对方模板规范**：标题带 `[Bug]` 或 `[Feature]` 前缀，正文结构化（复现步骤 / 期望行为 / 实际行为 / 运行环境）。若对方使用 `.yml` Issue Forms，`gh issue create` CLI 无法触发模板校验，需手动对齐模板要求的字段
-
