@@ -121,6 +121,8 @@ __mocks__/vscode.ts      — vscode API 统一 mock
 
 ### 强制流程
 
+* **一键验证入口**：`pnpm run verify`（= `pnpm build` + `pnpm test`）；CI 额外跑 `test:coverage`（覆盖率门槛）
+
 **每次代码改动**（bug 修复、新功能、重构还债）必须完整走完以下流程：
 
 ```
