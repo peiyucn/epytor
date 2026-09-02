@@ -2,10 +2,6 @@
 
 > 统一开发流程、统一安全基线、文档语言规范按 [pyai-meta-repo AGENTS.md](../AGENTS.md)，本文只记 epytor 专属约束；冲突以总规范为准。
 
-## 语言
-
-* **始终用简体中文回复**（README / CHANGELOG 中英双份等文档语言规范按 pyai-meta-repo AGENTS.md）
-
 ## 项目概况
 
 * VS Code「所见即所得」Markdown 编辑器，基于 Milkdown（Crepe）
