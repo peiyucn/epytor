@@ -220,7 +220,7 @@ __mocks__/vscode.ts      — vscode API 统一 mock
 
 ### 发布约定
 
-* publish job 已挂 `environment: marketplace-publish`——Deployments 页留每次发布记录；**不设审批门禁**（tag 即发布）；**无 release-control**
+* publish job 已挂 `environment: marketplace-publish`——Deployments 页留每次发布记录；**不设审批门禁**（tag 即发布）；**无 release-control**；发布凭据 `VSCE_PAT` 配在 `marketplace-publish` **环境级** secret（市场管理页 → Personal Access Tokens → `Marketplace: Manage` 权限），仓库级不保留
 * **发布红线**：已发布版本与 tag **不可覆盖、不可挪动**；市场同版本重发会被拒，错误只能**发新版本修正**；tag 一律 **annotated**（`git tag -a` 带一句话说明）
 
 ## GitHub / 网络
