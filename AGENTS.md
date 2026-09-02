@@ -1,7 +1,5 @@
 # 项目指令 — epytor
 
-> 统一开发流程、统一安全基线、文档语言规范按 [pyai-meta-repo AGENTS.md](../AGENTS.md)，本文只记 epytor 专属约束；冲突以总规范为准。
-
 ## 项目概况
 
 * VS Code「所见即所得」Markdown 编辑器，基于 Milkdown（Crepe）
@@ -129,7 +127,7 @@ __mocks__/vscode.ts      — vscode API 统一 mock
 3. 开发者逐项选择「✅ 通过」或「🛑 有问题」
 4. 全部通过 → 进入阶段三；有任一未通过 → 修复后重新从阶段一开始
 
-**阶段三：提交**：方可 `git commit`（逐项提交，见 pyai-meta-repo AGENTS.md）
+**阶段三：提交**：方可 `git commit`（逐项提交，见上文「工程管线」）
 
 **附加要求**：
 
@@ -154,7 +152,7 @@ __mocks__/vscode.ts      — vscode API 统一 mock
 * 禁止跳过（`it.skip`）或注释失败的测试用例来让 CI 通过
 * 禁止修改测试预期值来掩盖 bug（除非实现有意变更且经过评审）
 * 禁止在未运行测试的情况下 push 到 `main` 或 `dev` 分支
-* 分支保护、外部 PR 审核、安全开关按 pyai-meta-repo AGENTS.md《统一安全基线》
+* 分支保护与安全开关见上方「安全基线」小节
 
 ### Mock 规范
 
@@ -165,13 +163,28 @@ __mocks__/vscode.ts      — vscode API 统一 mock
 
 ## Git 与发布
 
+### 工程管线（本仓库自含）
+
+* **开发**：日常改动在 `dev`；`main` 只接受发布合并
+* **验证**：本地一键 `pnpm run verify`（= typecheck + test + 生产构建）；push 前必须通过
+* **提交**：逐项提交，中文描述 + 英文类型前缀（feat:/fix:/refactor:/chore:/docs:）；禁止多任务混一个 commit；不确定的事直接说"不确定"，禁止编造事实性信息
+* **推送**：日常目标 `dev`；`git push/fetch` 需要代理 127.0.0.1:7897
+* **合并**：dev → main（`--no-ff` 带发布说明）
+* **运维**：依赖升级统一手动（security updates 与 dependabot.yml 关闭）；收到警报 → 判断影响面（运行时/产物依赖才影响用户）→ 手动升级 → 影响用户的按发布流程发版
+
+### 安全基线（本仓库自含要点）
+
+* 已开启：Dependabot alerts（仅报警）、CodeQL default setup、secret scanning + push protection、Private vulnerability reporting、根 `SECURITY.md`；检查命令 `gh api repos/peiyucn/epytor --jq .security_and_analysis`
+* 分支保护：main 禁强推/删/重建、Squash-only、owner 保留 fast-forward 直推；dev rulesets 轻保护（禁强推+禁删+禁重建）；**CI 会跑但不设硬门禁**——合并外部 PR 前 owner 自己确认 CI 绿
+* 外部 PR / Issue 一律开放、不设交互限制，owner 审核合并（Squash-only），不想收的直接关闭
+
 ### 文档角色
 
 | 文件 | 用途 | 更新时机 |
 | :--- | :--- | :--- |
 | `README.md` / `README.zh-CN.md` | 用户文档：功能介绍、安装方式、配置项、**已知限制** | 功能变更或发现新限制时 |
 | `CONTRIBUTING.md` / `CONTRIBUTING.zh-CN.md` | 贡献指南：开发环境、提交流程、Bug 报告 | 开发流程或分支策略变更时 |
-| `CHANGELOG.md` / `CHANGELOG.zh-CN.md` | 版本变更记录（[Keep a Changelog](https://keepachangelog.com/) 格式；中英双份按文档语言规范） | **发布新版本时** |
+| `CHANGELOG.md` / `CHANGELOG.zh-CN.md` | 版本变更记录（[Keep a Changelog](https://keepachangelog.com/) 格式；中英双份、英文为默认、顶部互链） | **发布新版本时** |
 
 ### 发布流程（必须严格按顺序）
 
@@ -214,7 +227,7 @@ __mocks__/vscode.ts      — vscode API 统一 mock
 
 * 仓库：https://github.com/peiyucn/epytor
 * 非 Bug 功能的讨论引导至 [Discussions](https://github.com/peiyucn/epytor/discussions)
-* GitHub 操作走 `gh` CLI（pyai-meta-repo AGENTS.md 约定）；向上游提 issue 的注意事项见[上游限制](#上游限制)
+* GitHub 操作一律走 `gh` CLI（已登录 peiyucn）；`gh api` 直连、`git push/fetch` 需要代理 127.0.0.1:7897；向上游提 issue 的注意事项见[上游限制](#上游限制)
 
 ## CI
 
