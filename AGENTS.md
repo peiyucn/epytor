@@ -23,6 +23,7 @@ VS Code「所见即所得」Markdown 编辑器，基于 Milkdown（Crepe）。
 
 * **开发**：日常改动在 `dev`；`main` 只接受发布合并
 * **验证**：`pnpm run verify`（= typecheck + test + 生产构建）；push 前必须通过
+* **本地制品**：本地打包产物统一落 `releases/`（`pnpm run package` 固定 `--out releases/`），该目录与 `*.vsix` 一起进 `.gitignore`、并入 `.vscodeignore`；制品不在仓库根散落，CI / publish 一律按 `releases/*.vsix` 取件（根规范《工程管线 · 本地制品》）
 * **提交**：逐项提交，中文描述 + 英文类型前缀（feat:/fix:/refactor:/chore:/docs:）；一个 commit 只做一件事
 * **推送**：日常目标 `dev`
 * **合并**：dev → main（`--no-ff` 带发布说明）
