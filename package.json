@@ -229,7 +229,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.webview.json --noEmit",
     "verify": "pnpm run typecheck && pnpm test && pnpm run vscode:prepublish",
     "watch": "node esbuild.mjs --watch",
-    "package": "vsce package --no-dependencies --out releases/ --baseContentUrl https://github.com/peiyucn/epytor/blob/main --baseImagesUrl https://github.com/peiyucn/epytor/raw/main",
+    "package": "node -e \"require('node:fs').mkdirSync('releases',{recursive:true})\" && vsce package --no-dependencies --out releases --baseContentUrl https://github.com/peiyucn/epytor/blob/main --baseImagesUrl https://github.com/peiyucn/epytor/raw/main",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
