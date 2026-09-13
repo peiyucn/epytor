@@ -5,6 +5,12 @@
 
 简体中文 | [English](CHANGELOG.md)
 
+## [1.2.1] - 2026-09-13
+
+### 修复
+
+* **「打开方式…」里本编辑器改列为 `Markdown Editor - EPYTOR`**（中文界面为 `Markdown 编辑器 - EPYTOR`）：此前显示 `EPYTOR - EPYTOR`——VS Code 对扩展提供的编辑器一律在名字后带上扩展名
+
 ## [1.2.0] - 2026-09-13
 
 ### 功能

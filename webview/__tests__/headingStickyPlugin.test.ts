@@ -346,4 +346,37 @@ describe("标题吸顶完整链路", () => {
         destroyEditor();
         root.remove();
     }, 60000);
+
+    it("缓存已脏时立即重建 应该 一并撤掉待触发的防抖定时器（回归：销毁后孤儿定时器仍重建 → 未捕获异常）", async () => {
+        scrollY = 150;
+        headingLeft = 100;
+        headingWidth = 800;
+        const root = await mountWithStubLayout(
+            Array.from({ length: 6 }, (_, i) => `## 标题 ${i}\n正文一行`).flatMap((s) => s.split("\n")),
+            (i) => 60 + i * 120,
+        );
+        await settle();
+
+        // 只冻结「防抖定时器」：rAF 仍是真实帧，测试推进一帧即可
+        vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+        try {
+            // ① 文档变更 → markCacheDirty：挂起一次 300ms 防抖重建
+            const view = getEditorView();
+            expect(view).not.toBeNull();
+            view!.dispatch(view!.state.tr.insertText("改", 1));
+            const pendingAfterChange = vi.getTimerCount();
+            // ② 滚动排一帧，那一帧先跑：updateSticky 见缓存已脏 → 立即重建
+            //    （修复前这里只把句柄置空、没撤定时器，待触发的那个成了孤儿）
+            window.dispatchEvent(new Event("scroll"));
+            await new Promise((r) => requestAnimationFrame(() => r(null)));
+            // ③ 立即重建过了，那一次防抖就不该再挂着——否则它是孤儿定时器，
+            //    编辑器销毁后仍会跑一次并对已销毁的 view 做 nodeDOM（docView 为 null）→ 未捕获异常
+            expect(vi.getTimerCount()).toBe(pendingAfterChange - 1);
+
+            destroyEditor();
+            root.remove();
+        } finally {
+            vi.useRealTimers();
+        }
+    }, 60000);
 });

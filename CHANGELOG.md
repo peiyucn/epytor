@@ -5,6 +5,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 English | [简体中文](CHANGELOG.zh-CN.md)
 
+## [1.2.1] - 2026-09-13
+
+### Bug fixes
+
+- **The editor is listed as `Markdown Editor - EPYTOR`** under *Reopen Editor With…* — it used to read `EPYTOR - EPYTOR`, because VS Code always appends the extension name to an editor contributed by an extension
+
 ## [1.2.0] - 2026-09-13
 
 ### Features

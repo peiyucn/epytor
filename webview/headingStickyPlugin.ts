@@ -193,8 +193,21 @@ export const headingStickyPlugin = $prose(() =>
             let rebuildTimer: ReturnType<typeof setTimeout> | null = null;
             let lastRowSignature = "";
 
+            /**
+             * 撤掉待触发的防抖重建。
+             * 回归（2026-09-13，CI 偶发）：立即重建路径（rAF 见 cacheDirty 时）此前只把句柄置空、
+             * 没撤定时器——待触发的那个成了孤儿，编辑器销毁后仍会跑一次并 `view.nodeDOM` 撞上
+             * 已销毁的 view（`docView` 为 null）→ 未捕获异常。句柄与定时器必须一起收。
+             */
+            const clearRebuildTimer = () => {
+                if (rebuildTimer !== null) {
+                    clearTimeout(rebuildTimer);
+                    rebuildTimer = null;
+                }
+            };
+
             const rebuildCache = () => {
-                rebuildTimer = null;
+                clearRebuildTimer();
                 const scrollOffset = window.scrollY;
                 const contentBottom = view.dom.getBoundingClientRect().bottom + scrollOffset;
                 const levelStack: number[] = [];
@@ -243,8 +256,9 @@ export const headingStickyPlugin = $prose(() =>
             /** 文档变更/折叠状态变化：防抖重建（输入连续时不重复全量扫描） */
             const markCacheDirty = () => {
                 cacheDirty = true;
-                if (rebuildTimer !== null) clearTimeout(rebuildTimer);
+                clearRebuildTimer();
                 rebuildTimer = setTimeout(() => {
+                    // 本次防抖已经触发，句柄归还（不是「撤掉定时器」——它正在跑）
                     rebuildTimer = null;
                     // 宿主折叠期视口是假的 300×150：此刻重建会把文档坐标记成窄版式的值，
                     // 而恢复原宽度后 onLayoutChange 会因「宽度回到基准」复用缓存 → 错误值
@@ -436,7 +450,7 @@ export const headingStickyPlugin = $prose(() =>
                 },
                 destroy() {
                     if (rafId !== null) cancelAnimationFrame(rafId);
-                    if (rebuildTimer !== null) clearTimeout(rebuildTimer);
+                    clearRebuildTimer();
                     if (_hideStickyUntilNextInteraction === suppressUntilNextInteraction) {
                         _hideStickyUntilNextInteraction = null;
                     }
