@@ -22,6 +22,7 @@ import { applyCodeBlockMaxHeight, applyEditorMaxWidth } from "./utils/layoutVars
 import { showNotice } from "./ui/notice";
 import { computeAllHeadingSignature } from "./utils/headingFold";
 import { headingScrollTop } from "./utils/headingScroll";
+import { anchorIdCandidates } from "./utils/anchorTarget";
 import { headingFoldPluginKey } from "./headingFoldPlugin";
 import {
     createEditor,
@@ -485,7 +486,11 @@ if (editorContainer) {
 	        e.preventDefault();
 	        e.stopImmediatePropagation();
 	        if (href.startsWith("#")) {
-	            const el = document.getElementById(href.slice(1));
+	            // 锚点目标：先按原文查、再按解码后的片段查（非 ASCII 锚点常被写成
+	            // 百分号编码，直接拿编码串查会静默失效；见 utils/anchorTarget.ts）
+	            const el = anchorIdCandidates(href.slice(1))
+	                .map((id) => document.getElementById(id))
+	                .find((found): found is HTMLElement => found !== null);
 	            if (el) {
 	                const tb = document.querySelector(".milkdown-top-bar") as HTMLElement | null;
 	                const th = tb?.getBoundingClientRect().height ?? DEFAULT_TOPBAR_HEIGHT;
