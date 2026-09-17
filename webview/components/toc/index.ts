@@ -328,8 +328,9 @@ export function initToc(getEditorView: () => EditorView | null): {
                 refresh();
             });
         } else {
+            // 无子标题的占位横杠：不再是「不可点」的指示（整行都跳转，见下方 item 的
+            // mousedown），所以不写 cursor: default —— 那会与整行 pointer 的预期打架
             toggle.textContent = "–";
-            toggle.style.cursor = "default";
         }
         item.appendChild(toggle);
 
@@ -338,7 +339,14 @@ export function initToc(getEditorView: () => EditorView | null): {
         label.textContent = h.text || `${t("Heading")} ${h.level}`;
         applyTooltip(label, h.text, { placement: "above", truncatedOnly: true });
 
-        label.addEventListener("mousedown", (e) => {
+        item.appendChild(label);
+
+        // 点击跳转绑在**整行**（item）而不是文字 span 上（回归：手测反馈「整行高亮可点，
+        // 但只有文字那一截有反应」）。此前绑在 label 上，而 label 是 flex:1 的文字高度
+        // （18px）、行高 24px——行的上下 padding 与文字右侧的空白都不属于 label，
+        // 点上去没有任何反应，与 hover 高亮给出的「整行可点」预期不符。
+        // 折叠箭头有自己的 mousedown 且 stopPropagation，因此不会与这里重复触发。
+        item.addEventListener("mousedown", (e) => {
             e.preventDefault();
             e.stopPropagation();
             const v = getEditorView();
@@ -372,7 +380,6 @@ export function initToc(getEditorView: () => EditorView | null): {
             } catch { /* heading 元素已不在 DOM 中，忽略此次跳转 */ }
         });
 
-        item.appendChild(label);
         return item;
     }
 

@@ -11,7 +11,7 @@
  *   2. 但「目录项 ↔ 标题当前位置」的绑定必须跟着更新——否则高亮与折叠会指向旧位置；
  *   3. 标题结构真的变了（改名/增删/层级变化）才重建，且重建后内容正确。
  */
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createEditor, destroyEditor, getEditorView } from "../editor";
 import { initToc } from "../components/toc";
 
@@ -253,6 +253,54 @@ describe("输入正文时 TOC 不重建（回归：目录内容一下一下闪�
 
                 expect({ clicked: k, active: activeIndex() }).toEqual({ clicked: k, active: k });
             }
+        } finally {
+            window.scrollTo = originalScrollTo;
+        }
+    }, 60000);
+
+    it("点击整行（非文字处）也应该跳转（回归：只有文字那一截有反应，行的空白点上去没反应）", async () => {
+        setViewport(1024, 800);
+        Object.defineProperty(document.documentElement, "scrollHeight", { get: () => 5000, configurable: true });
+        const { list } = await mount();
+
+        const scrollTo = vi.fn();
+        const originalScrollTo = window.scrollTo;
+        window.scrollTo = scrollTo as unknown as typeof window.scrollTo;
+        try {
+            await new Promise((r) => setTimeout(r, 400));
+
+            const items = Array.from(list.querySelectorAll<HTMLElement>(".toc-item"));
+            // 直接派发在**行**上：行的上下 padding 与文字右侧空白都不属于 label，
+            // 之前点击这些区域没有任何反应
+            items[1].dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+            await new Promise((r) => requestAnimationFrame(() => r(null)));
+
+            expect(scrollTo).toHaveBeenCalledTimes(1);
+            const active = items.findIndex((el) => el.classList.contains("toc-item--active"));
+            expect(active).toBe(1);
+        } finally {
+            window.scrollTo = originalScrollTo;
+        }
+    }, 60000);
+
+    it("点击折叠箭头 不应该 触发跳转（箭头 stopPropagation，与整行点击互不干扰）", async () => {
+        setViewport(1024, 800);
+        Object.defineProperty(document.documentElement, "scrollHeight", { get: () => 5000, configurable: true });
+        const { list } = await mount();
+
+        const scrollTo = vi.fn();
+        const originalScrollTo = window.scrollTo;
+        window.scrollTo = scrollTo as unknown as typeof window.scrollTo;
+        try {
+            await new Promise((r) => setTimeout(r, 400));
+
+            // 第一个项有子标题 → 是折叠开关
+            const toggle = list.querySelector<HTMLElement>(".toc-collapse-toggle")!;
+            toggle.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+            await new Promise((r) => setTimeout(r, 0));
+            await new Promise((r) => requestAnimationFrame(() => r(null)));
+
+            expect(scrollTo).not.toHaveBeenCalled();
         } finally {
             window.scrollTo = originalScrollTo;
         }
