@@ -1,12 +1,15 @@
 import './toc.css';
 import type { EditorView } from "@milkdown/kit/prose/view";
-import { DEFAULT_TOPBAR_HEIGHT, VIEWPORT_PADDING } from "../../../shared/constants";
+import { DEFAULT_TOPBAR_HEIGHT } from "../../../shared/constants";
 import { hideStickyUntilNextInteraction, onActiveHeadingChange, getActiveHeadingPos } from "../../headingStickyPlugin";
 import { applyTooltip } from "@/ui/tooltip";
 import { t } from "@/i18n";
 import { IconChevronRight, IconChevronDown } from "@/ui/icons";
 import { getWebviewState, setWebviewState } from "@/messaging";
 import { buildHeadingIndex } from "../../utils/headingFold";
+import { headingScrollTop } from "../../utils/headingScroll";
+import { pinHeadingHighlight, resolveHighlight, type HeadingHighlightPin } from "../../utils/headingHighlight";
+import { getUserInteractionEpoch, USER_INTERACTION_EVENT_TYPES } from "../../utils/userInteraction";
 import { shouldSkipViewportWork } from "../../utils/viewportLedger";
 
 interface HeadingEntry {
@@ -128,6 +131,14 @@ export function initToc(getEditorView: () => EditorView | null): {
     const itemByPos = new Map<number, HTMLElement>();
 
     /**
+     * 列表项 → 标题位置的**当前**值（点击钉住用）。
+     * 与 itemByPos 同源、每次重绑一起更新；点击时 O(1) 取到「这一项现在对应哪个 pos」，
+     * 不必按 DOM 元素反查（`posAtDOM` 是「节点起始 + 1」，与判据口径差 1，历史上已因此
+     * 出过两次回归——见 utils/headingFold.ts 的 pos 口径说明）。
+     */
+    const posByItem = new Map<HTMLElement, number>();
+
+    /**
      * 已渲染列表项的**渲染签名**（可见项的「身份键 + 折叠态」序列，不含文档位置）与
      * 对应的 DOM 项。`refresh()` 据此决定「要不要重建 DOM」：签名不变 = 标题结构没变
      * （正文输入只会让标题位置平移），此时只重绑位置，列表 DOM 一个节点都不动。
@@ -157,16 +168,47 @@ export function initToc(getEditorView: () => EditorView | null): {
         // 变了」时回调一次，不是每帧。位置确实不在列表里时（该标题被目录折叠隐藏）
         // rebindFromDocument 会因签名一致而重绑到同样的集合，行为是收敛的。
         if (pos !== null && !itemByPos.has(pos)) { rebindFromDocument(); }
+
+        // 点击钉住优先（短文档滚不动，纯几何无法表达「用户点的是第几项」，见
+        // utils/headingHighlight.ts）；用户再次交互即解除，交回滚动跟随。
+        const resolved = resolveHighlight(pinnedHighlight, pos, getUserInteractionEpoch());
+        pinnedHighlight = resolved.pin;
+        const effective = resolved.pos;
+
         for (const [itemPos, el] of itemByPos) {
-            el.classList.toggle("toc-item--active", pos !== null && itemPos === pos);
+            el.classList.toggle("toc-item--active", effective !== null && itemPos === effective);
         }
-        if (pos === null) { return; }
-        const item = itemByPos.get(pos);
+        if (effective === null) { return; }
+        const item = itemByPos.get(effective);
         if (!item) { return; }
         const listRect = list.getBoundingClientRect();
         const itemRect = item.getBoundingClientRect();
         if (itemRect.top >= listRect.top && itemRect.bottom <= listRect.bottom) { return; }
         list.scrollTop += itemRect.top - listRect.top - (listRect.height - itemRect.height) / 2;
+    }
+
+    /**
+     * 点击目录项后的高亮钉住状态（null = 跟随滚动）。
+     * 用户再次交互（滚动 / 键盘 / 拖滚动条）后由 resolveHighlight 自动解除。
+     */
+    let pinnedHighlight: HeadingHighlightPin | null = null;
+
+    /**
+     * 用户再次交互 → 解除钉住并交回滚动跟随。
+     *
+     * 为什么不能只依赖 applyActiveHeading 里的惰性解除：那条路径由 publication 驱动，
+     * 而上游 `publishActiveHeading` **只在当前章节真的变化时**才通知。短文档里几何值恒为
+     * 最后一项（用户怎么滚都不变）→ 通知永不触发 → 钉住就永远解不掉了。这里显式挂一次
+     * 交互监听，保证「用户一动就解除」。
+     *
+     * 用冒泡阶段（非 capture）：点击目录项自身也会递增纪元，但本函数在 label 的处理器
+     * **之后**才执行，此时钉住已带着新纪元建立、判定为相符，不会自我解除。
+     */
+    function releasePinOnInteraction(): void {
+        if (pinnedHighlight === null) { return; }
+        if (getUserInteractionEpoch() === pinnedHighlight.epoch) { return; }
+        pinnedHighlight = null;
+        applyActiveHeading(getActiveHeadingPos());
     }
 
     /** 按当前文档重新计算「目录项 ↔ 标题位置」绑定（DOM 不动；仅用于位置漂移兜底） */
@@ -308,12 +350,24 @@ export function initToc(getEditorView: () => EditorView | null): {
                 // 复用稳定，posAtDOM 即得当前位置）
                 const el = headingEls.get(item);
                 if (!el || !v.dom.contains(el)) return;
+                const targetPos = posByItem.get(item);
+                if (targetPos === undefined) return;
                 const topbar = document.querySelector(".milkdown-top-bar") as HTMLElement | null;
                 const topbarH = topbar?.getBoundingClientRect().height ?? DEFAULT_TOPBAR_HEIGHT;
                 // 跳转后隐藏吸顶条直到用户下一次交互：目标章节正常显示在顶栏下方，
                 // 不再残留上一个章节的吸顶条（用户反馈：应该正常显示到对应章节、没有吸顶标题）
                 hideStickyUntilNextInteraction();
-                const top = el.getBoundingClientRect().top + window.scrollY - topbarH - VIEWPORT_PADDING;
+                // 落点必须**越过**「当前章节」阅读线，否则高亮会停在被点项的前一项
+                // （回归：点击目录切换正常、但高亮乱跑/点第一项无高亮）
+                const top = headingScrollTop(
+                    el.getBoundingClientRect().top + window.scrollY,
+                    topbarH,
+                );
+                // 钉住被点项：短文档滚不动（可滚动量 < 尾部区间），纯几何取到的永远是最后
+                // 一项，必须靠这次点击意图才能精准高亮（见 utils/headingHighlight.ts）。
+                // 纪元**在点击之后**取：这次 mousedown 已计入纪元，用旧值会立刻自我解除。
+                pinnedHighlight = pinHeadingHighlight(targetPos, getUserInteractionEpoch());
+                applyActiveHeading(targetPos);
                 window.scrollTo({ top, behavior: "smooth" });
             } catch { /* heading 元素已不在 DOM 中，忽略此次跳转 */ }
         });
@@ -328,10 +382,12 @@ export function initToc(getEditorView: () => EditorView | null): {
      */
     function bindPositions(view: EditorView, headings: HeadingEntry[], visible: number[]): void {
         itemByPos.clear();
+        posByItem.clear();
         visible.forEach((idx, slot) => {
             const item = renderedItems[slot];
             if (!item) return;
             itemByPos.set(headings[idx].pos, item);
+            posByItem.set(item, headings[idx].pos);
             const headingEl = findHeadingElement(view, headings[idx].pos);
             if (headingEl) { headingEls.set(item, headingEl); }
         });
@@ -499,6 +555,15 @@ export function initToc(getEditorView: () => EditorView | null): {
     window.addEventListener("resize", checkAutoShow);
     // 当前章节跟随（判定与吸顶条同源：吸顶条最内层那一行）
     onActiveHeadingChange(applyActiveHeading);
+
+    // 点击钉住的解除：用户再滚动/敲键/点别处即交回滚动跟随。
+    // 事件集直接复用 userInteraction 的表（唯一真源，见该模块头注释的回归 F4）。
+    // 冒泡阶段：点击目录项自身也会递增纪元，但 label 的处理器先跑、钉住已带新纪元建立，
+    // 到这里判定为相符，不会自我解除。
+    window.addEventListener("scroll", releasePinOnInteraction, { passive: true });
+    for (const type of USER_INTERACTION_EVENT_TYPES) {
+        window.addEventListener(type, releasePinOnInteraction, { passive: true });
+    }
 
     function show(): void {
         panel.style.visibility = 'visible';

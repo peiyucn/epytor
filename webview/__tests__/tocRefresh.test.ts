@@ -220,4 +220,41 @@ describe("输入正文时 TOC 不重建（回归：目录内容一下一下闪�
         expect(document.querySelector(".toc-empty")).not.toBeNull();
         expect(document.querySelectorAll(".toc-item")).toHaveLength(0);
     }, 60000);
+
+    it("点击任一目录项后 高亮 应该 落在被点的那一项（回归：高亮停在前一项、点首项无高亮）", async () => {
+        setViewport(1024, 800);
+        Object.defineProperty(document.documentElement, "scrollHeight", { get: () => 5000, configurable: true });
+        const { list } = await mount();
+
+        // 瞬时滚动：模拟 smooth 的终点，并让吸顶插件按新位置重算当前章节
+        const originalScrollTo = window.scrollTo;
+        window.scrollTo = ((arg: unknown) => {
+            scrollY = Number((arg as { top?: number } | undefined)?.top ?? 0);
+            window.dispatchEvent(new Event("scroll"));
+        }) as unknown as typeof window.scrollTo;
+
+        try {
+            await new Promise((r) => setTimeout(r, 400));
+
+            const labels = () => Array.from(list.querySelectorAll<HTMLElement>(".toc-item-label"));
+            const activeIndex = () => Array.from(list.querySelectorAll<HTMLElement>(".toc-item"))
+                .findIndex((el) => el.classList.contains("toc-item--active"));
+
+            for (let k = 0; k < labels().length; k++) {
+                scrollY = 0;
+                window.dispatchEvent(new Event("scroll"));
+                await new Promise((r) => setTimeout(r, 60));
+                await new Promise((r) => requestAnimationFrame(() => r(null)));
+
+                labels()[k].dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+                await new Promise((r) => requestAnimationFrame(() => r(null)));
+                await new Promise((r) => setTimeout(r, 80));
+                await new Promise((r) => requestAnimationFrame(() => r(null)));
+
+                expect({ clicked: k, active: activeIndex() }).toEqual({ clicked: k, active: k });
+            }
+        } finally {
+            window.scrollTo = originalScrollTo;
+        }
+    }, 60000);
 });

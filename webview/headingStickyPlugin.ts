@@ -18,6 +18,7 @@ import { headingFoldPluginKey, type HeadingFoldMeta } from "./headingFoldPlugin"
 import { shouldSkipViewportWork } from "./utils/viewportLedger";
 import { buildHeadingIndex, type HeadingIndexEntry } from "./utils/headingFold";
 import { computeStickyRows, currentHeadingIndex, effectiveReadingLineY, STICKY_MAX_ROWS, STICKY_ROW_HEIGHT_PX } from "./utils/headingSticky";
+import { headingScrollTop } from "./utils/headingScroll";
 import { getUserInteractionEpoch } from "./utils/userInteraction";
 
 /** 隐藏吸顶条直到用户下一次交互（TOC 跳转用；插件实例挂载时赋值） */
@@ -97,7 +98,6 @@ export const headingStickyPlugin = $prose(() =>
             let suppressSticky = false;
             let suppressEpoch: number | null = null;
 
-            const STICKY_SCROLL_OFFSET_PX = 8;
             /** 缓存重建防抖时长（连续输入合并为一次全量布局测量） */
             const CACHE_REBUILD_DEBOUNCE_MS = 300;
 
@@ -113,7 +113,12 @@ export const headingStickyPlugin = $prose(() =>
                 requestAnimationFrame(() => {
                     const heading = view.nodeDOM(headingPos);
                     if (!(heading instanceof HTMLElement)) return;
-                    const top = heading.getBoundingClientRect().top + window.scrollY - getTopbarBottom() - STICKY_SCROLL_OFFSET_PX;
+                    // 落点与「当前章节」阅读线同基准（见 utils/headingScroll.ts）：吸顶行点击
+                    // 跳转后，被点的那一节必须真的成为当前章节，否则高亮会停在前一项
+                    const top = headingScrollTop(
+                        heading.getBoundingClientRect().top + window.scrollY,
+                        getTopbarBottom(),
+                    );
                     window.scrollTo({ top });
                 });
             };

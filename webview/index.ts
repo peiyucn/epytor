@@ -21,6 +21,7 @@ import { applyTableWrapVars } from "./utils/tableWrap";
 import { applyCodeBlockMaxHeight, applyEditorMaxWidth } from "./utils/layoutVars";
 import { showNotice } from "./ui/notice";
 import { computeAllHeadingSignature } from "./utils/headingFold";
+import { headingScrollTop } from "./utils/headingScroll";
 import { headingFoldPluginKey } from "./headingFoldPlugin";
 import {
     createEditor,
@@ -488,7 +489,10 @@ if (editorContainer) {
 	            if (el) {
 	                const tb = document.querySelector(".milkdown-top-bar") as HTMLElement | null;
 	                const th = tb?.getBoundingClientRect().height ?? DEFAULT_TOPBAR_HEIGHT;
-	                window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - th - VIEWPORT_PADDING, behavior: "smooth" });
+	                // 落点与「当前章节」判据同基准：否则跳到的标题不会成为当前章节，
+	                // TOC 高亮会停在它前面一项（见 utils/headingScroll.ts）
+	                const top = headingScrollTop(el.getBoundingClientRect().top + window.scrollY, th);
+	                window.scrollTo({ top, behavior: "smooth" });
 	            }
 	            return;
 	        }
