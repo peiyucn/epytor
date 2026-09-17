@@ -426,8 +426,11 @@ async function initEditor(
                 // 输入正文时状态栏字数长期不更新（用户反馈「保存后才变」）
                 updateWordCount();
             }, MARK_DIRTY_DEBOUNCE_MS);
-            // TOC/字数：标题签名不变则跳过 TOC 重建（根源级优化：输入正文零重建，
-            // 替代纯防抖延时——停顿后仍会重建的开销被真正消除）
+            // TOC：这个外层签名带**文档位置**，正文输入会让其后所有标题的 pos 平移，
+            // 因此它几乎每次输入都会变、起不到「跳过」作用（实测：正文逐字输入 12 次，
+            // 签名变 12 次）。真正做「结构没变就不重建」的是 toc.refresh() 内部的渲染
+            // 签名（按「身份键 + 折叠态」，不含位置）——那才是「目录一下一下闪」的修复点，
+            // 见 components/toc/index.ts 的 refresh()。
             if (_tocRefreshTimer) clearTimeout(_tocRefreshTimer);
             _tocRefreshTimer = setTimeout(() => {
                 requestAnimationFrame(() => {
@@ -438,7 +441,7 @@ async function initEditor(
                     const sig = computeAllHeadingSignature(view.state.doc);
                     if (sig !== _lastTocSignature) {
                         _lastTocSignature = sig;
-                        toc.refresh(); // 标题结构变化才重建目录（面板关闭时是 no-op）
+                        toc.refresh(); // 面板关闭时是 no-op；结构未变时只重绑位置、不动 DOM
                     }
                 });
             }, TOC_REFRESH_DEBOUNCE_MS);

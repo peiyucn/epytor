@@ -124,8 +124,24 @@ export function initToc(getEditorView: () => EditorView | null): {
     /** TOC 列表项 → 对应标题 DOM 元素（refresh 时填充，点击跳转用；P9） */
     const headingEls = new WeakMap<HTMLElement, HTMLElement>();
 
-    /** 标题位置 → 列表项（高亮跟随用；refresh 时重建） */
+    /** 标题位置 → 列表项（高亮跟随用；refresh 时重绑） */
     const itemByPos = new Map<number, HTMLElement>();
+
+    /**
+     * 已渲染列表项的**渲染签名**（可见项的「身份键 + 折叠态」序列，不含文档位置）与
+     * 对应的 DOM 项。`refresh()` 据此决定「要不要重建 DOM」：签名不变 = 标题结构没变
+     * （正文输入只会让标题位置平移），此时只重绑位置，列表 DOM 一个节点都不动。
+     *
+     * 回归（owner 手测 2026-09-17「输入文字的时候，TOC 里的内容总一下一下闪」）：此前
+     * refresh 无条件 `list.innerHTML = ""` 全量重建，而刷新判据带文档位置——正文里每敲
+     * 一个字，其后所有标题的 pos 都平移、判据必变，于是每个输入停顿都重建一次：目录项
+     * 重画、列表滚动位置归零、hover 与点击目标被打断，观感就是「一下一下闪」。
+     *
+     * 初值用 `null` 而非 `""`：空文档的渲染签名恰好也是 `""`（空序列），用 `""` 当哨兵会
+     * 让「从来没有标题」的文档永远走「无变化」分支、连「No headings」占位都不画。
+     */
+    let renderedSignature: string | null = null;
+    let renderedItems: HTMLElement[] = [];
 
     /**
      * 高亮当前章节并把它滚进可视区（跟随吸顶条的「我们现在在哪」）。
@@ -133,6 +149,14 @@ export function initToc(getEditorView: () => EditorView | null): {
      * 只动列表自身的 scrollTop（不用 scrollIntoView：那会连带滚动窗口，把正文顶跑）。
      */
     function applyActiveHeading(pos: number | null): void {
+        // 位置漂移兜底（回归：输入时高亮「灭一下再亮」——正文里敲字会让标题 pos 整体平移，
+        // 吸顶插件随即按**新**位置发布，而这里的绑定还是旧的，查不到就把高亮全清了，直到
+        // 800ms 防抖刷新才恢复）。查不到就按当前文档重绑一次，高亮不中断。
+        //
+        // 不必担心这里变成滚动热路径：订阅上游 publishActiveHeading 只在「当前章节真的
+        // 变了」时回调一次，不是每帧。位置确实不在列表里时（该标题被目录折叠隐藏）
+        // rebindFromDocument 会因签名一致而重绑到同样的集合，行为是收敛的。
+        if (pos !== null && !itemByPos.has(pos)) { rebindFromDocument(); }
         for (const [itemPos, el] of itemByPos) {
             el.classList.toggle("toc-item--active", pos !== null && itemPos === pos);
         }
@@ -143,6 +167,20 @@ export function initToc(getEditorView: () => EditorView | null): {
         const itemRect = item.getBoundingClientRect();
         if (itemRect.top >= listRect.top && itemRect.bottom <= listRect.bottom) { return; }
         list.scrollTop += itemRect.top - listRect.top - (listRect.height - itemRect.height) / 2;
+    }
+
+    /** 按当前文档重新计算「目录项 ↔ 标题位置」绑定（DOM 不动；仅用于位置漂移兜底） */
+    function rebindFromDocument(): void {
+        const view = getEditorView();
+        if (!view) return;
+        const headings = getHeadings(view);
+        const visible: number[] = [];
+        for (let idx = 0; idx < headings.length; idx++) {
+            if (isHeadingVisible(headings, idx, collapsedHeadings)) { visible.push(idx); }
+        }
+        // 结构已经变了（渲染签名不同）说明 refresh 尚未落地，此时重绑会错配——交给 refresh
+        if (renderSignature(headings, visible) !== renderedSignature) { return; }
+        bindPositions(view, headings, visible);
     }
 
     const header = document.createElement("div");
@@ -206,85 +244,138 @@ export function initToc(getEditorView: () => EditorView | null): {
         });
     }
 
+    /** 列表项的折叠态标记（进渲染签名：翻转箭头要跟着变） */
+    function foldStateOf(headings: HeadingEntry[], idx: number): string {
+        if (!hasChildren(headings, idx)) { return "-"; }
+        return collapsedHeadings.has(headings[idx].key) ? "closed" : "open";
+    }
+
+    /**
+     * 渲染签名：可见项的「稳定身份键 + 折叠态」序列。
+     *
+     * 关键是**不含文档位置**：正文输入只让标题 pos 平移，身份与形状都没变 —— 此时列表
+     * DOM 不需要动（这正是本次「目录一下一下闪」回归的修复点）。位置变化由
+     * `bindPositions()` 单独重绑。
+     */
+    function renderSignature(headings: HeadingEntry[], visible: number[]): string {
+        return visible.map((idx) => `${headings[idx].key}|${foldStateOf(headings, idx)}`).join("\n");
+    }
+
+    /** 新建一个目录项（仅结构变化时调用） */
+    function createItem(view: EditorView, headings: HeadingEntry[], idx: number): HTMLElement {
+        const h = headings[idx];
+        const item = document.createElement("div");
+        item.className = `toc-item toc-item--h${h.level}`;
+        item.style.paddingLeft = `${(h.level - 1) * 12 + 8}px`;
+
+        const hasKids = hasChildren(headings, idx);
+        const isCollapsed = collapsedHeadings.has(h.key);
+        const toggle = document.createElement("span");
+        toggle.className = "toc-collapse-toggle";
+        if (hasKids) {
+            toggle.innerHTML = isCollapsed ? IconChevronRight : IconChevronDown;
+            toggle.addEventListener("mousedown", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (isCollapsed) {
+                    collapsedHeadings.delete(h.key);
+                } else {
+                    collapsedHeadings.add(h.key);
+                }
+                saveCollapsedState();
+                refresh();
+            });
+        } else {
+            toggle.textContent = "–";
+            toggle.style.cursor = "default";
+        }
+        item.appendChild(toggle);
+
+        const label = document.createElement("span");
+        label.className = "toc-item-label";
+        label.textContent = h.text || `${t("Heading")} ${h.level}`;
+        applyTooltip(label, h.text, { placement: "above", truncatedOnly: true });
+
+        label.addEventListener("mousedown", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const v = getEditorView();
+            if (!v) return;
+            try {
+                // 点击时用 refresh 时记录的标题 DOM 元素反查当前位置（回归 P9：
+                // 此前按「level+文本」全文档 descendants 反查——每次点击 O(n)，
+                // 且两个同文同级标题永远命中第一个；元素引用随 ProseMirror DOM
+                // 复用稳定，posAtDOM 即得当前位置）
+                const el = headingEls.get(item);
+                if (!el || !v.dom.contains(el)) return;
+                const topbar = document.querySelector(".milkdown-top-bar") as HTMLElement | null;
+                const topbarH = topbar?.getBoundingClientRect().height ?? DEFAULT_TOPBAR_HEIGHT;
+                // 跳转后隐藏吸顶条直到用户下一次交互：目标章节正常显示在顶栏下方，
+                // 不再残留上一个章节的吸顶条（用户反馈：应该正常显示到对应章节、没有吸顶标题）
+                hideStickyUntilNextInteraction();
+                const top = el.getBoundingClientRect().top + window.scrollY - topbarH - VIEWPORT_PADDING;
+                window.scrollTo({ top, behavior: "smooth" });
+            } catch { /* heading 元素已不在 DOM 中，忽略此次跳转 */ }
+        });
+
+        item.appendChild(label);
+        return item;
+    }
+
+    /**
+     * 把「目录项 ↔ 标题位置」的绑定更新到当前文档（DOM 不动）。
+     * 位置一律从当前文档重新取：正文输入会让所有标题 pos 平移，旧绑定会指向错误章节。
+     */
+    function bindPositions(view: EditorView, headings: HeadingEntry[], visible: number[]): void {
+        itemByPos.clear();
+        visible.forEach((idx, slot) => {
+            const item = renderedItems[slot];
+            if (!item) return;
+            itemByPos.set(headings[idx].pos, item);
+            const headingEl = findHeadingElement(view, headings[idx].pos);
+            if (headingEl) { headingEls.set(item, headingEl); }
+        });
+    }
+
     function refresh(): void {
         if (!isOpen) return;
         const view = getEditorView();
         if (!view) return;
         const headings = getHeadings(view);
+
+        const visible: number[] = [];
+        for (let idx = 0; idx < headings.length; idx++) {
+            if (isHeadingVisible(headings, idx, collapsedHeadings)) { visible.push(idx); }
+        }
+        const signature = renderSignature(headings, visible);
+
+        // 结构未变（正文打字的常态：标题身份与折叠态都一样，只有位置平移）——
+        // 一个 DOM 节点都不动，只重绑位置。列表滚动位置、hover 与 tooltip 因此不被打断。
+        if (signature === renderedSignature) {
+            bindPositions(view, headings, visible);
+            applyActiveHeading(getActiveHeadingPos());
+            return;
+        }
+
+        // 结构变了（改名 / 增删标题 / 层级变化 / 折叠切换）：整体重建
+        renderedSignature = signature;
         list.innerHTML = "";
-        itemByPos.clear();
-        // headingEls 为 WeakMap：列表重建后旧项自动可回收，无需清空
-        if (headings.length === 0) {
+        renderedItems = [];
+        // headingEls 为 WeakMap：被丢弃的旧项自动可回收，无需清空
+        if (visible.length === 0) {
             const empty = document.createElement("div");
             empty.className = "toc-empty";
             empty.textContent = t("No headings");
             list.appendChild(empty);
+            itemByPos.clear();
             return;
         }
-        headings.forEach((h, idx) => {
-            if (!isHeadingVisible(headings, idx, collapsedHeadings)) return;
-
-            const item = document.createElement("div");
-            item.className = `toc-item toc-item--h${h.level}`;
-            item.style.paddingLeft = `${(h.level - 1) * 12 + 8}px`;
-            // 记录标题 DOM 元素引用（点击跳转用；P9：替代「按文本反查 pos」的 O(n) 路径）
-            const headingEl = findHeadingElement(view, h.pos);
-            if (headingEl) { headingEls.set(item, headingEl); }
-
-            const hasKids = hasChildren(headings, idx);
-            const toggle = document.createElement("span");
-            toggle.className = "toc-collapse-toggle";
-            if (hasKids) {
-                const isCollapsed = collapsedHeadings.has(h.key);
-                toggle.innerHTML = isCollapsed ? IconChevronRight : IconChevronDown;
-                toggle.addEventListener("mousedown", (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (isCollapsed) {
-                        collapsedHeadings.delete(h.key);
-                    } else {
-                        collapsedHeadings.add(h.key);
-                    }
-                    saveCollapsedState();
-                    refresh();
-                });
-            } else {
-                toggle.textContent = "–";
-                toggle.style.cursor = "default";
-            }
-            item.appendChild(toggle);
-
-            const label = document.createElement("span");
-            label.className = "toc-item-label";
-            label.textContent = h.text || `${t("Heading")} ${h.level}`;
-            applyTooltip(label, h.text, { placement: "above", truncatedOnly: true });
-
-            label.addEventListener("mousedown", (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const v = getEditorView();
-                if (!v) return;
-                try {
-                    // 点击时用 refresh 时记录的标题 DOM 元素反查当前位置（回归 P9：
-                    // 此前按「level+文本」全文档 descendants 反查——每次点击 O(n)，
-                    // 且两个同文同级标题永远命中第一个；元素引用随 ProseMirror DOM
-                    // 复用稳定，posAtDOM 即得当前位置）
-                    const el = headingEls.get(item);
-                    if (!el || !v.dom.contains(el)) return;
-                    const topbar = document.querySelector(".milkdown-top-bar") as HTMLElement | null;
-                    const topbarH = topbar?.getBoundingClientRect().height ?? DEFAULT_TOPBAR_HEIGHT;
-                    // 跳转后隐藏吸顶条直到用户下一次交互：目标章节正常显示在顶栏下方，
-                    // 不再残留上一个章节的吸顶条（用户反馈：应该正常显示到对应章节、没有吸顶标题）
-                    hideStickyUntilNextInteraction();
-                    const top = el.getBoundingClientRect().top + window.scrollY - topbarH - VIEWPORT_PADDING;
-                    window.scrollTo({ top, behavior: "smooth" });
-                } catch { /* heading 元素已不在 DOM 中，忽略此次跳转 */ }
-            });
-
-            item.appendChild(label);
+        for (const idx of visible) {
+            const item = createItem(view, headings, idx);
             list.appendChild(item);
-            itemByPos.set(h.pos, item);
-        });
+            renderedItems.push(item);
+        }
+        bindPositions(view, headings, visible);
         applyActiveHeading(getActiveHeadingPos());
     }
 
