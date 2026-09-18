@@ -14,6 +14,13 @@ const USER_INTERACTION_EVENTS = [
     "keydown", "mousedown", "paste", "drop", "cut", "wheel", "touchstart",
 ] as const;
 
+/**
+ * 计入「用户交互纪元」的事件名（唯一真源）。
+ * 需要「用户又动了」的消费者（如 TOC 点击钉住的解除，见 components/toc/index.ts）
+ * 复用本表，不要自行另列一套——历史上两处口径不一致出过回归 F4。
+ */
+export const USER_INTERACTION_EVENT_TYPES: readonly string[] = USER_INTERACTION_EVENTS;
+
 let _epoch = 0;
 
 for (const evt of USER_INTERACTION_EVENTS) {

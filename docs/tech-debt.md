@@ -13,6 +13,7 @@
 
 ### 🟡 中优先级（每次改一点）
 
+* [ ] **锚点链接不做 slug 归一化**（2026-09-17 修复「编码锚点点了没反应」时登记）— 编辑器给标题挂的 id 是**标题原文**（`## Hello World!` → `id="hello-world!"`，重复标题追加 `-#2`），而链接里常见的是 GitHub 风格 slug（`#hello-world`）。`webview/utils/anchorTarget.ts` 目前只处理**编码差异**（原文 → 整串解码），**不猜 slug**——猜 slug 需要定一套规则（大小写 / 标点 / 中文 / 重名序号），猜错会跳到**别的标题**，比「点了没反应」更糟。待定口径：要不要支持 slug、按哪套规则、重名如何编号；定了再实现并补测试
 * [ ] **代码块全屏按钮注入** — MutationObserver 改为 Crepe NodeView 扩展
 * [ ] **CodeMirror 主题补配** — MutationObserver 改为 Compartment 初始化时传入
 * [ ] **溢出菜单与官方 Vue 渲染的耦合点**（2026-09-04 新增，`components/topBarOverflow`）— ① 隐藏 class 依赖 MutationObserver 自愈（Vue patch 覆盖）② 按钮 meta 与官方 DOM 渲染顺序对齐（官方渲染顺序变更需同步）；上游 topBar 提供 item key 或 overflow 能力后移除

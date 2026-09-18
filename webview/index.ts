@@ -21,6 +21,8 @@ import { applyTableWrapVars } from "./utils/tableWrap";
 import { applyCodeBlockMaxHeight, applyEditorMaxWidth } from "./utils/layoutVars";
 import { showNotice } from "./ui/notice";
 import { computeAllHeadingSignature } from "./utils/headingFold";
+import { headingScrollTop } from "./utils/headingScroll";
+import { anchorIdCandidates } from "./utils/anchorTarget";
 import { headingFoldPluginKey } from "./headingFoldPlugin";
 import {
     createEditor,
@@ -426,8 +428,11 @@ async function initEditor(
                 // 输入正文时状态栏字数长期不更新（用户反馈「保存后才变」）
                 updateWordCount();
             }, MARK_DIRTY_DEBOUNCE_MS);
-            // TOC/字数：标题签名不变则跳过 TOC 重建（根源级优化：输入正文零重建，
-            // 替代纯防抖延时——停顿后仍会重建的开销被真正消除）
+            // TOC：这个外层签名带**文档位置**，正文输入会让其后所有标题的 pos 平移，
+            // 因此它几乎每次输入都会变、起不到「跳过」作用（实测：正文逐字输入 12 次，
+            // 签名变 12 次）。真正做「结构没变就不重建」的是 toc.refresh() 内部的渲染
+            // 签名（按「身份键 + 折叠态」，不含位置）——那才是「目录一下一下闪」的修复点，
+            // 见 components/toc/index.ts 的 refresh()。
             if (_tocRefreshTimer) clearTimeout(_tocRefreshTimer);
             _tocRefreshTimer = setTimeout(() => {
                 requestAnimationFrame(() => {
@@ -438,7 +443,7 @@ async function initEditor(
                     const sig = computeAllHeadingSignature(view.state.doc);
                     if (sig !== _lastTocSignature) {
                         _lastTocSignature = sig;
-                        toc.refresh(); // 标题结构变化才重建目录（面板关闭时是 no-op）
+                        toc.refresh(); // 面板关闭时是 no-op；结构未变时只重绑位置、不动 DOM
                     }
                 });
             }, TOC_REFRESH_DEBOUNCE_MS);
@@ -481,11 +486,18 @@ if (editorContainer) {
 	        e.preventDefault();
 	        e.stopImmediatePropagation();
 	        if (href.startsWith("#")) {
-	            const el = document.getElementById(href.slice(1));
+	            // 锚点目标：先按原文查、再按解码后的片段查（非 ASCII 锚点常被写成
+	            // 百分号编码，直接拿编码串查会静默失效；见 utils/anchorTarget.ts）
+	            const el = anchorIdCandidates(href.slice(1))
+	                .map((id) => document.getElementById(id))
+	                .find((found): found is HTMLElement => found !== null);
 	            if (el) {
 	                const tb = document.querySelector(".milkdown-top-bar") as HTMLElement | null;
 	                const th = tb?.getBoundingClientRect().height ?? DEFAULT_TOPBAR_HEIGHT;
-	                window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - th - VIEWPORT_PADDING, behavior: "smooth" });
+	                // 落点与「当前章节」判据同基准：否则跳到的标题不会成为当前章节，
+	                // TOC 高亮会停在它前面一项（见 utils/headingScroll.ts）
+	                const top = headingScrollTop(el.getBoundingClientRect().top + window.scrollY, th);
+	                window.scrollTo({ top, behavior: "smooth" });
 	            }
 	            return;
 	        }
