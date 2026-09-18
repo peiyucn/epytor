@@ -5,6 +5,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 English | [简体中文](CHANGELOG.zh-CN.md)
 
+## [1.2.2] - 2026-09-18
+
+### Bug fixes
+
+- **The outline panel no longer flickers while you type** — every keystroke used to rebuild the whole list (items repainted, the panel's own scroll position reset); it is now rebuilt only when the heading structure actually changes
+- **Click-to-jump in the outline panel is now accurate** — the highlight lands on the item you clicked (it used to stay on the previous one, and clicking the first item highlighted nothing); short documents behave the same
+- **The whole row in the outline panel is clickable** — previously only the text itself responded; clicks on the row's blank area did nothing
+- **In-document anchor links** — clicking a percent-encoded link to a heading with non-ASCII characters no longer does nothing
+
 ## [1.2.1] - 2026-09-13
 
 ### Bug fixes
