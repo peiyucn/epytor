@@ -5,6 +5,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 English | [简体中文](CHANGELOG.zh-CN.md)
 
+## [1.2.3] - 2026-10-17
+
+### Bug fixes
+
+- **A new to-do item no longer starts out checked** — pressing Enter inside a completed task item (`- [x] …`) used to add the next item already ticked; newly created items now always start unchecked, and the item you were in keeps its own state
+
 ## [1.2.2] - 2026-09-18
 
 ### Bug fixes
