@@ -51,6 +51,7 @@ import { languages as allCodeLanguages } from "@codemirror/language-data";
 import { onThemeChange, isDarkTheme } from "./utils/themeBus";
 import { changeRangeInFinalDoc, normalizeListSpread } from "./utils/listSpread";
 import { listBackspacePlugin } from "./utils/listBackspace";
+import { taskListItemEnterPlugin } from "./utils/taskListItemEnter";
 import { listMarkerPlugin } from "./listMarkerPlugin";
 import {
     beginClick,
@@ -117,6 +118,7 @@ codeLanguages.push(LanguageDescription.of({
 // 以下插件 Crepe 不提供对应功能，永久保留：
 //   listSpreadNormalizePlugin → 列表 spread 规范化
 //   listBackspacePlugin      → 列表项行首 Backspace 的落点（见 utils/listBackspace.ts 文件头）
+//   taskListItemEnterPlugin  → 任务项回车新建项默认未勾选（见 utils/taskListItemEnter.ts 文件头）
 //   formatKeymapPlugin       → 自定义格式化快捷键
 // 说明：列表 Backspace 的**编号**仍走官方默认（joinBackward：合并/删除行，编号自动重排），
 // Shift-Tab = liftListItem（提升层级）。但官方 joinBackward 在 Crepe 的列表 schema 下按「项」
@@ -644,6 +646,7 @@ export async function createEditor(
         .use(softBreakKeymap)       // Shift+Enter 软换行（表格内允许；见文件头回归说明）
         .use(cellClickFixPlugin)    // 表格单击→光标定位，拖拽→多选
         .use(listBackspacePlugin)   // 列表项行首 Backspace 的落点（见 utils/listBackspace.ts）
+        .use(taskListItemEnterPlugin) // 任务项回车新建项默认未勾选（见 utils/taskListItemEnter.ts）
         .use(listMarkerPlugin)      // Word 式多级列表标记（见 listMarkers.css 与同名 spec）
         .use(emptyTaskListItemRemark) // 空任务项（`- [ ] `）识别（见 utils/emptyTaskListItem.ts）
         .use(listSpreadNormalizePlugin); // 保留：列表 spread 规范化
