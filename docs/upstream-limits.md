@@ -2,7 +2,7 @@
 
 以下限制来自 Milkdown / Crepe / ProseMirror 等上游依赖，以及 VS Code 的 webview 宿主行为，EPYTOR 无法自行修复。升级上游依赖 / 宿主版本时需逐项验证是否已解决。
 
-> 最近验证：2026-09-13（Milkdown 7.22.1 / VS Code 1.137）——第 1、2、3 项对应的上游 issue 经 `gh` 复核**全部 open**（#2413 / #2414 / #2415 / #2475）；第 1、3、5 项 epytor 侧已各自解决（见「追踪」列）；第 4 项是宿主行为，读数见下。
+> 最近验证：**2026-10-18（Milkdown 7.22.3 / VS Code 1.137）**——第 1、2、3 项对应的上游 issue 经 `gh` 复核**仍全部 open**（#2413 / #2414 / #2415 / #2475），对应 workaround 保留；#2451、#2463 已由上游修复并随 7.22.1 / 7.22.2 发版（见「已解决的历史条目」）。上一轮验证：2026-09-13（Milkdown 7.22.1）。
 > **README 只镜像「用户能感知」的条目**（下表「用户可见」列）：用户看不到的内部细节留在本表，不进 README（README 里只在已知限制末尾留一句指向本文件的链接）。第 4 项（切标签闪一下）是宿主行为、扩展侧无法干预，owner 决定**不在 README 提**，本表保留读数作工程记录。
 
 | # | 限制 | 用户可见 | 来源 | 追踪 |
@@ -30,6 +30,6 @@
 **已解决的历史条目**（按维护规则从表中移除，留档备查）：
 
 * [Milkdown#2451](https://github.com/Milkdown/milkdown/issues/2451) 行内代码 mark 改为非 inclusive —— 7.22.1 已修，自动化断言见 `webview/__tests__/upstreamRegression.test.ts`；
-* [Milkdown#2463](https://github.com/Milkdown/milkdown/issues/2463) 加载时保留单元格内手写 `<br>` —— 上游已 closed；epytor 侧仍有闭环 workaround（`convertTableBrForDisplay` + `withTableBreakHandler`），**下次升级 `@milkdown/*` 时复验能否回收**。
+* [Milkdown#2463](https://github.com/Milkdown/milkdown/issues/2463) 加载时保留单元格内手写 `<br>` —— 上游已修复并**随 7.22.2 发版**；epytor 侧闭环 workaround（`convertTableBrForDisplay` + `withTableBreakHandler` + `cleanTableBreaks` + `preserveTableBreakStyle`）**暂保留未拆**。**2026-10-18 升 7.22.3 复验结果**：`tableBrRoundtrip` / `tableSoftBreak` / `saveFidelity` 全绿，四层链与上游修复并存无冲突；已登记 `docs/tech-debt.md`「表格 `<br>` 往返闭环」待安排拆链（拆完保留回归用例作保护）。**注**：上游 7.22.2 起空段落改用 `<br />` 占位，列表项首块非段落时有已知回归（[open PR #2487](https://github.com/Milkdown/milkdown/pull/2487)）；epytor 的 `stripListItemBreakPlaceholder` 正好挡住数据丢失，已补回归用例（`saveFidelity.test.ts`「列表项以代码块开头」）。
 
 > 自动化回归断言只覆盖「可自动化」的部分（行内代码 mark 的 inclusive、列表编号重排），其余条目仍需手测，见 `webview/__tests__/upstreamRegression.test.ts` 文件头。

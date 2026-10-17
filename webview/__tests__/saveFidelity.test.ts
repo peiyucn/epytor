@@ -127,6 +127,19 @@ describe("保存保真（列表写法不被重写）", () => {
         expect(/(?<!\r)\n/.test(saved)).toBe(false);
     }, 60_000);
 
+    it("列表项以代码块开头 应该 保存后不丢代码块（回归：上游 7.22.2 起的 `<br />` 占位会吞块）", async () => {
+        // 上游 #2487（截至 7.22.3 未修）：列表项首块不是段落时，序列化器给空的首段写 `<br />`
+        // 占位；这一行在 CommonMark 里会开启 HTML block，**重新解析时把紧随的代码块吞进 html 节点**。
+        // epytor 的 stripListItemBreakPlaceholder 会擦掉「只有标记 + `<br />`」的行，正好挡住。
+        // 本用例锁「数据不丢」：升级 @milkdown/* 后这条链一旦变化就在这里红。
+        const source = "- ```js\n  code\n  ```\n";
+        const { save } = await openEditor(source);
+        const saved = save();
+
+        expect(saved).toContain("```js");
+        expect(saved).toContain("code");
+    }, 60_000);
+
     it("链接目标里的 & 应该 保留原样（回归：被写成 \\& 改写用户文件）", async () => {
         const source = [
             "[![CI](https://img.shields.io/x/ci.yml?branch=main&label=ci)](https://github.com/a/b/actions)",

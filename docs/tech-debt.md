@@ -85,7 +85,8 @@
   **销毁路线已评估并否决**（同日）：做了 A/B 探针包（`retainContextWhenHidden: false` + 延迟 150ms 的加载覆盖层）——用户实测「B 明显好，成功抑制了闪动」，**技术上成立**；但**产品上不可用**：本产品是编辑器而非只读预览，切标签不能销毁会话（撤销历史只能从快照「恢复」而不是「天然在」，最后 ≤400ms 的编辑还有丢失窗口，超长历史会降级）。因此**保活是产品原则**，本条目按「平台行为，接受」结案，不再尝试抑制。撤销历史快照实现仍保留在 `858518a`。
 * [ ] **`cellClickFixPlugin`**（~130 行，[editor.ts:236-363](../webview/editor.ts#L236)）— `filterTransaction` + `appendTransaction` + `requestAnimationFrame` 多层拦截，对抗 Crepe 表格单击行为不稳定。**需等 Milkdown 上游修复后移除。**
 * [ ] **vendor latex feature 上游同步**（2026-09-08 新增，`webview/vendor/latexFeature.ts`）— 升级 `@milkdown/crepe` 时需按文件头「§上游对照」逐节 diff 上游 `src/feature/latex/*`；若上游 latex feature 改为惰性加载 katex，可移除本 vendor 与 esbuild.mjs 的 katex-stub-for-crepe 插件
-* [ ] **表格 `<br>` 往返闭环（四层）**（2026-09-08 过度设计审计 P11 登记）— `convertTableBrForDisplay`（加载转换 `src/utils/contentTransform.ts`）+ `withTableBreakHandler`（序列化 handler）+ `cleanTableBreaks` + `preserveTableBreakStyle`（`webview/utils/markdownSerializer.ts`），四层全部绕上游 [Milkdown#2463](https://github.com/Milkdown/milkdown/issues/2463)（remark-gfm 丢弃表格内 `<br>`）。**上游修复后整链移除**；关联回归测试 `webview/__tests__/tableBrRoundtrip.test.ts`、`tableSoftBreak.test.ts` 随链退役
+* [ ] **表格 `<br>` 往返闭环（四层）**（2026-09-08 过度设计审计 P11 登记）— `convertTableBrForDisplay`（加载转换 `src/utils/contentTransform.ts`）+ `withTableBreakHandler`（序列化 handler）+ `cleanTableBreaks` + `preserveTableBreakStyle`（`webview/utils/markdownSerializer.ts`），四层全部绕上游 [Milkdown#2463](https://github.com/Milkdown/milkdown/issues/2463)（remark-gfm 丢弃表格内 `<br>`）。**上游修复后整链移除**；关联回归测试 `webview/__tests__/tableBrRoundtrip.test.ts`、`tableSoftBreak.test.ts` 随链退役。
+  **2026-10-18 更新**：上游 #2463 已修复并随 Milkdown 7.22.2 发版，epytor 已于 **7.22.3** 复验（`tableBrRoundtrip` / `tableSoftBreak` / `saveFidelity` 全绿，四层链与上游修复并存无冲突）→ **可以安排拆链**。拆链注意：① 先补/保留「表格内手写 `<br>` 保存往返」用例再删代码；② 拆的是**加载/保存两端的转换**，别把 `tableWrapMode`（换行两档，用户配置）一起拆掉；③ 拆完把本条移入「已清偿」。
 
 ### 🔴 官方无替代（已查证）
 
