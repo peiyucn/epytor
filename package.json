@@ -2,7 +2,7 @@
   "name": "epytor-vscode",
   "displayName": "EPYTOR",
   "description": "WYSIWYG Markdown editor",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "publisher": "peiyucn",
   "license": "MIT",
   "engines": {

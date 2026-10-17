@@ -5,6 +5,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 English | [简体中文](CHANGELOG.zh-CN.md)
 
+## [1.2.5] - 2026-10-18
+
+### Bug fixes
+
+- **Saving no longer rewrites loose lists** — version 1.2.4 could drop the blank lines between list items when a file was saved without any edit (the list silently turned from loose into tight); saving an untouched document is now byte-for-byte identical again
+- **Repeated Enter in a to-do list no longer sprouts a plain bullet** — in a nested task list, pressing Enter on an empty task item used to turn it into a plain bullet item first and only then leave the list; the empty item now moves up one level as a task item instead (at the top level it leaves the list)
+
 ## [1.2.4] - 2026-10-18
 
 ### Changed
