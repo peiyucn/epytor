@@ -300,6 +300,11 @@ import { createImageView } from "./components/imageView";
 
 let _editor: Editor | null = null;
 let _savedMarkdown = '';
+/**
+ * 上次保存时的文档快照：与当前 doc 相等 = 「自上次保存以来没编辑过」，保存时直接回原文
+ * （见 `getMarkdownForSave`）。null = 必须重序列化一次（序列化模式切换等）。
+ */
+let _savedDoc: ProseNode | null = null;
 /** CodeMirror 主题补配观察器断开函数（编辑器重建时先断开旧的） */
 let _disconnectCmObserver: (() => void) | null = null;
 /** 主题订阅退订句柄（createEditor 订阅、destroyEditor 退订）——
@@ -309,6 +314,8 @@ let _unsubscribeTheme: (() => void) | null = null;
 let _serializationMode: SerializationMode = "clean";
 
 export function setSerializationMode(mode: SerializationMode): void {
+    // 序列化口径变化必须重序列化一次：作废快照，否则未编辑保存会继续回原文、模式切换不生效
+    if (mode !== _serializationMode) { _savedDoc = null; }
     _serializationMode = mode;
 }
 
@@ -361,6 +368,7 @@ export function destroyEditor(): void {
     _disconnectCmObserver = null;
     _editor?.destroy();
     _editor = null;
+    _savedDoc = null;
 }
 
 /**
@@ -370,9 +378,17 @@ export function destroyEditor(): void {
  */
 export function getMarkdownForSave(): string {
     if (!_editor) return _savedMarkdown;
+    const view = _editor.action((ctx) => ctx.get(editorViewCtx));
+    // 未编辑保存 → 直接回原文（逐字保真 + 省一次序列化）。
+    // 回归（2026-10-18，owner 真机发现）：Milkdown 7.22.2 起序列化输出的结尾空行变化，
+    // 让 minimalDiff 里「非空行 1:1 匹配且两串长度相等 → 原样返回 saved」这条快速路径失效，
+    // 未编辑保存也进入逐行重写——松散列表（列表项之间有空行）的空行被 tight 序列化吃掉，
+    // 列表由 loose 变 tight。这里以「doc 与上次保存时相等」为准，不依赖序列化文本的巧合。
+    if (_savedDoc && view.state.doc.eq(_savedDoc)) { return _savedMarkdown; }
     const serialized = _editor.action(getMarkdown());
     const toSave = prepareMarkdownForSave(_savedMarkdown, serialized);
     _savedMarkdown = toSave;
+    _savedDoc = view.state.doc;
     return toSave;
 }
 
@@ -656,5 +672,7 @@ export async function createEditor(
     // 首帧基准：settle 后用户首个交互事务（点击定位光标等纯选区 dispatch）与基准
     // doc 相同即不通知（回归：prevDoc=null 使首事务无条件误发脏标记，未编辑就出 ● 圆点）
     prevDoc = _editor.action((ctx) => ctx.get(editorViewCtx)).state.doc;
+    // 未编辑保存的判据基准：载入/重建后的文档就是磁盘内容的等价物
+    _savedDoc = prevDoc;
     return _editor;
 }

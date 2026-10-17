@@ -140,6 +140,28 @@ describe("保存保真（列表写法不被重写）", () => {
         expect(saved).toContain("code");
     }, 60_000);
 
+    it("未编辑保存松散列表 应该 逐字一致（回归：升到 Milkdown 7.22.2 后空行被吃掉）", async () => {
+        // 回归（2026-10-18，owner 真机发现 + 7.22.1/7.22.3 双向 A/B 确认）：
+        // 7.22.2 起序列化输出的结尾空行变化，使 minimalDiff 的「非空行 1:1 匹配且长度相等 →
+        // 原样返回」快速路径失效；未编辑保存也会被逐行重写，松散列表（项间空行）被写成 tight。
+        // 修复：保存入口按「doc 与上次保存时相等」直接回原文（getMarkdownForSave）。
+        const source = "# t\n\n- [x] done\n\n- a\n- b\n\n```js\nconst x = 1;\n```\n";
+        const { save } = await openEditor(source);
+
+        expect(save()).toBe(source);
+        // 连续保存（仍未编辑）也必须逐字一致
+        expect(save()).toBe(source);
+    }, 60_000);
+
+    it("未编辑保存松散列表（CRLF）应该 逐字一致并保持 CRLF", async () => {
+        const source = ["# t", "", "- [x] done", "", "- a", ""].join("\r\n");
+        const { save } = await openEditor(source);
+        const saved = save();
+
+        expect(saved).toBe(source);
+        expect(saved.includes("\r\n")).toBe(true);
+    }, 60_000);
+
     it("链接目标里的 & 应该 保留原样（回归：被写成 \\& 改写用户文件）", async () => {
         const source = [
             "[![CI](https://img.shields.io/x/ci.yml?branch=main&label=ci)](https://github.com/a/b/actions)",
