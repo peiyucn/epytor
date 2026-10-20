@@ -9,8 +9,7 @@ English | [简体中文](CHANGELOG.zh-CN.md)
 
 ### Changed
 
-- **Security patch upgrades** — 8 packages with open Dependabot alerts were moved to their patched releases; `dompurify` (3.4.13 → 3.4.17), `katex` (0.18.1 → 0.18.11) and `prosemirror-view` (1.42.2 → 1.42.6) ship inside the extension, so the editor now runs the fixed versions — no user-perceivable change in behaviour
-- **Dependencies**: `vue` 3.5.41 → 3.5.44, `prosemirror-model` 1.25.11 → 1.25.12 (required by the `prosemirror-view` fix), `source-map-js` 1.2.1 → 1.2.2, `undici` 7.29.0/8.10.0 → 7.30.1/8.12.3, `markdown-it` 14.3.0 → 14.3.3, `brace-expansion` 5.0.9 → 5.0.12, `fast-uri` 3.1.7 → 3.1.9, `qs` 6.15.3 → 6.16.1 — none of these ends up in the extension itself, so there is no user-perceivable change
+- **Security patches** — dependencies with known vulnerabilities were upgraded to their fixed releases; there is no user-perceivable change
 
 ## [1.2.5] - 2026-10-18
 
