@@ -5,9 +5,14 @@ overrides:
   # 而 @codemirror/view 与 epytor 自己用 6.6.0 —— Compartment/StateEffect 跨副本不被识别，
   # Crepe 的 languageConf.reconfigure 静默失效（代码块无语法高亮，用户实测反馈）
   "@codemirror/state": ^6.7.1
-  # 0.18.2 起修 GHSA-238p-pmpm-9mq7（原型污染绕过 trust 限制）；仍在 0.18.x 线内，
-  # 0.19 是另一条版本线，需单独验证 mermaid 数学标签渲染后再动
-  katex: ^0.18.11
+  # 0.18.2 起修 GHSA-238p-pmpm-9mq7（原型污染绕过 trust 限制）。
+  # **上限必须排除 0.18.11**：npm 上 katex@0.18.11 被官方标为
+  # "Accidentally published with breaking changes. Use 0.19.0 instead."——
+  # 它是个误发布的破坏性版本，装上会静默改变渲染行为。
+  # 也不动 0.19：crepe 7.22.3 声明 ^0.19.0，但 mermaid 11.16.1 声明 ^0.16.45；
+  # 这套 override 的用意就是让两者共用同一份 0.18（否则 mermaid 生成的 HTML 用
+  # 0.16 的 class 名、加载的样式表却是 0.18 的，样式错配——见 1a1f8f7）。
+  katex: ">=0.18.2 <0.18.11"
   prosemirror-changeset: ^2.3.1
   prosemirror-commands: ^1.7.1
   prosemirror-dropcursor: ^1.8.3
