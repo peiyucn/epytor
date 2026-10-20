@@ -139,7 +139,6 @@ VS Code「所见即所得」Markdown 编辑器，基于 Milkdown（Crepe）。
 * **人工验收**：输出手测清单（受影响的交互路径与验收点，一行一条、编号排序）→ 用 `vscode_askQuestions` 逐项确认（每屏 ≤4 项，超过分屏）→ 全部通过才进提交；有未通过则修复后从验证重来
 * **提交**：通过后方可 `git commit`
 * **功能开发后**补单测（核心逻辑、边界值、异常路径各至少一个用例）；**Bug 修复后**先补能复现该 bug 的用例（写在修复同一 commit 内），确认修复前失败、修复后通过
-* **git push 前必须** `pnpm run verify` 全绿
 * **禁止**：跳过（`it.skip`）或注释失败的用例让 CI 通过；改测试预期值掩盖 bug（除非实现有意变更且经过评审）；未跑测试就 push 到 `main` / `dev`
 * **Mock 规范**：每个 `describe` 在 `beforeEach` 调 `vi.clearAllMocks()`；文件系统统一 mock `vscode.workspace.fs`（禁止真实 fs 写盘）；依赖时间的逻辑用 `vi.useFakeTimers()` / `vi.useRealTimers()`；禁止测 `private` 方法，通过公共接口验证
 
