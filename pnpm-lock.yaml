@@ -6,7 +6,7 @@ settings:
 
 overrides:
   '@codemirror/state': ^6.7.1
-  katex: ^0.18.11
+  katex: '>=0.18.2 <0.18.11'
   prosemirror-changeset: ^2.3.1
   prosemirror-commands: ^1.7.1
   prosemirror-dropcursor: ^1.8.3
@@ -50,6 +50,9 @@ importers:
       '@codemirror/view':
         specifier: ^6.43.1
         version: 6.43.1
+      '@floating-ui/dom':
+        specifier: ^1.8.0
+        version: 1.8.0
       '@milkdown/crepe':
         specifier: 7.22.3
         version: 7.22.3(prosemirror-model@1.25.12)(prosemirror-state@1.4.4)(prosemirror-view@1.42.6)(typescript@5.9.3)
@@ -57,8 +60,8 @@ importers:
         specifier: 7.22.3
         version: 7.22.3(@codemirror/language@6.12.3)(@codemirror/state@6.7.1)(@codemirror/view@6.43.1)(typescript@5.9.3)
       katex:
-        specifier: ^0.18.11
-        version: 0.18.11
+        specifier: '>=0.18.2 <0.18.11'
+        version: 0.18.10
       mermaid:
         specifier: ^11.16.1
         version: 11.16.1
@@ -2080,9 +2083,8 @@ packages:
   jws@4.0.1:
     resolution: {integrity: sha512-EKI/M/yqPncGUUh44xz0PxSidXFr/+r0pA70+gIYhjv+et7yxM+s29Y+VGDkovRofQem0fs7Uvf4+YmAdyRduA==}
 
-  katex@0.18.11:
-    resolution: {integrity: sha512-yvyz/2VMKqoho/35Hat5w37wIEdWJ5ElVMidTAlWrxr5uW4aBGsEpveTmKh18/zw08v/7lGswCPon4OhqmqrTA==}
-    deprecated: Accidentally published with breaking changes. Use 0.19.0 instead.
+  katex@0.18.10:
+    resolution: {integrity: sha512-/B6p9eY9DX7aHBfpkHdpirDTZ5QH9xTwL9y837PWuzuv41O5jFdqNQwVQEQsimY0/iVNkwBY4+4hMfhQ7d4Dbw==}
     hasBin: true
 
   keytar@7.9.0:
@@ -3852,7 +3854,7 @@ snapshots:
       clsx: 2.1.1
       codemirror: 6.0.2
       dompurify: 3.4.17
-      katex: 0.18.11
+      katex: 0.18.10
       lodash-es: 4.18.1
       prosemirror-virtual-cursor: 0.4.2(prosemirror-model@1.25.12)(prosemirror-state@1.4.4)(prosemirror-view@1.42.6)
       remark-math: 6.0.0
@@ -5516,7 +5518,7 @@ snapshots:
       jwa: 2.0.1
       safe-buffer: 5.2.1
 
-  katex@0.18.11:
+  katex@0.18.10:
     dependencies:
       commander: 15.0.0
 
@@ -5739,7 +5741,7 @@ snapshots:
       dayjs: 1.11.21
       dompurify: 3.4.17
       es-toolkit: 1.50.0
-      katex: 0.18.11
+      katex: 0.18.10
       khroma: 2.1.0
       marked: 16.4.2
       roughjs: 4.6.6
@@ -5828,7 +5830,7 @@ snapshots:
     dependencies:
       '@types/katex': 0.16.8
       devlop: 1.1.0
-      katex: 0.18.11
+      katex: 0.18.10
       micromark-factory-space: 2.0.1
       micromark-util-character: 2.1.1
       micromark-util-symbol: 2.0.1

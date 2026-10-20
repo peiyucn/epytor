@@ -29,6 +29,11 @@
     box-shadow: var(--crepe-shadow-1);
     border-radius: 8px;
     padding: 2px 6px 2px 12px;
+    /* 气泡宽度由内容撑开；上限定在视口内（floating-ui 的 size 中间件另会把
+       max-width 压到「公式位置到页面边界」的可用宽度）。
+       回归：公式在行首/行尾时编辑框曾直接溢出页面宽度。 */
+    max-width: calc(var(--epytor-vw, 100vw) - 16px);
+    box-sizing: border-box;
 }
 
 .milkdown .milkdown-latex-inline-edit .container {
@@ -50,7 +55,10 @@
 
 .milkdown .milkdown-latex-inline-edit .ProseMirror {
     padding: 0;
-    min-width: 174px;
+    /* 能窄能宽：外层气泡被压窄时（公式贴行首/行尾）内部编辑区要跟着收，
+       否则 min-width 会撑破父级、气泡仍溢出页面。上限保持上游值。 */
+    min-width: 0;
+    width: 100%;
     max-width: 294px;
     font-family: var(--crepe-font-code);
 }

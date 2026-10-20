@@ -46,6 +46,7 @@ import { Schema } from "@milkdown/kit/prose/model";
 import type { Node as ProseNode } from "@milkdown/kit/prose/model";
 import { $nodeSchema, $command, $inputRule, $remark } from "@milkdown/kit/utils";
 import { tooltipFactory, TooltipProvider } from "@milkdown/kit/plugin/tooltip";
+import { size } from "@floating-ui/dom";
 import { textblockTypeInputRule } from "@milkdown/kit/prose/inputrules";
 import { defineComponent, h, shallowRef, createApp } from "vue";
 import type { App, ShallowRef, VNodeRef } from "vue";
@@ -344,6 +345,12 @@ export const remarkMathBlockPlugin = $remark(
 // ─── §tooltip（上游 src/feature/latex/inline-tooltip/*，未改动逻辑）───────────
 export const inlineLatexTooltip = tooltipFactory("INLINE_LATEX");
 
+/** 编辑气泡与视口边缘的最小留白（px）：留一点缝，避免看起来像被裁掉 */
+const BUBBLE_VIEWPORT_PADDING = 8;
+
+/** 编辑气泡被压缩时的下限（px）：再窄就没法编辑了 */
+const BUBBLE_MIN_WIDTH = 120;
+
 type LatexTooltipProps = {
     config: Partial<LatexConfig>;
     innerView: ShallowRef<EditorView | null>;
@@ -421,6 +428,22 @@ export class LatexInlineTooltip implements PluginView {
             floatingUIOptions: {
                 placement: "bottom",
             },
+            // 气泡是 absolute + floating-ui 定位：flip/shift 只把框整体**挪**进边界，
+            // 不会让它**变窄**。行内公式落在行首/行尾时，气泡自身比剩余空间宽，
+            // 位移也救不回来 → 溢出页面宽度（回归：owner 真机反馈编辑框超出页面）。
+            // size 中间件在溢出时按可用空间压缩气泡宽度，配合 latex.css 里的
+            // max-width:100% / min-width:0 让内部编辑区跟着收窄。
+            middleware: [
+                size({
+                    padding: BUBBLE_VIEWPORT_PADDING,
+                    apply({ availableWidth, elements }) {
+                        elements.floating.style.maxWidth = `${Math.max(
+                            BUBBLE_MIN_WIDTH,
+                            availableWidth,
+                        )}px`;
+                    },
+                }),
+            ],
         });
         this.#provider.update(view);
         this.#dom = document.createElement("div");
