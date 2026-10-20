@@ -471,13 +471,28 @@ export async function createEditor(
     // 代码块渲染时才加载；主题切换在未加载时只记录目标主题，加载时统一初始化。
     let _mermaidModule: typeof import("mermaid").default | null = null;
     let _mermaidThemeInitializedFor: boolean | null = null;
+
+    /** mermaid 初始化配置（主题随明暗切换；错误渲染策略固定） */
+    function mermaidInitConfig(dark: boolean): Parameters<NonNullable<typeof _mermaidModule>["initialize"]>[0] {
+        return {
+            startOnLoad: false,
+            theme: dark ? "dark" : "default",
+            // 语法错误时**不要**画 mermaid 自带的「炸弹 + Syntax error in text」大图：
+            // 那段 SVG 是 mermaid 在 render() 内部插入 <body> 的临时元素，我们修改不了
+            // 它的位置与尺寸，它会滞留在文档最底部（回归：真机截图里文档末尾出现一张
+            // 占满宽度的红色炸弹图）。置 true 后 mermaid 抛错，由下方 catch 在**代码块
+            // 自己的预览区**显示一行简洁错误，错误位置正确、不污染页面。
+            suppressErrorRendering: true,
+        };
+    }
+
     async function loadMermaid(): Promise<typeof import("mermaid").default> {
         if (!_mermaidModule) {
             const mod = await import("mermaid");
             _mermaidModule = mod.default;
         }
         if (_mermaidThemeInitializedFor !== isDark) {
-            _mermaidModule.initialize({ startOnLoad: false, theme: isDark ? "dark" : "default" });
+            _mermaidModule.initialize(mermaidInitConfig(isDark));
             _mermaidThemeInitializedFor = isDark;
         }
         return _mermaidModule;
@@ -495,7 +510,7 @@ export async function createEditor(
         // 重绘已有 mermaid 预览（仅 mermaid 已加载时——未加载说明尚无预览可重绘，
         // 主题偏好由 loadMermaid 在首次渲染时套用）
         if (_mermaidModule) {
-            _mermaidModule.initialize({ startOnLoad: false, theme: dark ? "dark" : "default" });
+            _mermaidModule.initialize(mermaidInitConfig(dark));
             _mermaidThemeInitializedFor = dark;
             mermaidCodeMap.forEach((code, key) => {
                 const el = document.querySelector<HTMLElement>(`[data-mermaid-key="${key}"]`);
