@@ -30,4 +30,13 @@ describe("katex API 兼容性（mermaid 数学标签 + epytor 公式共用）", 
     it("版本 应该 为 0.18.x（与 epytor 根依赖一致）", () => {
         expect(katex.version).toMatch(/^0\.18\./);
     });
+
+    it("版本 应该 不低于 0.18.2（GHSA-238p-pmpm-9mq7：原型污染可绕过 trust 限制）", () => {
+        const match = katex.version.match(/^0\.(\d+)\.(\d+)$/);
+
+        expect(match, `无法解析 katex 版本号：${katex.version}`).not.toBeNull();
+        const [, minor, patch] = match!.map(Number);
+        const isPatched = minor > 18 || (minor === 18 && patch >= 2);
+        expect(isPatched, `katex ${katex.version} 低于修补版 0.18.2`).toBe(true);
+    });
 });

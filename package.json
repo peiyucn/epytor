@@ -2,7 +2,7 @@
   "name": "epytor-vscode",
   "displayName": "EPYTOR",
   "description": "WYSIWYG Markdown editor",
-  "version": "1.2.5",
+  "version": "1.2.6",
   "publisher": "peiyucn",
   "license": "MIT",
   "engines": {
@@ -262,7 +262,7 @@
     "remark-parse": "^11.0.0",
     "unified": "^11.0.5",
     "unist-util-visit": "^5.0.0",
-    "vue": "^3.5.20"
+    "vue": "^3.5.44"
   },
   "overrides": {
     "prosemirror-changeset": "^2.3.1",
