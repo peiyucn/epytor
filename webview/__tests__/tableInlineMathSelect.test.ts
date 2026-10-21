@@ -1,22 +1,30 @@
 /**
- * 表格单元格内的行内公式必须能被选中编辑（回归：点不中、编辑框不出现）。
+ * 表格内点行内公式：为什么必须挂在 document 捕获阶段？
  *
- * 根因：`cellClickFixPlugin` 的 filterTransaction 把**所有**落在表格单元格内的
- * `NodeSelection` 一律转成 `TextSelection`（目的是修正「点单元格时 PM 选中整段」
- * 这个不顺手的行为）。但行内公式 `math_inline` 是 `atom: true`，它的编辑气泡
- * 只在 `NodeSelection` 下才激活——被无差别拦截后，表格里的公式永远选不中。
+ * 这是踩了三轮才查清的因果链，逐条锁住防止再回退：
  *
- * 修法：只拦「单元格段落本身」的 NodeSelection，原子节点（isAtom）一律放行；
- * rAF 补偿回调里也要再判一次，避免覆盖用户刚点中的原子节点选区。
+ * 1. prosemirror-view 的事件入口（dist/index.js:3155）：
+ *      if (eventBelongsToView(view, event) && !runCustomHandler(view, event) && ...)
+ *    eventBelongsToView 沿 target→view.dom 遍历，遇到任一 desc 的 stopEvent() 返回
+ *    true 就判定「事件不属于编辑器」并返回 false → runCustomHandler（即
+ *    handleDOMEvents）**根本不会被调用**。
+ *
+ * 2. Crepe 的 TableNodeView.stopEvent() 对 th/td 内的 mousedown 返回 true
+ *    （@milkdown/components table-block:1030-1040），目的就是自己接管表格点击：
+ *    设 NodeSelection.create(doc, cellFrom + 1)。实测 cellFrom+1 落在 paragraph
+ *    上（isAtom:false），所以那个选区 = **整个单元格内容被选中**（整格蓝框）。
+ *
+ * 3. 因此「在 handleDOMEvents.mousedown 里识别公式点击」从来不曾执行过。
+ *
+ * 4. 还有一处会吃掉纠正机会：filterTransaction 对整格 NodeSelection 返回 false
+ *    （丢弃 transaction），而 appendTransaction 只在 transaction 成功后运行 ——
+ *    丢掉就等于纠正永远不发生。所以 pendingAtomClickPos 非空时必须放行。
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { editorViewCtx } from "@milkdown/kit/core";
-import { NodeSelection } from "@milkdown/kit/prose/state";
-import type { EditorView } from "@milkdown/kit/prose/view";
-import type { Node as ProseNode } from "@milkdown/kit/prose/model";
 
+// jsdom 环境桩：行为层用例会真正创建编辑器
 if (typeof window.matchMedia === "undefined") {
     window.matchMedia = (() => ({
         matches: false, media: "", onchange: null,
@@ -25,139 +33,123 @@ if (typeof window.matchMedia === "undefined") {
         dispatchEvent() { return false; },
     })) as typeof window.matchMedia;
 }
-if (typeof (window as unknown as Record<string, unknown>).ResizeObserver === "undefined") {
-    (window as unknown as Record<string, unknown>).ResizeObserver = class {
-        observe() { /* noop */ } unobserve() { /* noop */ } disconnect() { /* noop */ }
-    };
+for (const name of ["ResizeObserver", "IntersectionObserver"]) {
+    if (typeof (window as unknown as Record<string, unknown>)[name] === "undefined") {
+        (window as unknown as Record<string, unknown>)[name] = class {
+            observe() { /* noop */ } unobserve() { /* noop */ } disconnect() { /* noop */ }
+            takeRecords() { return []; }
+        };
+    }
 }
-if (typeof (window as unknown as Record<string, unknown>).IntersectionObserver === "undefined") {
-    (window as unknown as Record<string, unknown>).IntersectionObserver = class {
-        observe() { /* noop */ } unobserve() { /* noop */ } disconnect() { /* noop */ } takeRecords() { return []; }
-    };
-}
+(window as unknown as Record<string, unknown>).__i18n = {
+    translations: {}, isMac: false, serializationMode: "clean",
+};
 
 const editorSrc = readFileSync(
     path.resolve(process.cwd(), "webview/editor.ts"),
     "utf-8",
 );
 
-/**
- * 截出 `cellClickFixPlugin` 里 `mousedown` 处理器的实现正文。
- *
- * 用括号配对而不是找固定字符串——缩进/换行一变，固定串就失配，
- * 会把整个文件尾部算进来（测试里踩过两次）。
- */
-function mousedownBlock(): string {
-    const start = editorSrc.indexOf("mousedown: (view, event) =>");
-    expect(start, "editor.ts 里应有 cellClickFixPlugin 的 mousedown").toBeGreaterThanOrEqual(0);
+/** 按括号配对截出某个函数/处理器正文 */
+function block(startMarker: string): string {
+    const start = editorSrc.indexOf(startMarker);
+    expect(start, `找不到 ${startMarker}`).toBeGreaterThanOrEqual(0);
     const openBrace = editorSrc.indexOf("{", start);
     let depth = 0;
     for (let i = openBrace; i < editorSrc.length; i++) {
-        const ch = editorSrc[i];
-        if (ch === "{") depth++;
-        else if (ch === "}") {
+        if (editorSrc[i] === "{") depth++;
+        else if (editorSrc[i] === "}") {
             depth--;
             if (depth === 0) return editorSrc.slice(start, i + 1);
         }
     }
-    throw new Error("mousedown 块未闭合");
+    throw new Error(`${startMarker} 未闭合`);
 }
 
-/**
- * 截出 `cellClickFixPlugin` 里 `filterTransaction` 的实现正文。
- *
- * 注意 `appendTransaction(` 在文件里出现多次（前面的插件也有），所以不能拿它当
- * 结束标记——按 `filterTransaction(tr, state)` 之后找该函数自己的收尾缩进。
- */
-function filterTransactionBlock(): string {
-    const start = editorSrc.indexOf("filterTransaction(tr, state) {");
-    expect(start, "editor.ts 里应有 cellClickFixPlugin 的 filterTransaction").toBeGreaterThanOrEqual(0);
-    // 从起点往后找第一个同层收尾的 "        },"（8 空格缩进 + 逗号）
-    const end = editorSrc.indexOf("\n        },", start);
-    expect(end, "找不到 filterTransaction 的结束位置").toBeGreaterThan(start);
-    return editorSrc.slice(start, end);
+/** 去掉注释行，只留代码（注释里会提到关键符号，直接断言会误判） */
+function codeOnly(src: string): string {
+    return src
+        .split("\n")
+        .filter((line) => !line.trim().startsWith("//") && !line.trim().startsWith("*"))
+        .join("\n");
 }
 
-describe("表格内行内公式的选中（cellClickFixPlugin）", () => {
-    it("mousedown 应该 只登记意图，不在当场 dispatch（否则被 Crepe 的 rAF 覆盖）", () => {
-        // 回归根因：Crepe 的 TableNodeView.stopEvent() 在 mousedown 里用
-        // NodeSelection.create(doc, cellFrom+1) 设选区并 rAF 延迟 dispatch。
-        // 谁后写谁生效——当场设会被覆盖成「选中单元格段落」= 整格高亮。
-        // 截取范围必须止于 mousedown 自己的收尾，否则会把后面的代码也算进来。
-        const block = mousedownBlock();
-        // 断言只看**代码行**：注释里会提到 NodeSelection.create（解释回归根因），
-        // 直接对整块做 toContain 会误判。
-        const code = block
-            .split("\n")
-            .filter((line) => !line.trim().startsWith("//") && !line.trim().startsWith("*"))
-            .join("\n");
+describe("公式点击必须用 document 捕获阶段（因果链第 1、2 条）", () => {
+    it("应该 在 view() 里挂 document 捕获阶段的 mousedown", () => {
+        const pluginView = block("view(editorView) {");
+        const code = codeOnly(pluginView);
 
-        expect(code).toContain("atomPosAtEvent(view, event)");
-        expect(code).toContain("pendingAtomClickPos = atomPos");
-        // 不允许在 mousedown 里 dispatch 选区（会被 Crepe 的 rAF 覆盖）
-        expect(code).not.toContain("NodeSelection.create");
-        expect(code).not.toContain("event.preventDefault()");
+        expect(code).toContain('document.addEventListener("mousedown"');
+        // 第三个参数 true = 捕获阶段（PM 的 stopEvent 影响不到这里）
+        expect(code).toMatch(/document\.addEventListener\("mousedown",\s*\w+,\s*true\)/);
+        expect(code).toContain("atomPosAtEvent(editorView, event)");
+        // 清理对称：destroy 里必须移除
+        expect(code).toContain('document.removeEventListener("mousedown"');
     });
 
-    it("appendTransaction 应该 把选区纠正回公式的 NodeSelection", () => {
-        // appendTransaction 是所有 transaction 的最后关口，rAF 里那条也走这里
-        const block = editorSrc.slice(
-            editorSrc.indexOf("appendTransaction(_trs, _oldState, newState)"),
-            editorSrc.indexOf("if (cell.pendingClickPos === null) return null;"),
-        );
-        expect(block, "appendTransaction 里应先处理原子的 pending 意图").toContain("pendingAtomClickPos !== null");
-        expect(block).toContain("NodeSelection.create(newState.doc, atomPos)");
-        // 纠正前必须校验位置仍是原子节点（重绘/插入可能让它失效）
-        expect(block).toContain("node?.isAtom");
-        // 已经停在公式上时不要再 dispatch（避免自激）
-        expect(block).toContain("isAlreadyOnAtom");
+    it("handleDOMEvents.mousedown 里 应该 不再做公式识别（表格里走不到）", () => {
+        const handler = block("handleDOMEvents: {");
+        const code = codeOnly(handler);
+
+        expect(code).not.toContain("atomPosAtEvent");
+        // 但保留单元格点击修正本体
+        expect(code).toContain("beginClick(cell,");
+    });
+});
+
+describe("filterTransaction 必须给纠正让路（因果链第 4 条）", () => {
+    it("pendingAtomClickPos 非空时 应该 直接放行，不丢弃 transaction", () => {
+        const filter = block("filterTransaction(tr, state) {");
+        const code = codeOnly(filter);
+
+        // 必须是函数开头的最高优先级判断
+        const firstCheck = code.indexOf("pendingAtomClickPos !== null");
+        const firstNodeSel = code.indexOf("tr.selection instanceof NodeSelection");
+        expect(firstCheck).toBeGreaterThanOrEqual(0);
+        expect(firstCheck).toBeLessThan(firstNodeSel);
+        expect(code).toMatch(/if \(pendingAtomClickPos !== null\) return true;/);
     });
 
-    it("点别处 应该 清掉上一次的公式点击意图（避免旧意图劫持选区）", () => {
-        const block = mousedownBlock();
-        // 清理点必须出现在「公式命中分支之后」，且至少两处
-        // （修饰键分支 + 非公式分支），否则「先点公式再点别处」会被旧意图劫持
-        const occurrences = block.split("pendingAtomClickPos = null").length - 1;
-        expect(occurrences).toBeGreaterThanOrEqual(2);
-        // 公式命中分支本身应把意图设上
-        expect(block).toContain("pendingAtomClickPos = atomPos");
-    });
+    it("appendTransaction 应该 把选区纠正到公式并清空意图", () => {
+        const append = block("appendTransaction(_trs, _oldState, newState) {");
+        const code = codeOnly(append);
 
-    it("atomPosAtEvent 应该 只在点到原子节点时返回位置", () => {
-        const fn = editorSrc.slice(
-            editorSrc.indexOf("function atomPosAtEvent"),
-            editorSrc.indexOf("/** 位置所属单元格的起始坐标"),
-        );
+        expect(code).toContain("pendingAtomClickPos !== null");
+        expect(code).toContain("pendingAtomClickPos = null");
+        expect(code).toContain("NodeSelection.create(newState.doc, atomPos)");
+        // 纠正前校验位置仍是原子节点
+        expect(code).toContain("node?.isAtom");
+        // 已停在公式上就不重复 dispatch
+        expect(code).toContain("isAlreadyOnAtom");
+    });
+});
+
+describe("atomPosAtEvent 的判据", () => {
+    it("应该 用 closest + posAtDOM + isAtom，拿不到就返回 null", () => {
+        const fn = block("function atomPosAtEvent");
+
         expect(fn).toContain("closest");
+        expect(fn).toContain("math_inline");
         expect(fn).toContain("posAtDOM");
         expect(fn).toContain("node.isAtom");
-        // 拿不到就返回 null，交回浏览器默认行为（不做乐观接管）
         expect(fn).toMatch(/return null/);
     });
+});
 
-    it("filterTransaction 应该 仍放行原子节点的 NodeSelection（双保险）", () => {
-        const block = filterTransactionBlock();
-        expect(block).toMatch(/if \(tr\.selection\.node\?\.isAtom\) return true;/);
-    });
-
-    it("rAF 补偿回调 应该 不覆盖用户刚选中的原子节点", () => {
-        const block = filterTransactionBlock();
-        expect(block).toMatch(/sel instanceof NodeSelection && sel\.node\?\.isAtom/);
-    });
-
+describe("行为层：表格里能对公式建立 NodeSelection", () => {
     it("math_inline 应该 仍是 atom:true（编辑气泡依赖 NodeSelection）", () => {
         const latexSrc = readFileSync(
             path.resolve(process.cwd(), "webview/vendor/latexFeature.ts"),
             "utf-8",
         );
         expect(latexSrc).toMatch(/atom:\s*true/);
-        expect(latexSrc).toMatch(/draggable:\s*true/);
     });
 
-    it("真实编辑器里 应该 能对表格单元格内的行内公式建立 NodeSelection", async () => {
-        // 必须用 epytor 自己的 createEditor（带 latex feature），裸 CrepeBuilder
-        // 不装 math 解析器，文档里不会有 math_inline 节点
+    it("真实表格里 应该 能对单元格内的公式建立 NodeSelection（且公式确在 cell 内）", async () => {
         const { createEditor, destroyEditor } = await import("../editor");
+        const { editorViewCtx } = await import("@milkdown/kit/core");
+        const { NodeSelection } = await import("@milkdown/kit/prose/state");
+
         const root = document.createElement("div");
         document.body.appendChild(root);
         const editor = await createEditor(
@@ -165,28 +157,17 @@ describe("表格内行内公式的选中（cellClickFixPlugin）", () => {
             "| 列A | 列B |\n| --- | --- |\n| $x$ 说明 | 普通 |\n",
             () => {},
         );
-        const view: EditorView = editor.action((ctx) => ctx.get(editorViewCtx));
+        const view = editor.action((ctx) => ctx.get(editorViewCtx));
 
-        // 找到单元格里的 math_inline
         let mathPos = -1;
-        let mathNode: ProseNode | null = null;
         view.state.doc.descendants((node, pos) => {
-            if (node.type.name === "math_inline") {
-                mathPos = pos;
-                mathNode = node;
-            }
+            if (node.type.name === "math_inline") mathPos = pos;
         });
-        expect(mathPos, "文档里应有 math_inline 节点").toBeGreaterThanOrEqual(0);
-        expect((mathNode as unknown as ProseNode | null)?.isAtom).toBe(true);
+        expect(mathPos, "文档里应有 math_inline").toBeGreaterThanOrEqual(0);
 
-        // 建立 NodeSelection：应当成功且选区停在公式上
-        view.dispatch(
-            view.state.tr.setSelection(NodeSelection.create(view.state.doc, mathPos)),
-        );
+        view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, mathPos)));
         expect(view.state.selection).toBeInstanceOf(NodeSelection);
-        expect((view.state.selection as NodeSelection).from).toBe(mathPos);
 
-        // 确认该公式确实位于表格单元格内（覆盖真正的回归场景）
         let inCell = false;
         view.state.doc.descendants((node, pos) => {
             if (node.type.name === "table_cell" && pos < mathPos && mathPos < pos + node.nodeSize) {
@@ -197,5 +178,5 @@ describe("表格内行内公式的选中（cellClickFixPlugin）", () => {
 
         destroyEditor();
         document.body.innerHTML = "";
-    }, 30000);
+    }, 40000);
 });

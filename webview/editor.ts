@@ -198,34 +198,53 @@ const cellClickFixPlugin = $prose(() => {
     return new Plugin({
         view(editorView) {
             capturedView = editorView;
-            return { destroy() { capturedView = null; } };
+
+            // **必须挂在 document 的捕获阶段，不能只用 handleDOMEvents。**
+            //
+            // prosemirror-view 的事件入口（dist/index.js:3155）是：
+            //   if (eventBelongsToView(view, event) && !runCustomHandler(view, event) && ...)
+            // 而 eventBelongsToView 会沿 target→view.dom 遍历，遇到任一 desc 的
+            // stopEvent() 返回 true 就判定「这个事件不属于编辑器」，直接返回 false ——
+            // 于是 runCustomHandler（也就是 handleDOMEvents）**根本不会被调用**。
+            //
+            // Crepe 的 TableNodeView.stopEvent() 恰好对 th/td 内的 mousedown 返回 true
+            // （@milkdown/components table-block:1030-1040），目的就是自己接管表格点击
+            // （设 NodeSelection.create(doc, cellFrom+1) = 选中整格）。所以在表格里，
+            // handleDOMEvents 里的 mousedown 从来没有执行过 —— 这就是「改了跟没改一样」
+            // 的真正原因。
+            //
+            // 捕获阶段在 PM 的任何处理之前跑，不受 stopEvent 影响。
+            const onCaptureMouseDown = (event: MouseEvent) => {
+                if (event.button !== 0 || event.detail !== 1 ||
+                    event.shiftKey || event.ctrlKey || event.metaKey) {
+                    pendingAtomClickPos = null;
+                    return;
+                }
+                const atomPos = atomPosAtEvent(editorView, event);
+                // 只登记意图，不在这里 dispatch：Crepe 的表格点击也用 rAF 延迟派发，
+                // 谁后写谁生效，所以真正兜底放在 appendTransaction。
+                pendingAtomClickPos = atomPos;
+            };
+            document.addEventListener("mousedown", onCaptureMouseDown, true);
+
+            return {
+                destroy() {
+                    document.removeEventListener("mousedown", onCaptureMouseDown, true);
+                    capturedView = null;
+                },
+            };
         },
         props: {
             handleDOMEvents: {
+                // 注意：表格内的 mousedown **不会**走到这里——Crepe 的
+                // TableNodeView.stopEvent() 对 th/td 返回 true，prosemirror-view 的
+                // eventBelongsToView 会据此判定事件不属于编辑器，跳过 runCustomHandler。
+                // 「点公式」的识别因此放在 view() 里的 document 捕获阶段监听。
                 mousedown: (view, event) => {
                     if (event.button !== 0 || event.detail !== 1 || event.shiftKey || event.ctrlKey || event.metaKey) {
-                        pendingAtomClickPos = null; // 修饰键点击不算「要编辑公式」
                         beginClick(cell, null);
                         return false;
                     }
-                    // **落在原子节点（行内公式）上的点击要保住 NodeSelection。**
-                    //
-                    // 这里只「记下来」，不在 mousedown 当场 dispatch —— 见
-                    // pendingAtomClickPos 的注释：Crepe 的 TableNodeView.stopEvent 会在
-                    // mousedown 里同样设选区（NodeSelection.create(doc, cellFrom+1)，
-                    // 用的是 rAF），谁后写谁生效，当场设会被它覆盖成「选中整个单元格
-                    // 的段落」。真正兜底在 appendTransaction。
-                    const atomPos = atomPosAtEvent(view, event);
-                    if (atomPos !== null) {
-                        pendingAtomClickPos = atomPos;
-                        beginClick(cell, null); // 不进入单元格点击修正流程
-                        // 不 preventDefault、不 return true：让 PM 正常处理这次点击，
-                        // 我们只在选区被改掉时纠回来，避免干扰双击选词等原生行为。
-                        return false;
-                    }
-                    // 这次点击与公式无关：清掉上一次可能残留的意图，
-                    // 否则「先点公式、再点别处」会被旧意图劫持选区。
-                    pendingAtomClickPos = null;
                     if (!(event.target as Element).closest("td, th")) {
                         beginClick(cell, null);
                         return false;
@@ -249,13 +268,17 @@ const cellClickFixPlugin = $prose(() => {
             },
         },
         filterTransaction(tr, state) {
+            // **用户点的是行内公式时，放行一切选区变更，交给 appendTransaction 纠正。**
+            //
+            // 否则这里会把 Crepe 那条「选中整格」的 transaction 直接丢掉（返回 false），
+            // 而 appendTransaction 只在 transaction 成功应用后才跑 —— 丢掉就等于
+            // 纠正永远不会发生，整格蓝框也就一直在（owner 三次真机复验）。
+            if (pendingAtomClickPos !== null) return true;
+
             // 原生表格单击→NodeSelection（单元格内段落）→拦截并转为光标定位
             if (tr.selection instanceof NodeSelection) {
-                // **只拦「整格段落」的 NodeSelection**：点单元格时 PM 给出的是选中整段
-                // 那个 NodeSelection，用户预期是光标，才需要修正。
-                // 而单元格里的原子节点（行内公式 math_inline，atom:true）靠 NodeSelection
-                // 才能激活编辑气泡——之前无差别拦截，导致表格内的行内公式永远选不中、
-                // 点不开编辑框（owner 真机反馈）。原子节点一律放行。
+                // 单元格里直接点中原子节点（行内公式，atom:true）时不要拦：
+                // 它靠 NodeSelection 才能激活编辑气泡。
                 if (tr.selection.node?.isAtom) return true;
                 try {
                     const $pos = state.doc.resolve(Math.min(tr.selection.from, state.doc.content.size));
