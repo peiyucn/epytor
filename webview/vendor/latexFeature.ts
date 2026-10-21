@@ -465,20 +465,17 @@ export class LatexInlineTooltip implements PluginView {
             updateValue: this.#updateValue,
         });
         this.#app.mount(content);
-        // **挂到 document.body，不留在 .milkdown 里。**
-        // TooltipProvider 默认把气泡 append 到 `view.dom.parentElement`（.milkdown），
-        // 而 .milkdown 有 `position: relative`：absolute 策略下坐标会被它带偏；
-        // 换成 fixed 策略后虽然坐标是视口坐标，但祖先链上若出现 transform/filter
-        // 仍会让 fixed 退化。挂到 body 是最干净的做法——body 无定位、无 transform。
-        document.body.appendChild(content);
+        // 气泡留在 .milkdown 内（**不要**挪到 body）：Crepe 主题的 --crepe-* 变量
+        // （--crepe-color-surface / --crepe-color-hover / --crepe-font-code 等）
+        // 都定义在 .milkdown 上，挪到 body 就继承不到，按钮与图标样式会崩
+        // （真机回归：确认按钮变成白底方块、图标丢失）。
+        // fixed 定位不受祖先影响——.milkdown 只有 position: relative，没有
+        // transform / filter / will-change，不会让 fixed 退化成相对祖先定位。
         this.#provider = new TooltipProvider({
             debounce: 0,
             content: this.#content,
             shouldShow: this.#shouldShow,
             offset: 10,
-            // root 指向 body，provider 就不会再往 .milkdown 里塞（传 body 本身，
-            // appendChild 在同一父节点上是幂等的）
-            root: document.body,
             floatingUIOptions: {
                 placement: "bottom",
                 // **必须用 fixed，不能用默认的 absolute。**

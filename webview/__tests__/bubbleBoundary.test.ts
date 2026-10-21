@@ -138,9 +138,14 @@ describe("接线（latexFeature）", () => {
         expect(fn).toContain("milkdown-top-bar");
     });
 
-    it("气泡应该 挂到 document.body（不留在有 position:relative 的 .milkdown 里）", () => {
-        expect(latexSrc).toContain("document.body.appendChild(content)");
-        expect(latexSrc).toMatch(/root:\s*document\.body/);
+    it("气泡应该 留在 .milkdown 内（继承 --crepe-* 变量；fixed 不需要挪到 body）", () => {
+        // 挪到 body 会丢失 .milkdown 上定义的 --crepe-color-surface / --crepe-font-code
+        // 等变量，按钮与图标样式崩掉（真机回归）。
+        expect(latexSrc).not.toContain("document.body.appendChild(content)");
+        expect(latexSrc).not.toMatch(/root:\s*document\.body/);
+        // strategy 仍是 fixed：.milkdown 只有 position:relative，无 transform/filter，
+        // 不会让 fixed 退化
+        expect(latexSrc).toMatch(/strategy:\s*"fixed"/);
     });
 
     it("定位策略 应该是 fixed", () => {
@@ -172,7 +177,21 @@ describe("样式（latex.css）", () => {
         expect(Number(z![1])).toBeGreaterThan(0);
     });
 
-    it("选择器 不应该 再带 .milkdown 前缀（气泡已挂到 body）", () => {
-        expect(latexCss).not.toMatch(/\.milkdown \.milkdown-latex-inline-edit/);
+    it("选择器 应该 带 .milkdown 前缀（气泡留在 .milkdown 内以继承 --crepe-* 变量）", () => {
+        // 挪到 body 会继承不到 --crepe-color-surface / --crepe-font-code，按钮与
+        // 图标样式崩掉（真机回归：确认按钮变白底方块）。
+        expect(latexCss).toMatch(/\.milkdown \.milkdown-latex-inline-edit\s*\{/);
+    });
+
+    it("按钮 应该 自带外观重置（crepe 的全局 button 重置没跟过来）", () => {
+        const m = /\.milkdown \.milkdown-latex-inline-edit \.container button\s*\{([^}]*)\}/.exec(latexCss);
+        expect(m, "找不到确认按钮规则").not.toBeNull();
+        const body = m![1];
+
+        // 不重置的话显示成浏览器默认按钮（白底方块、图标被压掉）
+        expect(body).toMatch(/appearance:\s*none/);
+        expect(body).toMatch(/background:\s*transparent/);
+        expect(body).toMatch(/border:\s*none/);
+        expect(body).toMatch(/padding:\s*0/);
     });
 });

@@ -19,14 +19,17 @@
     color: var(--vscode-descriptionForeground, inherit);
 }
 
-/* 气泡挂在 document.body 下（不留在 .milkdown 里，见 vendor/latexFeature.ts）——
-   body 无定位、无 transform，fixed 的坐标系干净。因此选择器不能带 .milkdown 前缀，
-   否则规则会落空（回归：气泡恢复默认样式后位置与外观全错）。 */
-.milkdown-latex-inline-edit[data-show='false'] {
+/* 气泡留在 .milkdown 内（见 vendor/latexFeature.ts）：Crepe 主题的 --crepe-* 变量
+   都定义在 .milkdown 上，挪到 body 会继承不到、按钮与图标样式崩掉（真机回归：
+   确认按钮变白底方块）。fixed 定位不受 .milkdown 的 position:relative 影响——
+   它没有 transform / filter / will-change，不会让 fixed 退化。
+   注意：气泡是 NodeView 之外单独创建的，不在 .ProseMirror 内，所以这里用
+   .milkdown 作前缀即可。 */
+.milkdown .milkdown-latex-inline-edit[data-show='false'] {
     display: none;
 }
 
-.milkdown-latex-inline-edit {
+.milkdown .milkdown-latex-inline-edit {
     /* 与 floating-ui 的 strategy: "fixed" 配对。absolute 下坐标相对 offsetParent，
        而浮动元素按视口坐标计算，二者错位会让气泡飘走。 */
     position: fixed;
@@ -45,24 +48,38 @@
     box-sizing: border-box;
 }
 
-.milkdown-latex-inline-edit .container {
+.milkdown .milkdown-latex-inline-edit .container {
     display: flex;
     gap: 6px;
     align-items: flex-start;
 }
 
-.milkdown-latex-inline-edit .container button {
+.milkdown .milkdown-latex-inline-edit .container button {
     width: 24px;
     height: 24px;
     cursor: pointer;
     border-radius: 8px;
+    /* 上游靠 Crepe 的全局 button 重置抹掉浏览器默认外观，而本文件是从 crepe
+       主题里「摘出」的（见文件头），那层重置没跟过来——不补的话确认按钮会显示成
+       白底方块、图标被压掉（真机回归）。 */
+    appearance: none;
+    -webkit-appearance: none;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--crepe-color-on-surface-variant, var(--vscode-editor-foreground));
+    line-height: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
 }
 
-.milkdown-latex-inline-edit .container button:hover {
+.milkdown .milkdown-latex-inline-edit .container button:hover {
     background: var(--crepe-color-hover, rgba(128, 128, 128, 0.2));
 }
 
-.milkdown-latex-inline-edit .ProseMirror {
+.milkdown .milkdown-latex-inline-edit .ProseMirror {
     padding: 0;
     /* 能窄能宽：外层气泡被压窄时（公式贴行首/行尾）内部编辑区要跟着收，
        否则 min-width 会撑破父级、气泡仍溢出页面。上限保持上游值。 */
