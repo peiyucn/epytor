@@ -46,6 +46,13 @@ import { Schema } from "@milkdown/kit/prose/model";
 import type { Node as ProseNode } from "@milkdown/kit/prose/model";
 import { $nodeSchema, $command, $inputRule, $remark } from "@milkdown/kit/utils";
 import { tooltipFactory, TooltipProvider } from "@milkdown/kit/plugin/tooltip";
+import { size } from "@floating-ui/dom";
+import type { Middleware } from "@floating-ui/dom";
+import {
+    BUBBLE_BOUNDARY_PADDING,
+    BUBBLE_MIN_WIDTH,
+    placeBubble,
+} from "@/utils/bubbleBoundary";
 import { textblockTypeInputRule } from "@milkdown/kit/prose/inputrules";
 import { defineComponent, h, shallowRef, createApp } from "vue";
 import type { App, ShallowRef, VNodeRef } from "vue";
@@ -344,6 +351,51 @@ export const remarkMathBlockPlugin = $remark(
 // ─── §tooltip（上游 src/feature/latex/inline-tooltip/*，未改动逻辑）───────────
 export const inlineLatexTooltip = tooltipFactory("INLINE_LATEX");
 
+
+/**
+ * 按「公式矩形 + 内容可视区」自己算气泡位置，完全绕开 flip/shift 的推断。
+ *
+ * 为什么不再让 floating-ui 决定位置：
+ * - `shift` 的边界默认取 clippingAncestors，而 TOC 是 fixed 浮层、body 的
+ *   padding-left 又不属于裁剪区域 → 它看不见内容区的真实范围；
+ * - `flip` 会在下方放不下时翻到上方，翻车时就直接跑到页面顶部（真机上正是
+ *   覆盖到了固定标题条与工具栏之上）；
+ * - 而 `boundary` 字段只收静态值，不能跟随 TOC 拖动实时变化。
+ *
+ * 这里用 `rects.reference`（公式的视口矩形）自行布局，语义明确：
+ *   水平：与公式左对齐 → 夹进 [内容区左, 视口右]；
+ *   垂直：优先贴公式下方；下方不够则贴上方；两边都不够就夹进
+ *         [内容区顶（工具栏底）, 视口底]，保证既不遮挡工具栏、也不出可视区。
+ * 返回值直接覆盖最终 x/y（配合 strategy: "fixed"，坐标即视口坐标）。
+ */
+function placeInsideContentViewport(): Middleware {
+    return {
+        name: "epytorPlaceInsideContentViewport",
+        fn({ rects }) {
+            const bodyStyle = getComputedStyle(document.body);
+            const contentLeft = Number.parseFloat(bodyStyle.paddingLeft) || 0;
+            const viewportWidth =
+                document.documentElement.clientWidth || window.innerWidth;
+            const viewportHeight =
+                document.documentElement.clientHeight || window.innerHeight;
+
+            // 编辑区顶端：让开固定工具栏（.milkdown-top-bar 是 fixed 吸顶条）
+            const topBar = document.querySelector<HTMLElement>(".milkdown-top-bar");
+            const contentTop = topBar
+                ? Math.max(0, topBar.getBoundingClientRect().bottom)
+                : 0;
+
+            // 定位算法在 utils/bubbleBoundary.ts（纯函数，可直测）——
+            // 这里只负责把浏览器实测的几何喂给它。
+            return placeBubble(
+                rects.reference,
+                rects.floating,
+                { contentLeft, contentTop, viewportWidth, viewportHeight },
+            );
+        },
+    };
+}
+
 type LatexTooltipProps = {
     config: Partial<LatexConfig>;
     innerView: ShallowRef<EditorView | null>;
@@ -413,6 +465,12 @@ export class LatexInlineTooltip implements PluginView {
             updateValue: this.#updateValue,
         });
         this.#app.mount(content);
+        // 气泡留在 .milkdown 内（**不要**挪到 body）：Crepe 主题的 --crepe-* 变量
+        // （--crepe-color-surface / --crepe-color-hover / --crepe-font-code 等）
+        // 都定义在 .milkdown 上，挪到 body 就继承不到，按钮与图标样式会崩
+        // （真机回归：确认按钮变成白底方块、图标丢失）。
+        // fixed 定位不受祖先影响——.milkdown 只有 position: relative，没有
+        // transform / filter / will-change，不会让 fixed 退化成相对祖先定位。
         this.#provider = new TooltipProvider({
             debounce: 0,
             content: this.#content,
@@ -420,7 +478,36 @@ export class LatexInlineTooltip implements PluginView {
             offset: 10,
             floatingUIOptions: {
                 placement: "bottom",
+                // **必须用 fixed，不能用默认的 absolute。**
+                //
+                // absolute 策略算的是相对 offsetParent 的坐标，而浮动元素的坐标
+                // 体系来自视口；当 offsetParent 不是 body 时两者错位，气泡会整体偏移
+                // 「offsetParent 相对视口的位置」——真机表现就是气泡飘到别处。
+                // fixed 策略下坐标恒为视口坐标，不受任何定位祖先影响。
+                strategy: "fixed",
             },
+            // **位置完全自己算，不要 flip/shift 的推断。**
+            //
+            // 之前用 floating-ui 的 flip/shift，两个问题都治不好：
+            // ① 它的边界取 clippingAncestors，而 TOC 是 fixed 浮层、body 的
+            //    padding-left 又不属于裁剪区域 → 它看不见内容区真实范围；
+            // ② flip 在下方放不下时会翻到上方，翻车就跑到页面顶部盖住工具栏。
+            //
+            // 现在：size 只负责把宽度收进可用空间，placeInsideContentViewport 按
+            // 「公式矩形 + 内容区边界」自己决定 x/y（下方优先 → 上方 → 夹紧），
+            // 保证气泡始终落在编辑区内、不越出视口、也不压住固定工具栏。
+            middleware: [
+                size({
+                    padding: BUBBLE_BOUNDARY_PADDING,
+                    apply({ availableWidth, elements }) {
+                        elements.floating.style.maxWidth = `${Math.max(
+                            BUBBLE_MIN_WIDTH,
+                            availableWidth,
+                        )}px`;
+                    },
+                }),
+                placeInsideContentViewport(),
+            ],
         });
         this.#provider.update(view);
         this.#dom = document.createElement("div");

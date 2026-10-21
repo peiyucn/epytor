@@ -3,6 +3,23 @@
  * （不含 `@import 'katex/dist/katex.min.css'`——该行是三格式字体 base64 内联
  * 1.4MB、webview.css 膨胀主因；KaTeX 样式改由 vendor/latexFeature.ts 首次数学
  * 渲染时动态加载）。
+ *
+ * ⚠️ `.milkdown-latex-inline-edit`（行内公式编辑气泡）外观**不是** crepe 上游值。
+ *
+ * 本项目对「链接/文件引用」弹层另有 VS Code 风格覆盖（见 style.css 末尾
+ * `.milkdown-link-preview > .link-preview, .milkdown-link-edit > .link-edit` 那一段）。
+ * owner 要求公式气泡与它们**完全一致**，所以这里不是抄 crepe 原始值，而是逐条镜像
+ * style.css 里那套覆盖：
+ *   .link-edit（盒子）      → .container
+ *   .link-edit .input-area  → .ProseMirror
+ *   .link-edit .button      → .container button
+ *   .link-edit .button svg  → .container button svg
+ * 另外气泡内是另一个 ProseMirror 实例，会吃到 style.css 为主编辑器写的全局规则
+ * （字号被 !important 拉到正文大小、段落被塞 12px 段后间距），所以字号与内边距
+ * 必须带 !important 才能压过。
+ *
+ * 仅两处纯功能差异：外层的 position: fixed（位置由 floating-ui 按视口坐标算）
+ * 与 z-index: 50（必须低于标题条 90 / TOC / 顶栏，否则遮挡）。
  */
 
 .milkdown span[data-type='math_inline'] {
@@ -23,34 +40,103 @@
     display: none;
 }
 
+/* 外层不带外观（对齐 .milkdown-link-edit = position+z-index 而已），
+   但这里要多两处功能值：fixed、z-index。 */
 .milkdown .milkdown-latex-inline-edit {
-    position: absolute;
-    background: var(--crepe-color-surface);
-    box-shadow: var(--crepe-shadow-1);
-    border-radius: 8px;
-    padding: 2px 6px 2px 12px;
+    position: fixed;
+    z-index: 50;
 }
 
+/* 对齐 style.css 里 `.milkdown-link-edit > .link-edit` 的覆盖值 */
 .milkdown .milkdown-latex-inline-edit .container {
+    height: auto;
+    min-height: 32px;
+    padding: 3px 6px;
+    justify-content: flex-start;
     display: flex;
-    gap: 6px;
-    align-items: flex-start;
+    align-items: center;
+    background: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+    border: 1px solid var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.35));
+    border-radius: 6px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+    gap: 2px;
+    box-sizing: border-box;
+    /* 兜底：size 中间件会把 max-width 压到可用空间，防视口过窄时溢出 */
+    max-width: calc(var(--epytor-vw, 100vw) - 16px);
 }
 
-.milkdown .milkdown-latex-inline-edit .container button {
-    width: 24px;
+/* 对齐 `.milkdown-link-edit .input-area`（VS Code 输入框外观） */
+.milkdown .milkdown-latex-inline-edit .ProseMirror {
     height: 24px;
+    /* 与 .input-area 同宽：crepe 给它 width:200px、epytor 覆盖加 min-width:160px */
+    width: 200px;
+    min-width: 160px;
+    /* 气泡被压窄时不能溢出容器 */
+    max-width: 100%;
+    /* style.css 对正文有 `padding: 0 !important`，这里必须同样 !important */
+    padding: 0 6px !important;
+    box-sizing: border-box;
+    color: var(--vscode-input-foreground, var(--vscode-editor-foreground)) !important;
+    background: var(--vscode-input-background, rgba(128, 128, 128, 0.1)) !important;
+    border: 1px solid var(--vscode-input-border, rgba(128, 128, 128, 0.3)) !important;
+    border-radius: 3px;
+    outline: none;
+    /* 跟随弹层字体（与 .input-area 的继承口径一致），不写 code 字体 */
+    font-family: inherit;
+    line-height: 22px;
+    /* **必须 !important**：style.css 有
+         `.milkdown, .milkdown .ProseMirror { font-size: … !important }`
+       会命中这里（气泡内是另一个 ProseMirror 实例），不加 !important 压不住。
+       12px 与 .input-area 同口径。 */
+    font-size: 12px !important;
+}
+
+.milkdown .milkdown-latex-inline-edit .ProseMirror:focus-within,
+.milkdown .milkdown-latex-inline-edit .ProseMirror:focus {
+    border-color: var(--vscode-focusBorder, #007acc) !important;
+}
+
+/* 单行编辑器：去掉正文的段后间距（style.css 给正文 p 加了 --epytor-block-gap） */
+.milkdown .milkdown-latex-inline-edit .ProseMirror p {
+    padding: 0 !important;
+    margin: 0 !important;
+    font-size: inherit;
+    line-height: inherit;
+}
+
+/* 对齐 `.milkdown-link-edit .button` */
+.milkdown .milkdown-latex-inline-edit .container button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    width: auto;
+    height: 24px;
+    padding: 0 3px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 3px;
     cursor: pointer;
-    border-radius: 8px;
+    transition: background 0.1s, border-color 0.1s;
+    opacity: 1;
+    flex-shrink: 0;
+}
+
+/* 对齐 `.milkdown-link-edit .button svg`（16×16、跟随编辑器前景色） */
+.milkdown .milkdown-latex-inline-edit .container button svg {
+    width: 16px;
+    height: 16px;
+    color: var(--vscode-editor-foreground);
+    fill: var(--vscode-editor-foreground);
+}
+
+/* 上游 SVG 的 path 上写死了 fill="#817567"（presentation attribute，
+   优先级低于 CSS），这里显式改回主题前景色，与链接弹层图标一致。 */
+.milkdown .milkdown-latex-inline-edit .container button svg path {
+    fill: var(--vscode-editor-foreground);
 }
 
 .milkdown .milkdown-latex-inline-edit .container button:hover {
-    background: var(--crepe-color-hover);
-}
-
-.milkdown .milkdown-latex-inline-edit .ProseMirror {
-    padding: 0;
-    min-width: 174px;
-    max-width: 294px;
-    font-family: var(--crepe-font-code);
+    background: var(--vscode-toolbar-hoverBackground, rgba(128, 128, 128, 0.2));
+    border-color: var(--vscode-toolbar-hoverOutline, transparent);
 }

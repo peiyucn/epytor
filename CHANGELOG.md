@@ -5,6 +5,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 English | [简体中文](CHANGELOG.zh-CN.md)
 
+## [1.2.6] - 2026-10-21
+
+### Bug fixes
+
+- **The inline formula editor no longer gets buried under the outline panel** — when the outline sidebar was open, the pop-up editor for an inline formula could be placed underneath it; it now stays inside the editing area, and it no longer covers the fixed toolbar, the heading bar or the outline panel
+- **Inline formulas inside a table can be selected and edited again** — clicking one used to select the whole table cell instead, so the formula editor never opened
+- **The inline formula editor now looks like the other pop-up editors** — same box, border, input field, icon and font size as the link editor, instead of the previous oversized text and mismatched icon
+
+### Changed
+
+- **Security patches** — dependencies with known vulnerabilities were upgraded to their fixed releases
+- **Mermaid syntax errors are reported in place** — a broken diagram used to leave a large error picture at the very bottom of the document; the error now appears inside that code block only
+
 ## [1.2.5] - 2026-10-18
 
 ### Bug fixes

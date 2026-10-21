@@ -180,13 +180,98 @@ const cellClickFixPlugin = $prose(() => {
     const cell = createCellClickState();
     let capturedView: EditorView | null = null;
 
+    /**
+     * 本次 mousedown 是否点在某一行内公式上（值为该公式的文档位置）。
+     *
+     * 为什么要这个中间状态，而不是在 mousedown 里直接把选区设成 NodeSelection：
+     * Crepe 的 `TableNodeView.stopEvent()` 也在 mousedown 处理单元格点击，它会
+     * `NodeSelection.create(doc, cellFrom + 1)`（**用 rAF 延迟 dispatch**）。
+     * 谁后写谁生效——我们在 mousedown 里设的，会被它那条 rAF 覆盖成「选中单元格
+     * 第一个子节点」，也就是整格段落高亮（owner 真机截图：整格被蓝框圈住）。
+     *
+     * 所以做法是：mousedown 只登记意图，由 `appendTransaction` 在每次选区变更后
+     * 兜底纠正——那里是所有 transaction 的最后一道关口，rAF 里那条也逃不掉。
+     * 纠正成功后立刻清空，不长期劫持用户选区。
+     */
+    let pendingAtomClickPos: number | null = null;
+
     return new Plugin({
         view(editorView) {
             capturedView = editorView;
-            return { destroy() { capturedView = null; } };
+
+            // **必须挂在 document 的捕获阶段，不能只用 handleDOMEvents。**
+            //
+            // prosemirror-view 的事件入口（dist/index.js:3155）是：
+            //   if (eventBelongsToView(view, event) && !runCustomHandler(view, event) && ...)
+            // 而 eventBelongsToView 会沿 target→view.dom 遍历，遇到任一 desc 的
+            // stopEvent() 返回 true 就判定「这个事件不属于编辑器」，直接返回 false ——
+            // 于是 runCustomHandler（也就是 handleDOMEvents）**根本不会被调用**。
+            //
+            // Crepe 的 TableNodeView.stopEvent() 恰好对 th/td 内的 mousedown 返回 true
+            // （@milkdown/components table-block:1030-1040），目的就是自己接管表格点击
+            // （设 NodeSelection.create(doc, cellFrom+1) = 选中整格）。所以在表格里，
+            // handleDOMEvents 里的 mousedown 从来没有执行过 —— 这就是「改了跟没改一样」
+            // 的真正原因。
+            //
+            // 捕获阶段在 PM 的任何处理之前跑，不受 stopEvent 影响。
+            const onCaptureMouseDown = (event: MouseEvent) => {
+                if (event.button !== 0 || event.detail !== 1 ||
+                    event.shiftKey || event.ctrlKey || event.metaKey) {
+                    pendingAtomClickPos = null;
+                    return;
+                }
+                const atomPos = atomPosAtEvent(editorView, event);
+                pendingAtomClickPos = atomPos;
+                if (atomPos === null) return;
+
+                // **在捕获阶段就把选区设成公式，并用两个 rAF 反复确认。**
+                //
+                // 只靠 appendTransaction 兜底实测无效（owner 四次真机复验），
+                // 因为 Crepe 的表格点击也用 rAF 派发、还会再套一层（见下方
+                // filterTransaction 里的 rAF），谁最后写谁生效。
+                // 这里不跟它抢「谁先」，而是持续把选区钉回公式：捕获后立即一次，
+                // 下一个 rAF 再一次（覆盖 Crepe 那条），再下一个 rAF 收尾清标记。
+                // 每一步都校验位置仍是原子节点，节点被删就放弃。
+                const pinSelectionToAtom = () => {
+                    const node = editorView.state.doc.nodeAt(atomPos);
+                    if (!node?.isAtom) return;
+                    const sel = editorView.state.selection;
+                    if (sel instanceof NodeSelection && sel.from === atomPos) return;
+                    try {
+                        editorView.dispatch(
+                            editorView.state.tr.setSelection(
+                                NodeSelection.create(editorView.state.doc, atomPos),
+                            ),
+                        );
+                    } catch { /* 位置失效（节点刚被删）时放弃 */ }
+                };
+
+                pinSelectionToAtom();
+                requestAnimationFrame(() => {
+                    pinSelectionToAtom();
+                    requestAnimationFrame(() => {
+                        pinSelectionToAtom();
+                        // 三步都做完才清标记：期间任何一次选区变更都会被
+                        // appendTransaction 里的纠正接住
+                        pendingAtomClickPos = null;
+                    });
+                });
+            };
+            document.addEventListener("mousedown", onCaptureMouseDown, true);
+
+            return {
+                destroy() {
+                    document.removeEventListener("mousedown", onCaptureMouseDown, true);
+                    capturedView = null;
+                },
+            };
         },
         props: {
             handleDOMEvents: {
+                // 注意：表格内的 mousedown **不会**走到这里——Crepe 的
+                // TableNodeView.stopEvent() 对 th/td 返回 true，prosemirror-view 的
+                // eventBelongsToView 会据此判定事件不属于编辑器，跳过 runCustomHandler。
+                // 「点公式」的识别因此放在 view() 里的 document 捕获阶段监听。
                 mousedown: (view, event) => {
                     if (event.button !== 0 || event.detail !== 1 || event.shiftKey || event.ctrlKey || event.metaKey) {
                         beginClick(cell, null);
@@ -215,8 +300,18 @@ const cellClickFixPlugin = $prose(() => {
             },
         },
         filterTransaction(tr, state) {
+            // **用户点的是行内公式时，放行一切选区变更，交给 appendTransaction 纠正。**
+            //
+            // 否则这里会把 Crepe 那条「选中整格」的 transaction 直接丢掉（返回 false），
+            // 而 appendTransaction 只在 transaction 成功应用后才跑 —— 丢掉就等于
+            // 纠正永远不会发生，整格蓝框也就一直在（owner 三次真机复验）。
+            if (pendingAtomClickPos !== null) return true;
+
             // 原生表格单击→NodeSelection（单元格内段落）→拦截并转为光标定位
             if (tr.selection instanceof NodeSelection) {
+                // 单元格里直接点中原子节点（行内公式，atom:true）时不要拦：
+                // 它靠 NodeSelection 才能激活编辑气泡。
+                if (tr.selection.node?.isAtom) return true;
                 try {
                     const $pos = state.doc.resolve(Math.min(tr.selection.from, state.doc.content.size));
                     for (let d = $pos.depth; d >= 0; d--) {
@@ -227,8 +322,12 @@ const cellClickFixPlugin = $prose(() => {
                             requestAnimationFrame(() => {
                                 const v = capturedView;
                                 if (!v) return;
+                                // 用户点的是行内公式：不得改成光标（否则编辑气泡不会出现）
+                                if (pendingAtomClickPos !== null) return;
                                 const sel = v.state.selection;
                                 if (sel instanceof TextSelection && sel.from === sel.to) return; // 已有光标
+                                // rAF 延迟期间用户可能已选中原子节点（如点了行内公式），别再覆盖
+                                if (sel instanceof NodeSelection && sel.node?.isAtom) return;
                                 try {
                                     const p = Math.min(clickPos ?? tr.selection.from, v.state.doc.content.size);
                                     v.dispatch(v.state.tr.setSelection(TextSelection.near(v.state.doc.resolve(p))));
@@ -246,6 +345,33 @@ const cellClickFixPlugin = $prose(() => {
             return true;
         },
         appendTransaction(_trs, _oldState, newState) {
+            // **最高优先级：用户点的是行内公式，就必须停在公式的 NodeSelection 上。**
+            //
+            // Crepe 的 TableNodeView.stopEvent() 会在 mousedown 时把选区设成
+            // `NodeSelection.create(doc, cellFrom + 1)`（rAF 延迟 dispatch）——
+            // 单元格第一个子节点通常是段落，于是整格被蓝框圈住，公式自己的
+            // NodeSelection 被覆盖，编辑气泡也就不出现（owner 真机两处截图）。
+            // appendTransaction 是所有 transaction 的最后一道关口，rAF 里那条
+            // 也走这里，所以在这纠正最可靠。
+            if (pendingAtomClickPos !== null) {
+                const atomPos = pendingAtomClickPos;
+                // **不在这里清 pendingAtomClickPos**：捕获阶段那套 rAF 连续钉选区
+                // 要经历多次 transaction，每次都可能被改写。清空时机由捕获阶段
+                // 自己控制（三轮钉完再清），这里只负责每次变更后纠回公式。
+                const node = newState.doc.nodeAt(atomPos);
+                if (node?.isAtom) {
+                    const isAlreadyOnAtom =
+                        newState.selection instanceof NodeSelection &&
+                        newState.selection.from === atomPos;
+                    if (!isAlreadyOnAtom) {
+                        return newState.tr.setSelection(
+                            NodeSelection.create(newState.doc, atomPos),
+                        );
+                    }
+                }
+                return null;
+            }
+
             if (cell.pendingClickPos === null) return null;
             const sel = newState.selection;
             if (!(sel instanceof CellSelection)) { return null; }
@@ -281,6 +407,27 @@ const cellClickFixPlugin = $prose(() => {
         },
     });
 });
+
+/**
+ * 点击落点处的原子节点（行内公式等）的文档位置。
+ *
+ * 只有「点在这个原子节点自己的 DOM 上」才算数——用 `closest` 找祖先里的
+ * `[data-type]` 节点，避免把点击单元格空白处误判成点公式。
+ * 返回 null 表示这次点击不是冲着原子节点来的。
+ */
+function atomPosAtEvent(view: EditorView, event: MouseEvent): number | null {
+    const target = event.target as Element | null;
+    if (!target) return null;
+    const atomEl = target.closest<HTMLElement>("[data-type='math_inline']");
+    if (!atomEl) return null;
+    try {
+        const pos = view.posAtDOM(atomEl, 0);
+        const node = view.state.doc.nodeAt(pos);
+        return node && node.isAtom ? pos : null;
+    } catch {
+        return null; // DOM 与文档不同步（正在重绘）时放弃接管，交回浏览器默认行为
+    }
+}
 
 /** 位置所属单元格的起始坐标（-1 = 不在单元格内） */
 function cellStartAt(doc: ProseNode, pos: number): number {
@@ -471,13 +618,28 @@ export async function createEditor(
     // 代码块渲染时才加载；主题切换在未加载时只记录目标主题，加载时统一初始化。
     let _mermaidModule: typeof import("mermaid").default | null = null;
     let _mermaidThemeInitializedFor: boolean | null = null;
+
+    /** mermaid 初始化配置（主题随明暗切换；错误渲染策略固定） */
+    function mermaidInitConfig(dark: boolean): Parameters<NonNullable<typeof _mermaidModule>["initialize"]>[0] {
+        return {
+            startOnLoad: false,
+            theme: dark ? "dark" : "default",
+            // 语法错误时**不要**画 mermaid 自带的「炸弹 + Syntax error in text」大图：
+            // 那段 SVG 是 mermaid 在 render() 内部插入 <body> 的临时元素，我们修改不了
+            // 它的位置与尺寸，它会滞留在文档最底部（回归：真机截图里文档末尾出现一张
+            // 占满宽度的红色炸弹图）。置 true 后 mermaid 抛错，由下方 catch 在**代码块
+            // 自己的预览区**显示一行简洁错误，错误位置正确、不污染页面。
+            suppressErrorRendering: true,
+        };
+    }
+
     async function loadMermaid(): Promise<typeof import("mermaid").default> {
         if (!_mermaidModule) {
             const mod = await import("mermaid");
             _mermaidModule = mod.default;
         }
         if (_mermaidThemeInitializedFor !== isDark) {
-            _mermaidModule.initialize({ startOnLoad: false, theme: isDark ? "dark" : "default" });
+            _mermaidModule.initialize(mermaidInitConfig(isDark));
             _mermaidThemeInitializedFor = isDark;
         }
         return _mermaidModule;
@@ -495,7 +657,7 @@ export async function createEditor(
         // 重绘已有 mermaid 预览（仅 mermaid 已加载时——未加载说明尚无预览可重绘，
         // 主题偏好由 loadMermaid 在首次渲染时套用）
         if (_mermaidModule) {
-            _mermaidModule.initialize({ startOnLoad: false, theme: dark ? "dark" : "default" });
+            _mermaidModule.initialize(mermaidInitConfig(dark));
             _mermaidThemeInitializedFor = dark;
             mermaidCodeMap.forEach((code, key) => {
                 const el = document.querySelector<HTMLElement>(`[data-mermaid-key="${key}"]`);
