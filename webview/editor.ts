@@ -217,6 +217,12 @@ const cellClickFixPlugin = $prose(() => {
         filterTransaction(tr, state) {
             // 原生表格单击→NodeSelection（单元格内段落）→拦截并转为光标定位
             if (tr.selection instanceof NodeSelection) {
+                // **只拦「整格段落」的 NodeSelection**：点单元格时 PM 给出的是选中整段
+                // 那个 NodeSelection，用户预期是光标，才需要修正。
+                // 而单元格里的原子节点（行内公式 math_inline，atom:true）靠 NodeSelection
+                // 才能激活编辑气泡——之前无差别拦截，导致表格内的行内公式永远选不中、
+                // 点不开编辑框（owner 真机反馈）。原子节点一律放行。
+                if (tr.selection.node?.isAtom) return true;
                 try {
                     const $pos = state.doc.resolve(Math.min(tr.selection.from, state.doc.content.size));
                     for (let d = $pos.depth; d >= 0; d--) {
@@ -229,6 +235,8 @@ const cellClickFixPlugin = $prose(() => {
                                 if (!v) return;
                                 const sel = v.state.selection;
                                 if (sel instanceof TextSelection && sel.from === sel.to) return; // 已有光标
+                                // rAF 延迟期间用户可能已选中原子节点（如点了行内公式），别再覆盖
+                                if (sel instanceof NodeSelection && sel.node?.isAtom) return;
                                 try {
                                     const p = Math.min(clickPos ?? tr.selection.from, v.state.doc.content.size);
                                     v.dispatch(v.state.tr.setSelection(TextSelection.near(v.state.doc.resolve(p))));
