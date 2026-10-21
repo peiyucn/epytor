@@ -57,8 +57,32 @@ function filterTransactionBlock(): string {
 }
 
 describe("表格内行内公式的选中（cellClickFixPlugin）", () => {
-    it("filterTransaction 应该 先放行原子节点的 NodeSelection", () => {
-        // 拦截逻辑的入口必须先判 isAtom 并 return true
+    it("mousedown 应该 对落在原子节点上的点击直接接管成 NodeSelection", () => {
+        // 关键：不能只靠 filterTransaction 事后放行——表格里 PM/prosemirror-tables
+        // 可能先给出 CellSelection 或规范化掉 NodeSelection，拦截点拿不到原子选区，
+        // 表现为「点公式却选中整张表格」。所以必须在 mousedown 阶段就认出来。
+        const mousedownBlock = editorSrc.slice(
+            editorSrc.indexOf("mousedown: (view, event) =>"),
+            editorSrc.indexOf("filterTransaction(tr, state)"),
+        );
+        expect(mousedownBlock).toContain("atomPosAtEvent(view, event)");
+        expect(mousedownBlock).toContain("NodeSelection.create");
+        expect(mousedownBlock).toContain("event.preventDefault()");
+    });
+
+    it("atomPosAtEvent 应该 只在点到原子节点时返回位置", () => {
+        const fn = editorSrc.slice(
+            editorSrc.indexOf("function atomPosAtEvent"),
+            editorSrc.indexOf("/** 位置所属单元格的起始坐标"),
+        );
+        expect(fn).toContain("closest");
+        expect(fn).toContain("posAtDOM");
+        expect(fn).toContain("node.isAtom");
+        // 拿不到就返回 null，交回浏览器默认行为（不做乐观接管）
+        expect(fn).toMatch(/return null/);
+    });
+
+    it("filterTransaction 应该 仍放行原子节点的 NodeSelection（双保险）", () => {
         const block = filterTransactionBlock();
         expect(block).toMatch(/if \(tr\.selection\.node\?\.isAtom\) return true;/);
     });

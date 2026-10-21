@@ -192,6 +192,27 @@ const cellClickFixPlugin = $prose(() => {
                         beginClick(cell, null);
                         return false;
                     }
+                    // **落在原子节点（行内公式）上的点击，直接接管成 NodeSelection。**
+                    //
+                    // 不走「让 PM 自己选、再在 filterTransaction 里放行」那条路：
+                    // 表格里点击时，PM / prosemirror-tables 可能先给出 CellSelection
+                    // 或把 NodeSelection 规范化掉，拦截点拿到的就不是原子的 NodeSelection，
+                    // 放行判断永远不成立，表现为「点公式却选中整张表格」（owner 真机反馈）。
+                    // 这里在 mousedown 阶段就认出来、显式设定选区并阻止默认行为，
+                    // 后面不管谁想规范化都改不了既有选区语义。
+                    const atomPos = atomPosAtEvent(view, event);
+                    if (atomPos !== null) {
+                        beginClick(cell, null); // 不进入单元格点击修正流程
+                        try {
+                            view.dispatch(
+                                view.state.tr.setSelection(
+                                    NodeSelection.create(view.state.doc, atomPos),
+                                ),
+                            );
+                        } catch { /* 位置失效（节点刚被删）时忽略 */ }
+                        event.preventDefault();
+                        return true;
+                    }
                     if (!(event.target as Element).closest("td, th")) {
                         beginClick(cell, null);
                         return false;
@@ -289,6 +310,27 @@ const cellClickFixPlugin = $prose(() => {
         },
     });
 });
+
+/**
+ * 点击落点处的原子节点（行内公式等）的文档位置。
+ *
+ * 只有「点在这个原子节点自己的 DOM 上」才算数——用 `closest` 找祖先里的
+ * `[data-type]` 节点，避免把点击单元格空白处误判成点公式。
+ * 返回 null 表示这次点击不是冲着原子节点来的。
+ */
+function atomPosAtEvent(view: EditorView, event: MouseEvent): number | null {
+    const target = event.target as Element | null;
+    if (!target) return null;
+    const atomEl = target.closest<HTMLElement>("[data-type='math_inline']");
+    if (!atomEl) return null;
+    try {
+        const pos = view.posAtDOM(atomEl, 0);
+        const node = view.state.doc.nodeAt(pos);
+        return node && node.isAtom ? pos : null;
+    } catch {
+        return null; // DOM 与文档不同步（正在重绘）时放弃接管，交回浏览器默认行为
+    }
+}
 
 /** 位置所属单元格的起始坐标（-1 = 不在单元格内） */
 function cellStartAt(doc: ProseNode, pos: number): number {
