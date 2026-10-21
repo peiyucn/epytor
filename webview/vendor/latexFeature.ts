@@ -46,8 +46,9 @@ import { Schema } from "@milkdown/kit/prose/model";
 import type { Node as ProseNode } from "@milkdown/kit/prose/model";
 import { $nodeSchema, $command, $inputRule, $remark } from "@milkdown/kit/utils";
 import { tooltipFactory, TooltipProvider } from "@milkdown/kit/plugin/tooltip";
-import { size } from "@floating-ui/dom";
-import { BUBBLE_BOUNDARY_PADDING, computeBubbleBoundary } from "@/utils/bubbleBoundary";
+import { size, shift } from "@floating-ui/dom";
+import type { Middleware } from "@floating-ui/dom";
+import { BUBBLE_BOUNDARY_PADDING } from "@/utils/bubbleBoundary";
 import { textblockTypeInputRule } from "@milkdown/kit/prose/inputrules";
 import { defineComponent, h, shallowRef, createApp } from "vue";
 import type { App, ShallowRef, VNodeRef } from "vue";
@@ -350,25 +351,31 @@ export const inlineLatexTooltip = tooltipFactory("INLINE_LATEX");
 const BUBBLE_MIN_WIDTH = 120;
 
 /**
- * 气泡可用的水平边界（floating-ui 的 `boundary` 支持传一个 Rect）。
+ * 把气泡坐标夹进「正文真实可视区」。
  *
- * 必须显式给出：TOC 是 fixed 浮层（不是气泡祖先，clippingAncestors 看不见），
- * 正文给 TOC 让位用的是 body 的 padding-left（不属于裁剪区域）。两者 floating-ui
- * 都不会自己算进去，所以这里按「正文真实可视区」手算。
+ * 为什么不靠 floating-ui 的 `boundary`：
+ * - `boundary` 字段只接受静态值（Rect / Element / 'clippingAncestors'），而 TOC 的
+ *   宽度会随用户拖动与开关变化，构造时算一次必然过期；
+ * - 更要紧的是 TOC 是 `position: fixed` 浮层，不参与 clippingAncestors，也不在
+ *   body padding 的裁剪范围内——floating-ui 从原理上就看不见它。
+ *
+ * 所以在 pipeline 末尾（size 之后、尺寸已定）直接读实时可视区并夹紧 `x`。
+ * 返回的 `{ x }` 会被 floating-ui 当作对最终坐标的修正。
  */
-function boundaryRect(): { x: number; y: number; width: number; height: number } {
-    const bodyStyle = getComputedStyle(document.body);
-    const bodyPadLeft = Number.parseFloat(bodyStyle.paddingLeft) || 0;
-    const bodyPadRight = Number.parseFloat(bodyStyle.paddingRight) || 0;
-    const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
-    const viewportHeight = document.documentElement.clientHeight || window.innerHeight;
-    const boundary = computeBubbleBoundary(viewportWidth, bodyPadLeft);
-
+function clampIntoContentViewport(): Middleware {
     return {
-        x: boundary.left,
-        y: 0,
-        width: Math.max(0, boundary.right - boundary.left - bodyPadRight),
-        height: viewportHeight,
+        name: "epytorClampIntoContentViewport",
+        fn({ x, rects }) {
+            const bodyStyle = getComputedStyle(document.body);
+            const left = Number.parseFloat(bodyStyle.paddingLeft) || 0;
+            const viewportRight =
+                document.documentElement.clientWidth || window.innerWidth;
+            const minX = left + BUBBLE_BOUNDARY_PADDING;
+            const maxX =
+                viewportRight - rects.floating.width - BUBBLE_BOUNDARY_PADDING;
+            const clamped = Math.max(minX, Math.min(x, Math.max(minX, maxX)));
+            return { x: clamped };
+        },
     };
 }
 
@@ -449,24 +456,21 @@ export class LatexInlineTooltip implements PluginView {
             floatingUIOptions: {
                 placement: "bottom",
             },
-            // 气泡是 absolute + floating-ui 定位，两道边界问题都要处理：
+            // 气泡是 absolute + floating-ui 定位。核心问题：
             //
-            // ① 左侧被 TOC 挡住：floating-ui 的边界默认是 clippingAncestors（沿 DOM
-            //    祖先链找裁剪元素）。TOC 面板是 position:fixed 的**浮层**、不是气泡
-            //    祖先，floating-ui 看不见它；而正文让位靠的是 body 的 padding-left，
-            //    那也不属于裁剪区域。于是气泡被定位到面板底下（owner 真机反馈）。
-            //    解法：把「正文真实可视区」显式算出来，作为 apply 函数的边界——
-            //    左边界 = body 左内边距（TOC 打开时 = 面板宽），右边界 = 视口宽。
+            // **floating-ui 看不见 TOC 面板**。它的边界默认取 `clippingAncestors`
+            // （沿 DOM 祖先链找会裁剪的元素），而 TOC 是 `position: fixed` 的浮层、
+            // 不是气泡的祖先；正文给 TOC 让位靠的是 `body` 的 `padding-left`，
+            // 那也不属于裁剪区域。所以 shift/size 都以为「整块视口都归气泡用」，
+            // 位置和宽度都不扣左侧面板 → 气泡钻到面板下面（owner 真机两次复验）。
             //
-            // ② 放不下时要能**变窄**：flip/shift 只把框整体挪进边界、不会缩宽度，
-            //    公式贴行首/行尾时框比剩余空间宽，位移救不回来 → 溢出页面。
-            //    size 中间件按 availableWidth 压缩 max-width，配合 latex.css 的
-            //    max-width + 内部 min-width:0 让编辑区跟着收窄。
+            // 解法：用自定义中间件在每次定位前现算「正文真实可视区」并**直接夹紧
+            // 最终坐标**（不依赖 floating-ui 的 boundary 语义，那字段只收静态值，
+            // 而 TOC 宽度随拖动/开关变化）。夹紧放在 size 之后，保证用的是最终尺寸。
             middleware: [
+                shift({ padding: BUBBLE_BOUNDARY_PADDING }),
                 size({
                     padding: BUBBLE_BOUNDARY_PADDING,
-                    // 显式指定边界，覆盖浮层与 body padding 都看不见的问题
-                    boundary: boundaryRect(),
                     apply({ availableWidth, elements }) {
                         elements.floating.style.maxWidth = `${Math.max(
                             BUBBLE_MIN_WIDTH,
@@ -474,6 +478,7 @@ export class LatexInlineTooltip implements PluginView {
                         )}px`;
                     },
                 }),
+                clampIntoContentViewport(),
             ],
         });
         this.#provider.update(view);
