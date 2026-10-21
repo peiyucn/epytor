@@ -204,8 +204,13 @@ describe("样式（latex.css）", () => {
     });
 });
 
-describe("外观必须与上游 crepe 主题一致（owner 判定：原来就是对的）", () => {
+
+describe("外观对齐「链接/文件引用」弹层（link-tooltip.css 为参照）", () => {
     const latexCssNoComments = latexCss.replace(/\/\*[\s\S]*?\*\//g, "");
+    const styleCss = readFileSync(
+        path.resolve(process.cwd(), "webview/style.css"),
+        "utf-8",
+    );
 
     /** 取某个选择器的规则体（先剥注释） */
     function ruleBody(selector: string): string {
@@ -215,44 +220,64 @@ describe("外观必须与上游 crepe 主题一致（owner 判定：原来就是
         return m![1];
     }
 
-    it("气泡外框 应该 保持上游值：padding 2px 6px 2px 12px", () => {
+    it("图标 应该 固定 18×18（链接弹层同为 18×18；上游用 SVG 自带的 24 铺满按钮）", () => {
+        const body = ruleBody(".milkdown .milkdown-latex-inline-edit .container button svg");
+
+        expect(body).toMatch(/width:\s*18px/);
+        expect(body).toMatch(/height:\s*18px/);
+    });
+
+    it("图标 应该 用主题 outline 色（上游 SVG 写死 #817567，与 VS Code 主题脱节）", () => {
+        const body = ruleBody(
+            ".milkdown .milkdown-latex-inline-edit .container button svg path",
+        );
+
+        expect(body).toMatch(/fill:\s*var\(--crepe-color-outline/);
+        expect(body).not.toMatch(/#[0-9a-fA-F]{3,8}/);
+    });
+
+    it("按钮 应该 留 3px 内边距（与链接弹层 .button 的 padding:3px 一致）", () => {
+        expect(ruleBody(".milkdown .milkdown-latex-inline-edit .container button"))
+            .toMatch(/padding:\s*3px/);
+    });
+
+    it("气泡外框 应该 用 32px 节奏（4px 上下，同链接弹层）", () => {
         expect(ruleBody(".milkdown .milkdown-latex-inline-edit"))
-            .toMatch(/padding:\s*2px\s+6px\s+2px\s+12px/);
+            .toMatch(/padding:\s*4px\s+10px\s+4px\s+12px/);
     });
 
-    it("container 应该 保持上游值：gap 6px、align-items flex-start", () => {
-        const body = ruleBody(".milkdown .milkdown-latex-inline-edit .container");
-
-        expect(body).toMatch(/gap:\s*6px/);
-        expect(body).toMatch(/align-items:\s*flex-start/);
-    });
-
-    it("按钮 应该 只有上游那几条：尺寸 24×24 + 圆角，不自写 padding/svg 覆盖", () => {
-        const body = ruleBody(".milkdown .milkdown-latex-inline-edit .container button");
-
-        expect(body).toMatch(/width:\s*24px/);
-        expect(body).toMatch(/height:\s*24px/);
-        expect(body).toMatch(/border-radius:\s*8px/);
-        // 自己加的「与链接弹层对齐」的小图标/内边距是错的，已撤销
-        expect(body).not.toMatch(/padding:/);
-    });
-
-    it("不应该 再出现自定义 svg 规则（图标尺寸/颜色按上游 SVG 自身属性）", () => {
-        expect(latexCssNoComments).not.toMatch(/latex-inline-edit[^{]*button svg/);
-    });
-
-    it("内部编辑区 应该 保持上游值：padding 0 / min-width 174 / max-width 294 / code 字体", () => {
+    it("内文字号 应该 0.875em 且带 !important（style.css 的全局 !important 会压掉它）", () => {
         const body = ruleBody(".milkdown .milkdown-latex-inline-edit .ProseMirror");
 
-        expect(body).toMatch(/padding:\s*0/);
-        expect(body).toMatch(/min-width:\s*174px/);
-        expect(body).toMatch(/max-width:\s*294px/);
-        expect(body).toMatch(/font-family:\s*var\(--crepe-font-code\)/);
-        // 不再写 font-size / width / 段落覆盖这些「优化」
-        expect(body).not.toMatch(/font-size:/);
+        expect(body).toMatch(
+            /font-size:\s*calc\(var\(--crepe-base-font-size,\s*16px\)\s*\*\s*0\.875\)\s*!important/,
+        );
+
+        // 这条 !important 不是多余的：style.css 确实有一条会命中气泡内 ProseMirror
+        // 的 !important 字号规则（气泡内是另一个 ProseMirror 实例）。
+        expect(styleCss).toMatch(
+            /\.milkdown,\s*\.milkdown \.ProseMirror\s*\{[^}]*font-size:[^;}]*!important/,
+        );
     });
 
-    it("不应该 再出现气泡内段落的额外覆盖（上游没有这条）", () => {
-        expect(latexCssNoComments).not.toMatch(/latex-inline-edit \.ProseMirror p/);
+    it("气泡内段落 应该 去掉正文的段后间距（否则比同类弹层高一截、文字偏上）", () => {
+        const body = ruleBody(".milkdown .milkdown-latex-inline-edit .ProseMirror p");
+
+        expect(body).toMatch(/padding:\s*0/);
+        expect(body).toMatch(/margin:\s*0/);
+
+        // style.css 给正文段落加了 margin-bottom = --epytor-block-gap，正是要抵消的那条
+        expect(styleCss).toMatch(
+            /\.milkdown \.ProseMirror p[^{]*\{[^}]*margin:\s*0\s*0\s*var\(--epytor-block-gap\)/,
+        );
+    });
+
+    it("气泡内编辑区 应该 允许收窄（上游 min-width:174px 会撑破父级）", () => {
+        const body = ruleBody(".milkdown .milkdown-latex-inline-edit .ProseMirror");
+
+        expect(body).not.toMatch(/min-width:\s*174px/);
+        expect(body).toMatch(/min-width:\s*0/);
+        // 上限仍保持上游 294px
+        expect(body).toMatch(/max-width:\s*294px/);
     });
 });

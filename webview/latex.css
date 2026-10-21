@@ -4,10 +4,17 @@
  * 1.4MB、webview.css 膨胀主因；KaTeX 样式改由 vendor/latexFeature.ts 首次数学
  * 渲染时动态加载）。
  *
- * **本文件的外观值与上游保持一致，不要改。** 编辑气泡（.milkdown-latex-inline-edit）
- * 的尺寸、图标、字号、内边距此前被逐项「优化」过，结果与全局视觉不统一、反复返工；
- * 最终确认上游这套值就是对的（owner 判定），已恢复。
- * 相对上游只保留两处**功能性**改动（见下方注释）：position 与 z-index。
+ * ⚠️ 本文件里的 `.milkdown-latex-inline-edit`（行内公式编辑气泡）**不是**上游原值。
+ * 上游那套外观在本项目里从来就是错的（owner 2026-10-21 判定：原来就不对，只是
+ * 一直没被发现）。根因是气泡内是**另一个 ProseMirror 实例**，会吃到 style.css 里
+ * 为主编辑器写的全局规则：
+ *   - `.milkdown, .milkdown .ProseMirror { font-size: … !important }`
+ *     → 气泡内 TeX 源码被强行放大到正文编辑器字号（且不加 !important 压不下去）；
+ *   - `.milkdown .ProseMirror p { margin: 0 0 var(--epytor-block-gap) }`
+ *     → 单行编辑区被塞进 12px 段后间距，气泡比同类弹层高一截、文字偏上。
+ * 现在按同项目的「链接/文件引用」弹层（crepe link-tooltip.css）逐项对齐：
+ *   外框 32px 节奏、图标 18×18 且取 --crepe-color-outline、按钮 padding:3px、
+ *   内文字号 0.875em。每处改动的原因写在各规则上方。
  */
 
 .milkdown span[data-type='math_inline'] {
@@ -29,30 +36,58 @@
 }
 
 .milkdown .milkdown-latex-inline-edit {
-    /* 上游是 absolute。改 fixed 是因为位置由 floating-ui 以视口坐标计算
-       （latexFeature.ts 的 strategy: "fixed" + placeBubble），absolute 时
-       坐标相对 offsetParent、会整体错位。外观值一律不改。 */
+    /* 上游是 absolute；这里必须 fixed —— 位置由 floating-ui 以视口坐标计算
+       （latexFeature.ts 的 strategy: "fixed" + placeBubble），absolute 会
+       相对 offsetParent 整体错位。 */
     position: fixed;
-    /* 上游没有 z-index（默认 auto）。这里必须低于固定 UI，否则气泡会盖住
-       标题吸顶条(90)、TOC(101/102) 与顶栏(102)——真机回归。 */
+    /* 上游没有该属性。必须低于固定 UI：标题吸顶条 90 / TOC 101、把手 102 /
+       顶栏 102 / 代码块与查找栏 1000；否则气泡会盖住它们。 */
     z-index: 50;
     background: var(--crepe-color-surface);
     box-shadow: var(--crepe-shadow-1);
     border-radius: 8px;
-    padding: 2px 6px 2px 12px;
+    /* 32px 节奏：按钮 24 + 上下 4×2 = 32（对齐 link-tooltip.css 的 .link-edit
+       height:32px / padding:4px 10px 4px 20px）。上游的 2px 只有 28px，比同类弹层矮。 */
+    padding: 4px 10px 4px 12px;
+    box-sizing: border-box;
+    /* 兜底：size 中间件会再把 max-width 压到可用空间，这里防视口过窄时溢出 */
+    max-width: calc(var(--epytor-vw, 100vw) - 16px);
 }
 
 .milkdown .milkdown-latex-inline-edit .container {
     display: flex;
-    gap: 6px;
-    align-items: flex-start;
+    /* 对齐 link-tooltip.css 的 .link-edit（gap: 8px）；上游是 6px。
+       align-items 用 center：单行编辑区与 24px 按钮垂直居中对齐。 */
+    gap: 8px;
+    align-items: center;
 }
 
 .milkdown .milkdown-latex-inline-edit .container button {
     width: 24px;
     height: 24px;
+    /* 对齐 link-tooltip.css 的 .button（padding:3px）——24 的按钮里放 18 的图标。
+       上游没有 padding，图标按 SVG 自带的 24×24 铺满按钮。 */
+    padding: 3px;
     cursor: pointer;
     border-radius: 8px;
+    line-height: 24px;
+    flex-shrink: 0;
+    /* border/background/box-shadow 的重置由 crepe reset.css 提供，不覆盖。 */
+}
+
+/* 图标尺寸：对齐 link-tooltip.css 的 `.button > svg { width/height: 18px }`。
+   上游 SVG 自带 width/height=24，不约束会铺满整个按钮。 */
+.milkdown .milkdown-latex-inline-edit .container button svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+}
+
+/* 图标颜色：上游 SVG 里 path 写死 fill="#817567"（crepe classic 主题的棕灰色），
+   与本项目「一切跟随 VS Code 主题」的口径冲突。presentation attribute 优先级
+   低于 CSS 规则，这里显式改回主题 outline 色，与链接弹层图标一致。 */
+.milkdown .milkdown-latex-inline-edit .container button svg path {
+    fill: var(--crepe-color-outline);
 }
 
 .milkdown .milkdown-latex-inline-edit .container button:hover {
@@ -61,7 +96,28 @@
 
 .milkdown .milkdown-latex-inline-edit .ProseMirror {
     padding: 0;
-    min-width: 174px;
+    /* 能窄能宽：气泡被压窄时（公式贴行首/行尾）内部编辑区要跟着收，
+       否则上游的 min-width:174px 会撑破父级。上限保持上游 294px。 */
+    min-width: 0;
+    width: 100%;
     max-width: 294px;
+    /* **必须 !important**：style.css 有
+         `.milkdown, .milkdown .ProseMirror { font-size: var(--vscode-editor-font-size,14px) !important }`
+       为主编辑器写死的字号也会命中这里（气泡内是另一个 ProseMirror 实例），
+       不加 !important 这条声明完全不生效 —— 之前几轮「缩小字号」因此全部空转。
+       本规则特异性(0,3,0)高于那条(0,2,0)，同为 !important 时本规则胜出。
+       0.875em 与链接弹层 .input-area 同口径。 */
+    font-size: calc(var(--crepe-base-font-size, 16px) * 0.875) !important;
     font-family: var(--crepe-font-code);
+    line-height: 1.5;
+}
+
+/* 气泡内是**单行**编辑器：去掉正文的块级节奏。
+   style.css 给 `.milkdown .ProseMirror p { margin: 0 0 var(--epytor-block-gap) }`
+   （12px 段后间距），会让气泡比同类弹层高一截、文字偏上。 */
+.milkdown .milkdown-latex-inline-edit .ProseMirror p {
+    padding: 0;
+    margin: 0;
+    font-size: inherit;
+    line-height: inherit;
 }
