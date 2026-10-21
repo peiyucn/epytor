@@ -42,7 +42,9 @@
     background: var(--crepe-color-surface, var(--vscode-editorWidget-background));
     box-shadow: var(--crepe-shadow-1, 0 2px 8px rgba(0, 0, 0, 0.36));
     border-radius: 8px;
-    padding: 2px 6px 2px 12px;
+    /* 与链接弹层一致的 32px 节奏：按钮 24 + 上下 4×2 = 32
+       （link-tooltip.css 里 .link-edit 是 height:32px; padding:4px 10px 4px 20px） */
+    padding: 4px 10px 4px 12px;
     /* 宽度上限由 JS 的 size 中间件按可用空间收紧，这里兜底不超过视口 */
     max-width: calc(var(--epytor-vw, 100vw) - 16px);
     box-sizing: border-box;
@@ -50,20 +52,39 @@
 
 .milkdown .milkdown-latex-inline-edit .container {
     display: flex;
-    gap: 6px;
-    align-items: flex-start;
+    /* 与链接弹层同类（.link-edit 的 gap: 8px） */
+    gap: 8px;
+    align-items: center;
 }
 
+/* 以下三条对齐同项目里的「链接/文件引用」弹层（crepe 主题 link-tooltip.css）：
+   那里按钮是 padding:3px + 图标 18×18 + 颜色取 --crepe-color-outline。
+   本气泡此前图标没有尺寸/颜色约束，SVG 自带的 width/height=24 与硬编码
+   fill="#817567" 直接生效 → 对勾撑满按钮、颜色与 VS Code 主题脱节，
+   看起来像一块与整体风格不符的深色方块（owner 真机反馈）。 */
 .milkdown .milkdown-latex-inline-edit .container button {
     width: 24px;
     height: 24px;
+    /* 与链接弹层一致：24 的按钮里放 18 的图标，四周留 3px */
+    padding: 3px;
     cursor: pointer;
     border-radius: 8px;
-    /* 外观重置由 @milkdown/crepe/theme/common/reset.css 的全局规则提供
-       （`.milkdown button { border:none; background:none; box-shadow:none }`，
-       该文件已在 webview/index.ts:3 引入）。这里**不要**再覆盖 background /
-       appearance / color —— 之前手写一套与 crepe 不一致的值，反而让按钮出现
-       与整体风格不符的深色底（真机回归）。 */
+    line-height: 24px;
+    flex-shrink: 0;
+    /* 外观重置（border/background/box-shadow）由 crepe 的 reset.css 提供，
+       这里不覆盖，避免与主题冲突。 */
+}
+
+.milkdown .milkdown-latex-inline-edit .container button svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+}
+
+/* 图标路径的 fill 是上游硬编码的字面色（#817567），presentation attribute
+   优先级低于 CSS 规则，这里显式改回主题 outline 色，与链接弹层一致。 */
+.milkdown .milkdown-latex-inline-edit .container button svg path {
+    fill: var(--crepe-color-outline);
 }
 
 .milkdown .milkdown-latex-inline-edit .container button:hover {
@@ -77,5 +98,19 @@
     min-width: 0;
     width: 100%;
     max-width: 294px;
+    /* 与链接弹层的输入区一致（link-edit .input-area 是 0.875em），
+       此前继承 16px 基准，气泡里的公式源码明显偏大。 */
+    font-size: calc(var(--crepe-base-font-size, 16px) * 0.875);
     font-family: var(--crepe-font-code, monospace);
+    line-height: 1.5;
+}
+
+/* 气泡内的单行编辑器不要正文的段落节奏：crepe reset.css 给
+   `.milkdown .ProseMirror p { padding: 4px 0 }`，在气泡里会把高度撑出 32px 节奏，
+   看起来比链接弹层「胖」一圈。 */
+.milkdown .milkdown-latex-inline-edit .ProseMirror p {
+    padding: 0;
+    margin: 0;
+    font-size: inherit;
+    line-height: inherit;
 }

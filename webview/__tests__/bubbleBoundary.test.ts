@@ -153,12 +153,12 @@ describe("接线（latexFeature）", () => {
     });
 });
 
-describe("样式（latex.css）", () => {
-    const latexCss = readFileSync(
-        path.resolve(process.cwd(), "webview/latex.css"),
-        "utf-8",
-    );
+const latexCss = readFileSync(
+    path.resolve(process.cwd(), "webview/latex.css"),
+    "utf-8",
+);
 
+describe("样式（latex.css）", () => {
     function bubbleRule(): string {
         const m = /\.milkdown-latex-inline-edit\s*\{([^}]*)\}/.exec(latexCss);
         expect(m, "找不到气泡样式规则").not.toBeNull();
@@ -201,5 +201,58 @@ describe("样式（latex.css）", () => {
         // 尺寸约束保留
         expect(body).toMatch(/width:\s*24px/);
         expect(body).toMatch(/height:\s*24px/);
+    });
+});
+
+describe("风格对齐「链接/文件引用」弹层（link-tooltip.css 为参照）", () => {
+    const latexCssNoComments = latexCss.replace(/\/\*[\s\S]*?\*\//g, "");
+
+    /** 取某个选择器的规则体（先剥注释） */
+    function ruleBody(selector: string): string {
+        const esc = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const m = new RegExp(esc + "\\s*\\{([^}]*)\\}").exec(latexCssNoComments);
+        expect(m, `找不到规则 ${selector}`).not.toBeNull();
+        return m![1];
+    }
+
+    it("图标 应该 固定 18×18（链接弹层同为 18×18，此前用 SVG 自带的 24 撑满按钮）", () => {
+        const body = ruleBody(".milkdown .milkdown-latex-inline-edit .container button svg");
+
+        expect(body).toMatch(/width:\s*18px/);
+        expect(body).toMatch(/height:\s*18px/);
+    });
+
+    it("图标 应该 用主题 outline 色（上游 SVG 硬编码 #817567，与 VS Code 主题脱节）", () => {
+        const body = ruleBody(
+            ".milkdown .milkdown-latex-inline-edit .container button svg path",
+        );
+
+        expect(body).toMatch(/fill:\s*var\(--crepe-color-outline/);
+        // 不得出现硬编码色值
+        expect(body).not.toMatch(/#[0-9a-fA-F]{3,8}/);
+    });
+
+    it("按钮 应该 留 3px 内边距（与链接弹层 .button 的 padding:3px 一致）", () => {
+        const body = ruleBody(".milkdown .milkdown-latex-inline-edit .container button");
+
+        expect(body).toMatch(/padding:\s*3px/);
+    });
+
+    it("气泡内编辑区 应该 用 0.875em 字号（链接弹层 .input-area 同口径）", () => {
+        const body = ruleBody(".milkdown .milkdown-latex-inline-edit .ProseMirror");
+
+        expect(body).toMatch(/font-size:\s*calc\(var\(--crepe-base-font-size,\s*16px\)\s*\*\s*0\.875\)/);
+    });
+
+    it("气泡内段落 应该 去掉 crepe 正文的 4px 上下内边距（否则撑高、显得比链接弹层胖）", () => {
+        const body = ruleBody(".milkdown .milkdown-latex-inline-edit .ProseMirror p");
+
+        expect(body).toMatch(/padding:\s*0/);
+    });
+
+    it("气泡外框 应该 用 32px 节奏的内边距（4px 上下，同链接弹层）", () => {
+        const body = ruleBody(".milkdown .milkdown-latex-inline-edit");
+
+        expect(body).toMatch(/padding:\s*4px\s+10px\s+4px\s+12px/);
     });
 });
