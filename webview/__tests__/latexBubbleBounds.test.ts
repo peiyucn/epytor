@@ -57,6 +57,9 @@ describe("行内公式编辑气泡的宽度约束", () => {
 
     it("气泡压缩下限 应该是有语义的常量（不是魔术数字）", () => {
         expect(latexFeatureSrc).toMatch(/const BUBBLE_MIN_WIDTH\s*=\s*\d+/);
-        expect(latexFeatureSrc).toMatch(/const BUBBLE_VIEWPORT_PADDING\s*=\s*\d+/);
+        // 视口/边界留白已收进 utils/bubbleBoundary.ts 的 BUBBLE_BOUNDARY_PADDING
+        // （TOC 占位那条边界逻辑独立成模块，见 bubbleBoundary.test.ts）
+        expect(latexFeatureSrc).toContain("BUBBLE_BOUNDARY_PADDING");
+        expect(latexFeatureSrc).not.toContain("BUBBLE_VIEWPORT_PADDING");
     });
 });
