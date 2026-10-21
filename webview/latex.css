@@ -24,7 +24,12 @@
 }
 
 .milkdown .milkdown-latex-inline-edit {
-    position: absolute;
+    /* 与 floating-ui 的 strategy: "fixed" 配对（见 vendor/latexFeature.ts）。
+       用 absolute 时，坐标是相对 offsetParent 的，而气泡挂在有
+       `position: relative` 的 .milkdown 内 → 整体偏移「.milkdown 相对视口的位置」，
+       真机表现为气泡飘到公式下方很远。fixed 下坐标恒为视口坐标。 */
+    position: fixed;
+    z-index: 110;
     background: var(--crepe-color-surface);
     box-shadow: var(--crepe-shadow-1);
     border-radius: 8px;

@@ -106,3 +106,32 @@ describe("接线（latexFeature）", () => {
         expect(latexSrc).not.toContain("function boundaryRect");
     });
 });
+
+describe("定位策略必须是 fixed（回归：气泡飘到公式下方很远）", () => {
+    const latexCss = readFileSync(
+        path.resolve(process.cwd(), "webview/latex.css"),
+        "utf-8",
+    );
+
+    it("floating-ui 应该 用 strategy: fixed", () => {
+        // 气泡 append 到 .milkdown（有 position: relative），absolute 策略下
+        // 坐标相对 offsetParent、而 platform 用视口坐标系，二者错位 →
+        // 气泡整体偏移「.milkdown 相对视口的位置」。
+        expect(latexSrc).toMatch(/strategy:\s*"fixed"/);
+    });
+
+    it("气泡 CSS 的 position 应该 与策略一致（fixed）", () => {
+        const m = /\.milkdown \.milkdown-latex-inline-edit\s*\{([^}]*)\}/.exec(latexCss);
+        expect(m, "找不到气泡样式规则").not.toBeNull();
+        expect(m![1]).toMatch(/position:\s*fixed/);
+        expect(m![1]).not.toMatch(/position:\s*absolute/);
+    });
+
+    it("气泡应该 有足够的 z-index（盖住正文与表格手柄）", () => {
+        const m = /\.milkdown \.milkdown-latex-inline-edit\s*\{([^}]*)\}/.exec(latexCss);
+        const z = /z-index:\s*(\d+)/.exec(m![1]);
+        expect(z, "气泡应声明 z-index").not.toBeNull();
+        // TOC 面板 101 / 把手 102，气泡要在它们之上
+        expect(Number(z![1])).toBeGreaterThan(102);
+    });
+});

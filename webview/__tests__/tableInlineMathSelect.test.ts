@@ -110,17 +110,23 @@ describe("filterTransaction 必须给纠正让路（因果链第 4 条）", () =
         expect(code).toMatch(/if \(pendingAtomClickPos !== null\) return true;/);
     });
 
-    it("appendTransaction 应该 把选区纠正到公式并清空意图", () => {
+    it("appendTransaction 应该 把选区纠正到公式（不在此处清意图）", () => {
         const append = block("appendTransaction(_trs, _oldState, newState) {");
         const code = codeOnly(append);
 
         expect(code).toContain("pendingAtomClickPos !== null");
-        expect(code).toContain("pendingAtomClickPos = null");
         expect(code).toContain("NodeSelection.create(newState.doc, atomPos)");
         // 纠正前校验位置仍是原子节点
         expect(code).toContain("node?.isAtom");
         // 已停在公式上就不重复 dispatch
         expect(code).toContain("isAlreadyOnAtom");
+        // 意图的清理权归捕获阶段（要经历多轮 rAF 钉选区），这里不得清空，
+        // 否则后续 transaction 就没得纠了。
+        const atomBranch = code.slice(
+            code.indexOf("pendingAtomClickPos !== null"),
+            code.indexOf("if (cell.pendingClickPos === null)"),
+        );
+        expect(atomBranch).not.toContain("pendingAtomClickPos = null");
     });
 });
 

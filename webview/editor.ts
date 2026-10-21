@@ -221,9 +221,41 @@ const cellClickFixPlugin = $prose(() => {
                     return;
                 }
                 const atomPos = atomPosAtEvent(editorView, event);
-                // 只登记意图，不在这里 dispatch：Crepe 的表格点击也用 rAF 延迟派发，
-                // 谁后写谁生效，所以真正兜底放在 appendTransaction。
                 pendingAtomClickPos = atomPos;
+                if (atomPos === null) return;
+
+                // **在捕获阶段就把选区设成公式，并用两个 rAF 反复确认。**
+                //
+                // 只靠 appendTransaction 兜底实测无效（owner 四次真机复验），
+                // 因为 Crepe 的表格点击也用 rAF 派发、还会再套一层（见下方
+                // filterTransaction 里的 rAF），谁最后写谁生效。
+                // 这里不跟它抢「谁先」，而是持续把选区钉回公式：捕获后立即一次，
+                // 下一个 rAF 再一次（覆盖 Crepe 那条），再下一个 rAF 收尾清标记。
+                // 每一步都校验位置仍是原子节点，节点被删就放弃。
+                const pinSelectionToAtom = () => {
+                    const node = editorView.state.doc.nodeAt(atomPos);
+                    if (!node?.isAtom) return;
+                    const sel = editorView.state.selection;
+                    if (sel instanceof NodeSelection && sel.from === atomPos) return;
+                    try {
+                        editorView.dispatch(
+                            editorView.state.tr.setSelection(
+                                NodeSelection.create(editorView.state.doc, atomPos),
+                            ),
+                        );
+                    } catch { /* 位置失效（节点刚被删）时放弃 */ }
+                };
+
+                pinSelectionToAtom();
+                requestAnimationFrame(() => {
+                    pinSelectionToAtom();
+                    requestAnimationFrame(() => {
+                        pinSelectionToAtom();
+                        // 三步都做完才清标记：期间任何一次选区变更都会被
+                        // appendTransaction 里的纠正接住
+                        pendingAtomClickPos = null;
+                    });
+                });
             };
             document.addEventListener("mousedown", onCaptureMouseDown, true);
 
@@ -290,6 +322,8 @@ const cellClickFixPlugin = $prose(() => {
                             requestAnimationFrame(() => {
                                 const v = capturedView;
                                 if (!v) return;
+                                // 用户点的是行内公式：不得改成光标（否则编辑气泡不会出现）
+                                if (pendingAtomClickPos !== null) return;
                                 const sel = v.state.selection;
                                 if (sel instanceof TextSelection && sel.from === sel.to) return; // 已有光标
                                 // rAF 延迟期间用户可能已选中原子节点（如点了行内公式），别再覆盖
@@ -321,8 +355,9 @@ const cellClickFixPlugin = $prose(() => {
             // 也走这里，所以在这纠正最可靠。
             if (pendingAtomClickPos !== null) {
                 const atomPos = pendingAtomClickPos;
-                pendingAtomClickPos = null;
-                // 位置可能因期间的重绘/插入而失效，先校验还是不是原子节点
+                // **不在这里清 pendingAtomClickPos**：捕获阶段那套 rAF 连续钉选区
+                // 要经历多次 transaction，每次都可能被改写。清空时机由捕获阶段
+                // 自己控制（三轮钉完再清），这里只负责每次变更后纠回公式。
                 const node = newState.doc.nodeAt(atomPos);
                 if (node?.isAtom) {
                     const isAlreadyOnAtom =

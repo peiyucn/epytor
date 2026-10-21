@@ -455,6 +455,16 @@ export class LatexInlineTooltip implements PluginView {
             offset: 10,
             floatingUIOptions: {
                 placement: "bottom",
+                // **必须用 fixed，不能用默认的 absolute。**
+                //
+                // 气泡被 append 到 `view.dom.parentElement`（= `.milkdown`），而
+                // `.milkdown` 有 `position: relative`（style.css:263）。floating-ui
+                // 的 absolute 策略算的是**相对 offsetParent** 的坐标，但它的 platform
+                // 内部用的是视口坐标体系，两者在 offsetParent 不是 body 时对不上，
+                // 气泡会整体偏移「.milkdown 相对视口的位置」——真机表现就是气泡飘到
+                // 公式下方很远的地方（owner 截图）。
+                // fixed 策略下坐标恒为视口坐标，不受任何定位祖先影响。
+                strategy: "fixed",
             },
             // 气泡是 absolute + floating-ui 定位。核心问题：
             //
