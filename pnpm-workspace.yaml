@@ -5,14 +5,27 @@ overrides:
   # 而 @codemirror/view 与 epytor 自己用 6.6.0 —— Compartment/StateEffect 跨副本不被识别，
   # Crepe 的 languageConf.reconfigure 静默失效（代码块无语法高亮，用户实测反馈）
   "@codemirror/state": ^6.7.1
-  # 0.18.2 起修 GHSA-238p-pmpm-9mq7（原型污染绕过 trust 限制）。
-  # **上限必须排除 0.18.11**：npm 上 katex@0.18.11 被官方标为
-  # "Accidentally published with breaking changes. Use 0.19.0 instead."——
-  # 它是个误发布的破坏性版本，装上会静默改变渲染行为。
-  # 也不动 0.19：crepe 7.22.3 声明 ^0.19.0，但 mermaid 11.16.1 声明 ^0.16.45；
-  # 这套 override 的用意就是让两者共用同一份 0.18（否则 mermaid 生成的 HTML 用
-  # 0.16 的 class 名、加载的样式表却是 0.18 的，样式错配——见 1a1f8f7）。
-  katex: ">=0.18.2 <0.18.11"
+  # 升 0.19.0，而不是退回 0.18.10：
+  # katex 0.18.11 把「字符度量警告改走 strict」这个**破坏性变更**发成了补丁版，
+  # npm 于是在 0.18.11 上标了 "Accidentally published with breaking changes.
+  # Use 0.19.0 instead."——这句是让你**往前走**到 0.19.0（官方在那里把这个变更
+  # 正名为 BREAKING CHANGES），不是让你退回 0.18.10。
+  # 对齐上游：crepe 7.22.3 声明的就是 katex ^0.19.0。
+  # 仍需 override 的原因：mermaid 11.16.1 声明 ^0.16.45，不 override 会解析出
+  # 两份 katex（mermaid 的 HTML 用 0.16 的 class 名、加载的样式表却是 0.19 的，
+  # 样式错配——见 1a1f8f7）。0.19.0 同时满足 GHSA-238p-pmpm-9mq7 的 >=0.18.2。
+  #
+  # 关于 @types/katex：**不统一、不 override**，这是刻意留着的。
+  # micromark-extension-math@3.1.0 依赖 @types/katex ^0.16.0，解析出 @types/katex@0.16.8；
+  # 而 katex 自 0.16 起就自带类型（package.json 的 types + exports.types 都指向
+  # types/katex.d.ts），DefinitelyTyped 因此停在 0.16.8、不会再跟进 0.19——属于上游
+  # 的历史包袱，不是本项目的问题。实际影响为零：
+  #   ① 两个 tsconfig 都开 skipLibCheck，第三方 .d.ts 内部不检查；
+  #   ② epytor 自己 `import katex` 拿到的是 katex@0.19 自带类型（@types/katex 在顶层
+  #      不可解析，只嵌在 micromark-extension-math 目录里服务它自己）。
+  # 强行 override 一个不存在的「0.19 版 @types/katex」只能靠 stub 骗过类型检查，
+  # 反而掩盖问题（《优雅原则》：禁止 hack 或补丁式写法）。
+  katex: ^0.19.0
   prosemirror-changeset: ^2.3.1
   prosemirror-commands: ^1.7.1
   prosemirror-dropcursor: ^1.8.3
