@@ -1,13 +1,12 @@
 /**
- * 行内公式编辑气泡的边界约束（回归：公式在行首/行尾时编辑框溢出页面宽度）。
+ * 行内公式编辑气泡的宽度约束（回归：公式在行首/行尾时编辑框溢出页面宽度）。
  *
- * 气泡 = `.milkdown-latex-inline-edit`，`position: absolute`，由 floating-ui 定位。
- * floating-ui 的 flip/shift 只把框整体**挪**进边界、不会让它**变窄**；公式贴在
- * 页面最左或最右时，框比剩余空间宽，位移救不回来 → 溢出页面。
+ * 气泡 = `.milkdown-latex-inline-edit`，`position: fixed`，由 floating-ui 定位
+ * （定位算法见 utils/bubbleBoundary.ts 的 placeBubble）。
  *
- * 修复：给 TooltipProvider 注入 floating-ui 的 `size` 中间件（溢出时压缩
- * max-width），并让气泡与内部编辑区的 CSS 允许收窄（去掉固定 min-width 撑破）。
- * jsdom 无布局引擎，所以这里锁**接线与样式约束**，几何表象留给真机。
+ * 宽度这条线：floating-ui 的 size 中间件按 availableWidth 收窄 max-width，
+ * 配合 CSS 让内部编辑区能跟着收（上游的 min-width:174px 会在窄容器里撑破父级）。
+ * 位置那条线见 bubbleBoundary.test.ts。
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
@@ -19,6 +18,10 @@ const latexFeatureSrc = readFileSync(
 );
 const latexCss = readFileSync(
     path.resolve(process.cwd(), "webview/latex.css"),
+    "utf-8",
+);
+const bubbleBoundarySrc = readFileSync(
+    path.resolve(process.cwd(), "webview/utils/bubbleBoundary.ts"),
     "utf-8",
 );
 
@@ -40,14 +43,14 @@ describe("行内公式编辑气泡的宽度约束", () => {
     });
 
     it("气泡自身 应该有 max-width 上限，不超出视口", () => {
-        const body = ruleBody(latexCss, ".milkdown .milkdown-latex-inline-edit");
+        const body = ruleBody(latexCss, ".milkdown-latex-inline-edit");
         expect(body).toMatch(/max-width:\s*calc\(var\(--epytor-vw/);
         // border-box：max-width 要含自身 padding，否则仍会超出
         expect(body).toMatch(/box-sizing:\s*border-box/);
     });
 
     it("内部编辑区 应该 能收窄（min-width 不得撑破父级）", () => {
-        const body = ruleBody(latexCss, ".milkdown .milkdown-latex-inline-edit .ProseMirror");
+        const body = ruleBody(latexCss, ".milkdown-latex-inline-edit .ProseMirror");
         // 上游原值 min-width:174px 会在窄容器里撑破父级——必须放开
         expect(body).not.toMatch(/min-width:\s*174px/);
         expect(body).toMatch(/min-width:\s*0/);
@@ -55,11 +58,10 @@ describe("行内公式编辑气泡的宽度约束", () => {
         expect(body).toMatch(/max-width:\s*294px/);
     });
 
-    it("气泡压缩下限 应该是有语义的常量（不是魔术数字）", () => {
-        expect(latexFeatureSrc).toMatch(/const BUBBLE_MIN_WIDTH\s*=\s*\d+/);
-        // 视口/边界留白已收进 utils/bubbleBoundary.ts 的 BUBBLE_BOUNDARY_PADDING
-        // （TOC 占位那条边界逻辑独立成模块，见 bubbleBoundary.test.ts）
-        expect(latexFeatureSrc).toContain("BUBBLE_BOUNDARY_PADDING");
-        expect(latexFeatureSrc).not.toContain("BUBBLE_VIEWPORT_PADDING");
+    it("压缩下限 应该是 utils/bubbleBoundary.ts 里的具名常量", () => {
+        expect(bubbleBoundarySrc).toMatch(/export const BUBBLE_MIN_WIDTH\s*=\s*\d+/);
+        // latexFeature 从这里导入，不再各自定义一份
+        expect(latexFeatureSrc).toContain("BUBBLE_MIN_WIDTH");
+        expect(latexFeatureSrc).not.toMatch(/const BUBBLE_MIN_WIDTH\s*=/);
     });
 });

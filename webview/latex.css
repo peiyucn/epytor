@@ -19,51 +19,55 @@
     color: var(--vscode-descriptionForeground, inherit);
 }
 
-.milkdown .milkdown-latex-inline-edit[data-show='false'] {
+/* 气泡挂在 document.body 下（不留在 .milkdown 里，见 vendor/latexFeature.ts）——
+   body 无定位、无 transform，fixed 的坐标系干净。因此选择器不能带 .milkdown 前缀，
+   否则规则会落空（回归：气泡恢复默认样式后位置与外观全错）。 */
+.milkdown-latex-inline-edit[data-show='false'] {
     display: none;
 }
 
-.milkdown .milkdown-latex-inline-edit {
-    /* 与 floating-ui 的 strategy: "fixed" 配对（见 vendor/latexFeature.ts）。
-       用 absolute 时，坐标是相对 offsetParent 的，而气泡挂在有
-       `position: relative` 的 .milkdown 内 → 整体偏移「.milkdown 相对视口的位置」，
-       真机表现为气泡飘到公式下方很远。fixed 下坐标恒为视口坐标。 */
+.milkdown-latex-inline-edit {
+    /* 与 floating-ui 的 strategy: "fixed" 配对。absolute 下坐标相对 offsetParent，
+       而浮动元素按视口坐标计算，二者错位会让气泡飘走。 */
     position: fixed;
-    z-index: 110;
-    background: var(--crepe-color-surface);
-    box-shadow: var(--crepe-shadow-1);
+    /* **层级必须低于所有固定 UI，不能盖住它们。**
+       本仓库固定 UI 的层级：标题吸顶条 90 / TOC 面板 101 / TOC 把手 102 /
+       顶栏 102 / 代码块与查找栏 1000。气泡只是正文里的临时浮层，盖在正文之上
+       即可（正文是 z-index auto），取 50 保证它永远排在上述固定 UI 之下。
+       回归：曾用 110，真机上会盖住固定标题条与工具栏。 */
+    z-index: 50;
+    background: var(--crepe-color-surface, var(--vscode-editorWidget-background));
+    box-shadow: var(--crepe-shadow-1, 0 2px 8px rgba(0, 0, 0, 0.36));
     border-radius: 8px;
     padding: 2px 6px 2px 12px;
-    /* 气泡宽度由内容撑开；上限定在视口内（floating-ui 的 size 中间件另会把
-       max-width 压到「公式位置到页面边界」的可用宽度）。
-       回归：公式在行首/行尾时编辑框曾直接溢出页面宽度。 */
+    /* 宽度上限由 JS 的 size 中间件按可用空间收紧，这里兜底不超过视口 */
     max-width: calc(var(--epytor-vw, 100vw) - 16px);
     box-sizing: border-box;
 }
 
-.milkdown .milkdown-latex-inline-edit .container {
+.milkdown-latex-inline-edit .container {
     display: flex;
     gap: 6px;
     align-items: flex-start;
 }
 
-.milkdown .milkdown-latex-inline-edit .container button {
+.milkdown-latex-inline-edit .container button {
     width: 24px;
     height: 24px;
     cursor: pointer;
     border-radius: 8px;
 }
 
-.milkdown .milkdown-latex-inline-edit .container button:hover {
-    background: var(--crepe-color-hover);
+.milkdown-latex-inline-edit .container button:hover {
+    background: var(--crepe-color-hover, rgba(128, 128, 128, 0.2));
 }
 
-.milkdown .milkdown-latex-inline-edit .ProseMirror {
+.milkdown-latex-inline-edit .ProseMirror {
     padding: 0;
     /* 能窄能宽：外层气泡被压窄时（公式贴行首/行尾）内部编辑区要跟着收，
        否则 min-width 会撑破父级、气泡仍溢出页面。上限保持上游值。 */
     min-width: 0;
     width: 100%;
     max-width: 294px;
-    font-family: var(--crepe-font-code);
+    font-family: var(--crepe-font-code, monospace);
 }

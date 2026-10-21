@@ -46,9 +46,13 @@ import { Schema } from "@milkdown/kit/prose/model";
 import type { Node as ProseNode } from "@milkdown/kit/prose/model";
 import { $nodeSchema, $command, $inputRule, $remark } from "@milkdown/kit/utils";
 import { tooltipFactory, TooltipProvider } from "@milkdown/kit/plugin/tooltip";
-import { size, shift } from "@floating-ui/dom";
+import { size } from "@floating-ui/dom";
 import type { Middleware } from "@floating-ui/dom";
-import { BUBBLE_BOUNDARY_PADDING } from "@/utils/bubbleBoundary";
+import {
+    BUBBLE_BOUNDARY_PADDING,
+    BUBBLE_MIN_WIDTH,
+    placeBubble,
+} from "@/utils/bubbleBoundary";
 import { textblockTypeInputRule } from "@milkdown/kit/prose/inputrules";
 import { defineComponent, h, shallowRef, createApp } from "vue";
 import type { App, ShallowRef, VNodeRef } from "vue";
@@ -347,34 +351,47 @@ export const remarkMathBlockPlugin = $remark(
 // ─── §tooltip（上游 src/feature/latex/inline-tooltip/*，未改动逻辑）───────────
 export const inlineLatexTooltip = tooltipFactory("INLINE_LATEX");
 
-/** 编辑气泡被压缩时的下限（px）：再窄就没法编辑了 */
-const BUBBLE_MIN_WIDTH = 120;
 
 /**
- * 把气泡坐标夹进「正文真实可视区」。
+ * 按「公式矩形 + 内容可视区」自己算气泡位置，完全绕开 flip/shift 的推断。
  *
- * 为什么不靠 floating-ui 的 `boundary`：
- * - `boundary` 字段只接受静态值（Rect / Element / 'clippingAncestors'），而 TOC 的
- *   宽度会随用户拖动与开关变化，构造时算一次必然过期；
- * - 更要紧的是 TOC 是 `position: fixed` 浮层，不参与 clippingAncestors，也不在
- *   body padding 的裁剪范围内——floating-ui 从原理上就看不见它。
+ * 为什么不再让 floating-ui 决定位置：
+ * - `shift` 的边界默认取 clippingAncestors，而 TOC 是 fixed 浮层、body 的
+ *   padding-left 又不属于裁剪区域 → 它看不见内容区的真实范围；
+ * - `flip` 会在下方放不下时翻到上方，翻车时就直接跑到页面顶部（真机上正是
+ *   覆盖到了固定标题条与工具栏之上）；
+ * - 而 `boundary` 字段只收静态值，不能跟随 TOC 拖动实时变化。
  *
- * 所以在 pipeline 末尾（size 之后、尺寸已定）直接读实时可视区并夹紧 `x`。
- * 返回的 `{ x }` 会被 floating-ui 当作对最终坐标的修正。
+ * 这里用 `rects.reference`（公式的视口矩形）自行布局，语义明确：
+ *   水平：与公式左对齐 → 夹进 [内容区左, 视口右]；
+ *   垂直：优先贴公式下方；下方不够则贴上方；两边都不够就夹进
+ *         [内容区顶（工具栏底）, 视口底]，保证既不遮挡工具栏、也不出可视区。
+ * 返回值直接覆盖最终 x/y（配合 strategy: "fixed"，坐标即视口坐标）。
  */
-function clampIntoContentViewport(): Middleware {
+function placeInsideContentViewport(): Middleware {
     return {
-        name: "epytorClampIntoContentViewport",
-        fn({ x, rects }) {
+        name: "epytorPlaceInsideContentViewport",
+        fn({ rects }) {
             const bodyStyle = getComputedStyle(document.body);
-            const left = Number.parseFloat(bodyStyle.paddingLeft) || 0;
-            const viewportRight =
+            const contentLeft = Number.parseFloat(bodyStyle.paddingLeft) || 0;
+            const viewportWidth =
                 document.documentElement.clientWidth || window.innerWidth;
-            const minX = left + BUBBLE_BOUNDARY_PADDING;
-            const maxX =
-                viewportRight - rects.floating.width - BUBBLE_BOUNDARY_PADDING;
-            const clamped = Math.max(minX, Math.min(x, Math.max(minX, maxX)));
-            return { x: clamped };
+            const viewportHeight =
+                document.documentElement.clientHeight || window.innerHeight;
+
+            // 编辑区顶端：让开固定工具栏（.milkdown-top-bar 是 fixed 吸顶条）
+            const topBar = document.querySelector<HTMLElement>(".milkdown-top-bar");
+            const contentTop = topBar
+                ? Math.max(0, topBar.getBoundingClientRect().bottom)
+                : 0;
+
+            // 定位算法在 utils/bubbleBoundary.ts（纯函数，可直测）——
+            // 这里只负责把浏览器实测的几何喂给它。
+            return placeBubble(
+                rects.reference,
+                rects.floating,
+                { contentLeft, contentTop, viewportWidth, viewportHeight },
+            );
         },
     };
 }
@@ -448,37 +465,41 @@ export class LatexInlineTooltip implements PluginView {
             updateValue: this.#updateValue,
         });
         this.#app.mount(content);
+        // **挂到 document.body，不留在 .milkdown 里。**
+        // TooltipProvider 默认把气泡 append 到 `view.dom.parentElement`（.milkdown），
+        // 而 .milkdown 有 `position: relative`：absolute 策略下坐标会被它带偏；
+        // 换成 fixed 策略后虽然坐标是视口坐标，但祖先链上若出现 transform/filter
+        // 仍会让 fixed 退化。挂到 body 是最干净的做法——body 无定位、无 transform。
+        document.body.appendChild(content);
         this.#provider = new TooltipProvider({
             debounce: 0,
             content: this.#content,
             shouldShow: this.#shouldShow,
             offset: 10,
+            // root 指向 body，provider 就不会再往 .milkdown 里塞（传 body 本身，
+            // appendChild 在同一父节点上是幂等的）
+            root: document.body,
             floatingUIOptions: {
                 placement: "bottom",
                 // **必须用 fixed，不能用默认的 absolute。**
                 //
-                // 气泡被 append 到 `view.dom.parentElement`（= `.milkdown`），而
-                // `.milkdown` 有 `position: relative`（style.css:263）。floating-ui
-                // 的 absolute 策略算的是**相对 offsetParent** 的坐标，但它的 platform
-                // 内部用的是视口坐标体系，两者在 offsetParent 不是 body 时对不上，
-                // 气泡会整体偏移「.milkdown 相对视口的位置」——真机表现就是气泡飘到
-                // 公式下方很远的地方（owner 截图）。
+                // absolute 策略算的是相对 offsetParent 的坐标，而浮动元素的坐标
+                // 体系来自视口；当 offsetParent 不是 body 时两者错位，气泡会整体偏移
+                // 「offsetParent 相对视口的位置」——真机表现就是气泡飘到别处。
                 // fixed 策略下坐标恒为视口坐标，不受任何定位祖先影响。
                 strategy: "fixed",
             },
-            // 气泡是 absolute + floating-ui 定位。核心问题：
+            // **位置完全自己算，不要 flip/shift 的推断。**
             //
-            // **floating-ui 看不见 TOC 面板**。它的边界默认取 `clippingAncestors`
-            // （沿 DOM 祖先链找会裁剪的元素），而 TOC 是 `position: fixed` 的浮层、
-            // 不是气泡的祖先；正文给 TOC 让位靠的是 `body` 的 `padding-left`，
-            // 那也不属于裁剪区域。所以 shift/size 都以为「整块视口都归气泡用」，
-            // 位置和宽度都不扣左侧面板 → 气泡钻到面板下面（owner 真机两次复验）。
+            // 之前用 floating-ui 的 flip/shift，两个问题都治不好：
+            // ① 它的边界取 clippingAncestors，而 TOC 是 fixed 浮层、body 的
+            //    padding-left 又不属于裁剪区域 → 它看不见内容区真实范围；
+            // ② flip 在下方放不下时会翻到上方，翻车就跑到页面顶部盖住工具栏。
             //
-            // 解法：用自定义中间件在每次定位前现算「正文真实可视区」并**直接夹紧
-            // 最终坐标**（不依赖 floating-ui 的 boundary 语义，那字段只收静态值，
-            // 而 TOC 宽度随拖动/开关变化）。夹紧放在 size 之后，保证用的是最终尺寸。
+            // 现在：size 只负责把宽度收进可用空间，placeInsideContentViewport 按
+            // 「公式矩形 + 内容区边界」自己决定 x/y（下方优先 → 上方 → 夹紧），
+            // 保证气泡始终落在编辑区内、不越出视口、也不压住固定工具栏。
             middleware: [
-                shift({ padding: BUBBLE_BOUNDARY_PADDING }),
                 size({
                     padding: BUBBLE_BOUNDARY_PADDING,
                     apply({ availableWidth, elements }) {
@@ -488,7 +509,7 @@ export class LatexInlineTooltip implements PluginView {
                         )}px`;
                     },
                 }),
-                clampIntoContentViewport(),
+                placeInsideContentViewport(),
             ],
         });
         this.#provider.update(view);

@@ -1,137 +1,178 @@
 /**
- * 气泡坐标夹紧逻辑（回归：气泡被左侧 TOC 面板挡住）。
+ * 行内公式编辑气泡的定位（回归：气泡越出编辑区 / 压住固定工具栏）。
  *
- * floating-ui 的 `boundary` 只收静态值，而 TOC 宽度会随拖动/开关变化；更要紧的是
- * TOC 是 `position: fixed` 浮层，不在 clippingAncestors 里，也不在 body padding 的
- * 裁剪范围内——floating-ui 原理上就看不见它。所以用自定义中间件在 pipeline 末尾
- * 直接夹紧最终 x 坐标。
+ * 定位算法在 webview/utils/bubbleBoundary.ts 的 placeBubble（纯函数，可直测）。
+ * 这里测的是**数学结果**，不是「代码里有没有某个字符串」——前几轮吃过的教训：
+ * 断言接线存在，但算出来的坐标是错的，真机照样不对。
  *
- * jsdom 无布局引擎，所以这里测「夹紧函数本身的数学」，不测真实几何。
+ * jsdom 无布局引擎，所以几何全部由用例显式给定，不依赖真实渲染。
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import {
+    BUBBLE_BOUNDARY_PADDING,
+    BUBBLE_GAP,
+    placeBubble,
+} from "../utils/bubbleBoundary";
 
-const latexSrc = readFileSync(
-    path.resolve(process.cwd(), "webview/vendor/latexFeature.ts"),
-    "utf-8",
-);
+/** 典型编辑区：左侧 TOC 占 200，顶部工具栏占 36，视口 1200×800 */
+const VIEW = {
+    contentLeft: 200,
+    contentTop: 36,
+    viewportWidth: 1200,
+    viewportHeight: 800,
+};
 
-/**
- * 复刻 clampIntoContentViewport 的数学（与源码同构）。
- * 左边界 = body 左 padding + 留白；右边界 = 视口宽 - 气泡宽 - 留白。
- */
-function clampX(
-    x: number,
-    bubbleWidth: number,
-    viewportRight: number,
-    bodyPaddingLeft: number,
-    gutter: number,
-): number {
-    const minX = bodyPaddingLeft + gutter;
-    const maxX = viewportRight - bubbleWidth - gutter;
-    return Math.max(minX, Math.min(x, Math.max(minX, maxX)));
-}
+/** 气泡尺寸 */
+const FLOAT = { width: 260, height: 44 };
 
-describe("气泡坐标夹紧", () => {
-    const GUTTER = 8;
+describe("placeBubble：气泡必须落在编辑区内", () => {
+    it("正常情况下 应该 贴在公式下方", () => {
+        const pos = placeBubble({ x: 400, y: 300, width: 40, height: 20 }, FLOAT, VIEW);
 
-    it("TOC 打开时 应该 把落在面板下的气泡推到面板右侧", () => {
-        // 视口 1000，TOC 占 200，气泡宽 200，floating-ui 给的 x = 50（钻到面板下）
-        const x = clampX(50, 200, 1000, 200, GUTTER);
-
-        expect(x).toBe(200 + GUTTER);
-        // 关键断言：夹紧后不再与 [0, 200] 的面板区域重叠
-        expect(x).toBeGreaterThanOrEqual(200);
+        expect(pos.x).toBe(400);
+        expect(pos.y).toBe(300 + 20 + BUBBLE_GAP);
     });
 
-    it("TOC 关闭时 应该 允许气泡贴贴视口左边", () => {
-        const x = clampX(0, 200, 1000, 0, GUTTER);
+    it("公式贴编辑区左边（TOC 后面）时 应该 不越到 TOC 底下", () => {
+        // 公式在 x=200（紧贴 TOC 右缘）
+        const pos = placeBubble({ x: 200, y: 300, width: 20, height: 20 }, FLOAT, VIEW);
 
-        expect(x).toBe(GUTTER);
+        expect(pos.x).toBeGreaterThanOrEqual(VIEW.contentLeft + BUBBLE_BOUNDARY_PADDING);
+        expect(pos.x).toBeGreaterThanOrEqual(200);
     });
 
-    it("气泡超出视口右边 应该 左移回来", () => {
-        // x=900 + 宽 200 = 1100 > 1000，应被拉回到 1000-200-8
-        const x = clampX(900, 200, 1000, 0, GUTTER);
+    it("公式贴视口右边时 应该 把气泡拉回来，不越出右边界", () => {
+        const pos = placeBubble({ x: 1180, y: 300, width: 20, height: 20 }, FLOAT, VIEW);
 
-        expect(x).toBe(1000 - 200 - GUTTER);
-        expect(x + 200).toBeLessThanOrEqual(1000);
+        expect(pos.x + FLOAT.width).toBeLessThanOrEqual(
+            VIEW.viewportWidth - BUBBLE_BOUNDARY_PADDING,
+        );
     });
 
-    it("两边都放不下（气泡比可视区还宽）时 应该 优先贴左，不钻面板", () => {
-        // 视口 400，TOC 占 300，气泡宽 200：maxX < minX
-        const x = clampX(50, 200, 400, 300, GUTTER);
+    it("公式贴近视口底部、下方放不下时 应该 翻到上方（而不是跑到页面顶部压住工具栏）", () => {
+        // 公式在 y=780，下方没有空间
+        const pos = placeBubble({ x: 400, y: 780, width: 40, height: 18 }, FLOAT, VIEW);
 
-        // 贴左边界，宽度交给 size 中间件去收窄
-        expect(x).toBe(300 + GUTTER);
+        // 必须翻到公式上方
+        expect(pos.y).toBeLessThan(780);
+        expect(pos.y).toBe(780 - FLOAT.height - BUBBLE_GAP);
     });
 
-    it("正常位置（不碰边界）时 应该 原样返回", () => {
-        const x = clampX(450, 200, 1000, 100, GUTTER);
+    it("上下都放不下时 应该 夹在编辑区内，且不压住顶部工具栏", () => {
+        // 极矮视口，几乎没有空间
+        const tight = { ...VIEW, viewportHeight: 120 };
+        const pos = placeBubble({ x: 400, y: 60, width: 40, height: 20 }, FLOAT, tight);
 
-        expect(x).toBe(450);
+        expect(pos.y).toBeGreaterThanOrEqual(tight.contentTop + BUBBLE_BOUNDARY_PADDING);
+        expect(pos.y + FLOAT.height).toBeLessThanOrEqual(
+            tight.viewportHeight - BUBBLE_BOUNDARY_PADDING,
+        );
+    });
+
+    it("任何输入下 气泡都不压倒顶部工具栏（contentTop 之上）", () => {
+        // 扫一批极端位置，全部必须满足「y >= contentTop + padding」
+        for (const y of [0, 10, 36, 50, 100, 400, 700, 790, 800]) {
+            const pos = placeBubble({ x: 400, y, width: 40, height: 20 }, FLOAT, VIEW);
+            expect(
+                pos.y,
+                `公式 y=${y} 时气泡上边界越过了工具栏`,
+            ).toBeGreaterThanOrEqual(VIEW.contentTop + BUBBLE_BOUNDARY_PADDING);
+        }
+    });
+
+    it("任何输入下 气泡都不越出视口右边界", () => {
+        for (const x of [0, 100, 200, 600, 1000, 1180, 1200]) {
+            const pos = placeBubble({ x, y: 300, width: 20, height: 20 }, FLOAT, VIEW);
+            expect(
+                pos.x + FLOAT.width,
+                `公式 x=${x} 时气泡越出了右边界`,
+            ).toBeLessThanOrEqual(VIEW.viewportWidth - BUBBLE_BOUNDARY_PADDING + 0.001);
+            expect(pos.x).toBeGreaterThanOrEqual(VIEW.contentLeft);
+        }
+    });
+
+    it("气泡比编辑区还宽时 应该 贴左且不越出（宽度由 size 中间件另行收窄）", () => {
+        const huge = { width: 2000, height: 44 };
+        const pos = placeBubble({ x: 400, y: 300, width: 20, height: 20 }, huge, VIEW);
+
+        expect(pos.x).toBe(VIEW.contentLeft + BUBBLE_BOUNDARY_PADDING);
     });
 });
 
 describe("接线（latexFeature）", () => {
-    it("应该 注册 clampIntoContentViewport 中间件，并排在 size 之后", () => {
+    const latexSrc = readFileSync(
+        path.resolve(process.cwd(), "webview/vendor/latexFeature.ts"),
+        "utf-8",
+    );
+
+    it("应该 用 placeInsideContentViewport 定位，且不再用 flip/shift 推断", () => {
         const m = latexSrc.match(/middleware:\s*\[([\s\S]*?)\],\s*\}\);/);
-        expect(m, "找不到 TooltipProvider 的 middleware 数组").not.toBeNull();
+        expect(m, "找不到 middleware 数组").not.toBeNull();
         const list = m![1];
 
-        expect(list).toContain("shift(");
-        expect(list).toContain("size(");
-        expect(list).toContain("clampIntoContentViewport()");
-        // 顺序：clamp 必须在 size 之后（要用最终尺寸算右边界）
+        expect(list).toContain("placeInsideContentViewport()");
+        // flip/shift 会让气泡翻到页面顶部压住工具栏，必须不用
+        expect(list).not.toContain("flip(");
+        expect(list).not.toContain("shift(");
+        // clamp 必须在 size 之后（要用最终尺寸算右边界）
         expect(list.indexOf("size(")).toBeLessThan(
-            list.indexOf("clampIntoContentViewport()"),
+            list.indexOf("placeInsideContentViewport()"),
         );
     });
 
-    it("clamp 应该 从 body 的 padding-left 读 TOC 实时占位", () => {
+    it("定位应该 委托给纯函数 placeBubble，并传入浏览器实测几何", () => {
         const fn = latexSrc.slice(
-            latexSrc.indexOf("function clampIntoContentViewport"),
+            latexSrc.indexOf("function placeInsideContentViewport"),
             latexSrc.indexOf("type LatexTooltipProps"),
         );
 
+        expect(fn).toContain("placeBubble(");
+        expect(fn).toContain("rects.reference");
+        expect(fn).toContain("rects.floating");
+        // 编辑区左边界来自 body 的 padding-left（TOC 占位）
         expect(fn).toContain("getComputedStyle(document.body)");
         expect(fn).toContain("paddingLeft");
-        // 必须夹紧 x，而不是只返回 data
-        expect(fn).toMatch(/return \{ x: clamped \}/);
+        // 编辑区顶部来自固定工具栏底边
+        expect(fn).toContain("milkdown-top-bar");
     });
 
-    it("不应该 残留已被取代的 liveBoundary / boundaryRect", () => {
-        expect(latexSrc).not.toContain("function liveBoundary");
-        expect(latexSrc).not.toContain("function boundaryRect");
+    it("气泡应该 挂到 document.body（不留在有 position:relative 的 .milkdown 里）", () => {
+        expect(latexSrc).toContain("document.body.appendChild(content)");
+        expect(latexSrc).toMatch(/root:\s*document\.body/);
+    });
+
+    it("定位策略 应该是 fixed", () => {
+        expect(latexSrc).toMatch(/strategy:\s*"fixed"/);
     });
 });
 
-describe("定位策略必须是 fixed（回归：气泡飘到公式下方很远）", () => {
+describe("样式（latex.css）", () => {
     const latexCss = readFileSync(
         path.resolve(process.cwd(), "webview/latex.css"),
         "utf-8",
     );
 
-    it("floating-ui 应该 用 strategy: fixed", () => {
-        // 气泡 append 到 .milkdown（有 position: relative），absolute 策略下
-        // 坐标相对 offsetParent、而 platform 用视口坐标系，二者错位 →
-        // 气泡整体偏移「.milkdown 相对视口的位置」。
-        expect(latexSrc).toMatch(/strategy:\s*"fixed"/);
-    });
-
-    it("气泡 CSS 的 position 应该 与策略一致（fixed）", () => {
-        const m = /\.milkdown \.milkdown-latex-inline-edit\s*\{([^}]*)\}/.exec(latexCss);
+    function bubbleRule(): string {
+        const m = /\.milkdown-latex-inline-edit\s*\{([^}]*)\}/.exec(latexCss);
         expect(m, "找不到气泡样式规则").not.toBeNull();
-        expect(m![1]).toMatch(/position:\s*fixed/);
-        expect(m![1]).not.toMatch(/position:\s*absolute/);
+        return m![1];
+    }
+
+    it("气泡 position 应该 与 fixed 策略一致", () => {
+        expect(bubbleRule()).toMatch(/position:\s*fixed/);
+        expect(bubbleRule()).not.toMatch(/position:\s*absolute/);
     });
 
-    it("气泡应该 有足够的 z-index（盖住正文与表格手柄）", () => {
-        const m = /\.milkdown \.milkdown-latex-inline-edit\s*\{([^}]*)\}/.exec(latexCss);
-        const z = /z-index:\s*(\d+)/.exec(m![1]);
+    it("z-index 应该 低于所有固定 UI（标题条 90 / TOC 101+ / 顶栏 102）", () => {
+        const z = /z-index:\s*(\d+)/.exec(bubbleRule());
         expect(z, "气泡应声明 z-index").not.toBeNull();
-        // TOC 面板 101 / 把手 102，气泡要在它们之上
-        expect(Number(z![1])).toBeGreaterThan(102);
+        expect(Number(z![1])).toBeLessThan(90);
+        expect(Number(z![1])).toBeGreaterThan(0);
+    });
+
+    it("选择器 不应该 再带 .milkdown 前缀（气泡已挂到 body）", () => {
+        expect(latexCss).not.toMatch(/\.milkdown \.milkdown-latex-inline-edit/);
     });
 });
