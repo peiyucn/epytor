@@ -180,6 +180,21 @@ const cellClickFixPlugin = $prose(() => {
     const cell = createCellClickState();
     let capturedView: EditorView | null = null;
 
+    /**
+     * 本次 mousedown 是否点在某一行内公式上（值为该公式的文档位置）。
+     *
+     * 为什么要这个中间状态，而不是在 mousedown 里直接把选区设成 NodeSelection：
+     * Crepe 的 `TableNodeView.stopEvent()` 也在 mousedown 处理单元格点击，它会
+     * `NodeSelection.create(doc, cellFrom + 1)`（**用 rAF 延迟 dispatch**）。
+     * 谁后写谁生效——我们在 mousedown 里设的，会被它那条 rAF 覆盖成「选中单元格
+     * 第一个子节点」，也就是整格段落高亮（owner 真机截图：整格被蓝框圈住）。
+     *
+     * 所以做法是：mousedown 只登记意图，由 `appendTransaction` 在每次选区变更后
+     * 兜底纠正——那里是所有 transaction 的最后一道关口，rAF 里那条也逃不掉。
+     * 纠正成功后立刻清空，不长期劫持用户选区。
+     */
+    let pendingAtomClickPos: number | null = null;
+
     return new Plugin({
         view(editorView) {
             capturedView = editorView;
@@ -189,30 +204,28 @@ const cellClickFixPlugin = $prose(() => {
             handleDOMEvents: {
                 mousedown: (view, event) => {
                     if (event.button !== 0 || event.detail !== 1 || event.shiftKey || event.ctrlKey || event.metaKey) {
+                        pendingAtomClickPos = null; // 修饰键点击不算「要编辑公式」
                         beginClick(cell, null);
                         return false;
                     }
-                    // **落在原子节点（行内公式）上的点击，直接接管成 NodeSelection。**
+                    // **落在原子节点（行内公式）上的点击要保住 NodeSelection。**
                     //
-                    // 不走「让 PM 自己选、再在 filterTransaction 里放行」那条路：
-                    // 表格里点击时，PM / prosemirror-tables 可能先给出 CellSelection
-                    // 或把 NodeSelection 规范化掉，拦截点拿到的就不是原子的 NodeSelection，
-                    // 放行判断永远不成立，表现为「点公式却选中整张表格」（owner 真机反馈）。
-                    // 这里在 mousedown 阶段就认出来、显式设定选区并阻止默认行为，
-                    // 后面不管谁想规范化都改不了既有选区语义。
+                    // 这里只「记下来」，不在 mousedown 当场 dispatch —— 见
+                    // pendingAtomClickPos 的注释：Crepe 的 TableNodeView.stopEvent 会在
+                    // mousedown 里同样设选区（NodeSelection.create(doc, cellFrom+1)，
+                    // 用的是 rAF），谁后写谁生效，当场设会被它覆盖成「选中整个单元格
+                    // 的段落」。真正兜底在 appendTransaction。
                     const atomPos = atomPosAtEvent(view, event);
                     if (atomPos !== null) {
+                        pendingAtomClickPos = atomPos;
                         beginClick(cell, null); // 不进入单元格点击修正流程
-                        try {
-                            view.dispatch(
-                                view.state.tr.setSelection(
-                                    NodeSelection.create(view.state.doc, atomPos),
-                                ),
-                            );
-                        } catch { /* 位置失效（节点刚被删）时忽略 */ }
-                        event.preventDefault();
-                        return true;
+                        // 不 preventDefault、不 return true：让 PM 正常处理这次点击，
+                        // 我们只在选区被改掉时纠回来，避免干扰双击选词等原生行为。
+                        return false;
                     }
+                    // 这次点击与公式无关：清掉上一次可能残留的意图，
+                    // 否则「先点公式、再点别处」会被旧意图劫持选区。
+                    pendingAtomClickPos = null;
                     if (!(event.target as Element).closest("td, th")) {
                         beginClick(cell, null);
                         return false;
@@ -275,6 +288,32 @@ const cellClickFixPlugin = $prose(() => {
             return true;
         },
         appendTransaction(_trs, _oldState, newState) {
+            // **最高优先级：用户点的是行内公式，就必须停在公式的 NodeSelection 上。**
+            //
+            // Crepe 的 TableNodeView.stopEvent() 会在 mousedown 时把选区设成
+            // `NodeSelection.create(doc, cellFrom + 1)`（rAF 延迟 dispatch）——
+            // 单元格第一个子节点通常是段落，于是整格被蓝框圈住，公式自己的
+            // NodeSelection 被覆盖，编辑气泡也就不出现（owner 真机两处截图）。
+            // appendTransaction 是所有 transaction 的最后一道关口，rAF 里那条
+            // 也走这里，所以在这纠正最可靠。
+            if (pendingAtomClickPos !== null) {
+                const atomPos = pendingAtomClickPos;
+                pendingAtomClickPos = null;
+                // 位置可能因期间的重绘/插入而失效，先校验还是不是原子节点
+                const node = newState.doc.nodeAt(atomPos);
+                if (node?.isAtom) {
+                    const isAlreadyOnAtom =
+                        newState.selection instanceof NodeSelection &&
+                        newState.selection.from === atomPos;
+                    if (!isAlreadyOnAtom) {
+                        return newState.tr.setSelection(
+                            NodeSelection.create(newState.doc, atomPos),
+                        );
+                    }
+                }
+                return null;
+            }
+
             if (cell.pendingClickPos === null) return null;
             const sel = newState.selection;
             if (!(sel instanceof CellSelection)) { return null; }

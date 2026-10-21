@@ -42,6 +42,28 @@ const editorSrc = readFileSync(
 );
 
 /**
+ * 截出 `cellClickFixPlugin` 里 `mousedown` 处理器的实现正文。
+ *
+ * 用括号配对而不是找固定字符串——缩进/换行一变，固定串就失配，
+ * 会把整个文件尾部算进来（测试里踩过两次）。
+ */
+function mousedownBlock(): string {
+    const start = editorSrc.indexOf("mousedown: (view, event) =>");
+    expect(start, "editor.ts 里应有 cellClickFixPlugin 的 mousedown").toBeGreaterThanOrEqual(0);
+    const openBrace = editorSrc.indexOf("{", start);
+    let depth = 0;
+    for (let i = openBrace; i < editorSrc.length; i++) {
+        const ch = editorSrc[i];
+        if (ch === "{") depth++;
+        else if (ch === "}") {
+            depth--;
+            if (depth === 0) return editorSrc.slice(start, i + 1);
+        }
+    }
+    throw new Error("mousedown 块未闭合");
+}
+
+/**
  * 截出 `cellClickFixPlugin` 里 `filterTransaction` 的实现正文。
  *
  * 注意 `appendTransaction(` 在文件里出现多次（前面的插件也有），所以不能拿它当
@@ -57,17 +79,48 @@ function filterTransactionBlock(): string {
 }
 
 describe("表格内行内公式的选中（cellClickFixPlugin）", () => {
-    it("mousedown 应该 对落在原子节点上的点击直接接管成 NodeSelection", () => {
-        // 关键：不能只靠 filterTransaction 事后放行——表格里 PM/prosemirror-tables
-        // 可能先给出 CellSelection 或规范化掉 NodeSelection，拦截点拿不到原子选区，
-        // 表现为「点公式却选中整张表格」。所以必须在 mousedown 阶段就认出来。
-        const mousedownBlock = editorSrc.slice(
-            editorSrc.indexOf("mousedown: (view, event) =>"),
-            editorSrc.indexOf("filterTransaction(tr, state)"),
+    it("mousedown 应该 只登记意图，不在当场 dispatch（否则被 Crepe 的 rAF 覆盖）", () => {
+        // 回归根因：Crepe 的 TableNodeView.stopEvent() 在 mousedown 里用
+        // NodeSelection.create(doc, cellFrom+1) 设选区并 rAF 延迟 dispatch。
+        // 谁后写谁生效——当场设会被覆盖成「选中单元格段落」= 整格高亮。
+        // 截取范围必须止于 mousedown 自己的收尾，否则会把后面的代码也算进来。
+        const block = mousedownBlock();
+        // 断言只看**代码行**：注释里会提到 NodeSelection.create（解释回归根因），
+        // 直接对整块做 toContain 会误判。
+        const code = block
+            .split("\n")
+            .filter((line) => !line.trim().startsWith("//") && !line.trim().startsWith("*"))
+            .join("\n");
+
+        expect(code).toContain("atomPosAtEvent(view, event)");
+        expect(code).toContain("pendingAtomClickPos = atomPos");
+        // 不允许在 mousedown 里 dispatch 选区（会被 Crepe 的 rAF 覆盖）
+        expect(code).not.toContain("NodeSelection.create");
+        expect(code).not.toContain("event.preventDefault()");
+    });
+
+    it("appendTransaction 应该 把选区纠正回公式的 NodeSelection", () => {
+        // appendTransaction 是所有 transaction 的最后关口，rAF 里那条也走这里
+        const block = editorSrc.slice(
+            editorSrc.indexOf("appendTransaction(_trs, _oldState, newState)"),
+            editorSrc.indexOf("if (cell.pendingClickPos === null) return null;"),
         );
-        expect(mousedownBlock).toContain("atomPosAtEvent(view, event)");
-        expect(mousedownBlock).toContain("NodeSelection.create");
-        expect(mousedownBlock).toContain("event.preventDefault()");
+        expect(block, "appendTransaction 里应先处理原子的 pending 意图").toContain("pendingAtomClickPos !== null");
+        expect(block).toContain("NodeSelection.create(newState.doc, atomPos)");
+        // 纠正前必须校验位置仍是原子节点（重绘/插入可能让它失效）
+        expect(block).toContain("node?.isAtom");
+        // 已经停在公式上时不要再 dispatch（避免自激）
+        expect(block).toContain("isAlreadyOnAtom");
+    });
+
+    it("点别处 应该 清掉上一次的公式点击意图（避免旧意图劫持选区）", () => {
+        const block = mousedownBlock();
+        // 清理点必须出现在「公式命中分支之后」，且至少两处
+        // （修饰键分支 + 非公式分支），否则「先点公式再点别处」会被旧意图劫持
+        const occurrences = block.split("pendingAtomClickPos = null").length - 1;
+        expect(occurrences).toBeGreaterThanOrEqual(2);
+        // 公式命中分支本身应把意图设上
+        expect(block).toContain("pendingAtomClickPos = atomPos");
     });
 
     it("atomPosAtEvent 应该 只在点到原子节点时返回位置", () => {
