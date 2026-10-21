@@ -183,15 +183,23 @@ describe("样式（latex.css）", () => {
         expect(latexCss).toMatch(/\.milkdown \.milkdown-latex-inline-edit\s*\{/);
     });
 
-    it("按钮 应该 自带外观重置（crepe 的全局 button 重置没跟过来）", () => {
-        const m = /\.milkdown \.milkdown-latex-inline-edit \.container button\s*\{([^}]*)\}/.exec(latexCss);
+    it("按钮 不应该 自写外观覆盖（交给 crepe 的全局重置）", () => {
+        // 先剥掉注释再提规则体：注释里既有 `}` 也有 background/border 字样，
+        // 直接正则会被截断或误判（这轮调试踩过）。
+        const stripped = latexCss.replace(/\/\*[\s\S]*?\*\//g, "");
+        const m = /\.milkdown \.milkdown-latex-inline-edit \.container button\s*\{([^}]*)\}/.exec(stripped);
         expect(m, "找不到确认按钮规则").not.toBeNull();
         const body = m![1];
 
-        // 不重置的话显示成浏览器默认按钮（白底方块、图标被压掉）
-        expect(body).toMatch(/appearance:\s*none/);
-        expect(body).toMatch(/background:\s*transparent/);
-        expect(body).toMatch(/border:\s*none/);
-        expect(body).toMatch(/padding:\s*0/);
+        // crepe 的 reset.css（webview/index.ts:3 已引入）已经给了
+        // `.milkdown button { border:none; background:none; box-shadow:none }`。
+        // 这里再写一套自己的值，会与 crepe 主题不一致 —— 曾因此让按钮出现
+        // 与整体风格不符的深色底（真机回归）。只保留尺寸与圆角即可。
+        expect(body).not.toMatch(/appearance:/);
+        expect(body).not.toMatch(/background:/);
+        expect(body).not.toMatch(/border:/);
+        // 尺寸约束保留
+        expect(body).toMatch(/width:\s*24px/);
+        expect(body).toMatch(/height:\s*24px/);
     });
 });
