@@ -3,6 +3,11 @@
  * （不含 `@import 'katex/dist/katex.min.css'`——该行是三格式字体 base64 内联
  * 1.4MB、webview.css 膨胀主因；KaTeX 样式改由 vendor/latexFeature.ts 首次数学
  * 渲染时动态加载）。
+ *
+ * **本文件的外观值与上游保持一致，不要改。** 编辑气泡（.milkdown-latex-inline-edit）
+ * 的尺寸、图标、字号、内边距此前被逐项「优化」过，结果与全局视觉不统一、反复返工；
+ * 最终确认上游这套值就是对的（owner 判定），已恢复。
+ * 相对上游只保留两处**功能性**改动（见下方注释）：position 与 z-index。
  */
 
 .milkdown span[data-type='math_inline'] {
@@ -19,98 +24,44 @@
     color: var(--vscode-descriptionForeground, inherit);
 }
 
-/* 气泡留在 .milkdown 内（见 vendor/latexFeature.ts）：Crepe 主题的 --crepe-* 变量
-   都定义在 .milkdown 上，挪到 body 会继承不到、按钮与图标样式崩掉（真机回归：
-   确认按钮变白底方块）。fixed 定位不受 .milkdown 的 position:relative 影响——
-   它没有 transform / filter / will-change，不会让 fixed 退化。
-   注意：气泡是 NodeView 之外单独创建的，不在 .ProseMirror 内，所以这里用
-   .milkdown 作前缀即可。 */
 .milkdown .milkdown-latex-inline-edit[data-show='false'] {
     display: none;
 }
 
 .milkdown .milkdown-latex-inline-edit {
-    /* 与 floating-ui 的 strategy: "fixed" 配对。absolute 下坐标相对 offsetParent，
-       而浮动元素按视口坐标计算，二者错位会让气泡飘走。 */
+    /* 上游是 absolute。改 fixed 是因为位置由 floating-ui 以视口坐标计算
+       （latexFeature.ts 的 strategy: "fixed" + placeBubble），absolute 时
+       坐标相对 offsetParent、会整体错位。外观值一律不改。 */
     position: fixed;
-    /* **层级必须低于所有固定 UI，不能盖住它们。**
-       本仓库固定 UI 的层级：标题吸顶条 90 / TOC 面板 101 / TOC 把手 102 /
-       顶栏 102 / 代码块与查找栏 1000。气泡只是正文里的临时浮层，盖在正文之上
-       即可（正文是 z-index auto），取 50 保证它永远排在上述固定 UI 之下。
-       回归：曾用 110，真机上会盖住固定标题条与工具栏。 */
+    /* 上游没有 z-index（默认 auto）。这里必须低于固定 UI，否则气泡会盖住
+       标题吸顶条(90)、TOC(101/102) 与顶栏(102)——真机回归。 */
     z-index: 50;
-    background: var(--crepe-color-surface, var(--vscode-editorWidget-background));
-    box-shadow: var(--crepe-shadow-1, 0 2px 8px rgba(0, 0, 0, 0.36));
+    background: var(--crepe-color-surface);
+    box-shadow: var(--crepe-shadow-1);
     border-radius: 8px;
-    /* 与链接弹层一致的 32px 节奏：按钮 24 + 上下 4×2 = 32
-       （link-tooltip.css 里 .link-edit 是 height:32px; padding:4px 10px 4px 20px） */
-    padding: 4px 10px 4px 12px;
-    /* 宽度上限由 JS 的 size 中间件按可用空间收紧，这里兜底不超过视口 */
-    max-width: calc(var(--epytor-vw, 100vw) - 16px);
-    box-sizing: border-box;
+    padding: 2px 6px 2px 12px;
 }
 
 .milkdown .milkdown-latex-inline-edit .container {
     display: flex;
-    /* 与链接弹层同类（.link-edit 的 gap: 8px） */
-    gap: 8px;
-    align-items: center;
+    gap: 6px;
+    align-items: flex-start;
 }
 
-/* 以下三条对齐同项目里的「链接/文件引用」弹层（crepe 主题 link-tooltip.css）：
-   那里按钮是 padding:3px + 图标 18×18 + 颜色取 --crepe-color-outline。
-   本气泡此前图标没有尺寸/颜色约束，SVG 自带的 width/height=24 与硬编码
-   fill="#817567" 直接生效 → 对勾撑满按钮、颜色与 VS Code 主题脱节，
-   看起来像一块与整体风格不符的深色方块（owner 真机反馈）。 */
 .milkdown .milkdown-latex-inline-edit .container button {
     width: 24px;
     height: 24px;
-    /* 与链接弹层一致：24 的按钮里放 18 的图标，四周留 3px */
-    padding: 3px;
     cursor: pointer;
     border-radius: 8px;
-    line-height: 24px;
-    flex-shrink: 0;
-    /* 外观重置（border/background/box-shadow）由 crepe 的 reset.css 提供，
-       这里不覆盖，避免与主题冲突。 */
-}
-
-.milkdown .milkdown-latex-inline-edit .container button svg {
-    width: 18px;
-    height: 18px;
-    display: block;
-}
-
-/* 图标路径的 fill 是上游硬编码的字面色（#817567），presentation attribute
-   优先级低于 CSS 规则，这里显式改回主题 outline 色，与链接弹层一致。 */
-.milkdown .milkdown-latex-inline-edit .container button svg path {
-    fill: var(--crepe-color-outline);
 }
 
 .milkdown .milkdown-latex-inline-edit .container button:hover {
-    background: var(--crepe-color-hover, rgba(128, 128, 128, 0.2));
+    background: var(--crepe-color-hover);
 }
 
 .milkdown .milkdown-latex-inline-edit .ProseMirror {
     padding: 0;
-    /* 能窄能宽：外层气泡被压窄时（公式贴行首/行尾）内部编辑区要跟着收，
-       否则 min-width 会撑破父级、气泡仍溢出页面。上限保持上游值。 */
-    min-width: 0;
-    width: 100%;
+    min-width: 174px;
     max-width: 294px;
-    /* 与链接弹层的输入区一致（link-edit .input-area 是 0.875em），
-       此前继承 16px 基准，气泡里的公式源码明显偏大。 */
-    font-size: calc(var(--crepe-base-font-size, 16px) * 0.875);
-    font-family: var(--crepe-font-code, monospace);
-    line-height: 1.5;
-}
-
-/* 气泡内的单行编辑器不要正文的段落节奏：crepe reset.css 给
-   `.milkdown .ProseMirror p { padding: 4px 0 }`，在气泡里会把高度撑出 32px 节奏，
-   看起来比链接弹层「胖」一圈。 */
-.milkdown .milkdown-latex-inline-edit .ProseMirror p {
-    padding: 0;
-    margin: 0;
-    font-size: inherit;
-    line-height: inherit;
+    font-family: var(--crepe-font-code);
 }

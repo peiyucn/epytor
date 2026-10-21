@@ -204,7 +204,7 @@ describe("样式（latex.css）", () => {
     });
 });
 
-describe("风格对齐「链接/文件引用」弹层（link-tooltip.css 为参照）", () => {
+describe("外观必须与上游 crepe 主题一致（owner 判定：原来就是对的）", () => {
     const latexCssNoComments = latexCss.replace(/\/\*[\s\S]*?\*\//g, "");
 
     /** 取某个选择器的规则体（先剥注释） */
@@ -215,44 +215,44 @@ describe("风格对齐「链接/文件引用」弹层（link-tooltip.css 为参�
         return m![1];
     }
 
-    it("图标 应该 固定 18×18（链接弹层同为 18×18，此前用 SVG 自带的 24 撑满按钮）", () => {
-        const body = ruleBody(".milkdown .milkdown-latex-inline-edit .container button svg");
-
-        expect(body).toMatch(/width:\s*18px/);
-        expect(body).toMatch(/height:\s*18px/);
+    it("气泡外框 应该 保持上游值：padding 2px 6px 2px 12px", () => {
+        expect(ruleBody(".milkdown .milkdown-latex-inline-edit"))
+            .toMatch(/padding:\s*2px\s+6px\s+2px\s+12px/);
     });
 
-    it("图标 应该 用主题 outline 色（上游 SVG 硬编码 #817567，与 VS Code 主题脱节）", () => {
-        const body = ruleBody(
-            ".milkdown .milkdown-latex-inline-edit .container button svg path",
-        );
+    it("container 应该 保持上游值：gap 6px、align-items flex-start", () => {
+        const body = ruleBody(".milkdown .milkdown-latex-inline-edit .container");
 
-        expect(body).toMatch(/fill:\s*var\(--crepe-color-outline/);
-        // 不得出现硬编码色值
-        expect(body).not.toMatch(/#[0-9a-fA-F]{3,8}/);
+        expect(body).toMatch(/gap:\s*6px/);
+        expect(body).toMatch(/align-items:\s*flex-start/);
     });
 
-    it("按钮 应该 留 3px 内边距（与链接弹层 .button 的 padding:3px 一致）", () => {
+    it("按钮 应该 只有上游那几条：尺寸 24×24 + 圆角，不自写 padding/svg 覆盖", () => {
         const body = ruleBody(".milkdown .milkdown-latex-inline-edit .container button");
 
-        expect(body).toMatch(/padding:\s*3px/);
+        expect(body).toMatch(/width:\s*24px/);
+        expect(body).toMatch(/height:\s*24px/);
+        expect(body).toMatch(/border-radius:\s*8px/);
+        // 自己加的「与链接弹层对齐」的小图标/内边距是错的，已撤销
+        expect(body).not.toMatch(/padding:/);
     });
 
-    it("气泡内编辑区 应该 用 0.875em 字号（链接弹层 .input-area 同口径）", () => {
+    it("不应该 再出现自定义 svg 规则（图标尺寸/颜色按上游 SVG 自身属性）", () => {
+        expect(latexCssNoComments).not.toMatch(/latex-inline-edit[^{]*button svg/);
+    });
+
+    it("内部编辑区 应该 保持上游值：padding 0 / min-width 174 / max-width 294 / code 字体", () => {
         const body = ruleBody(".milkdown .milkdown-latex-inline-edit .ProseMirror");
 
-        expect(body).toMatch(/font-size:\s*calc\(var\(--crepe-base-font-size,\s*16px\)\s*\*\s*0\.875\)/);
-    });
-
-    it("气泡内段落 应该 去掉 crepe 正文的 4px 上下内边距（否则撑高、显得比链接弹层胖）", () => {
-        const body = ruleBody(".milkdown .milkdown-latex-inline-edit .ProseMirror p");
-
         expect(body).toMatch(/padding:\s*0/);
+        expect(body).toMatch(/min-width:\s*174px/);
+        expect(body).toMatch(/max-width:\s*294px/);
+        expect(body).toMatch(/font-family:\s*var\(--crepe-font-code\)/);
+        // 不再写 font-size / width / 段落覆盖这些「优化」
+        expect(body).not.toMatch(/font-size:/);
     });
 
-    it("气泡外框 应该 用 32px 节奏的内边距（4px 上下，同链接弹层）", () => {
-        const body = ruleBody(".milkdown .milkdown-latex-inline-edit");
-
-        expect(body).toMatch(/padding:\s*4px\s+10px\s+4px\s+12px/);
+    it("不应该 再出现气泡内段落的额外覆盖（上游没有这条）", () => {
+        expect(latexCssNoComments).not.toMatch(/latex-inline-edit \.ProseMirror p/);
     });
 });
