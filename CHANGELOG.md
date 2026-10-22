@@ -5,6 +5,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 English | [简体中文](CHANGELOG.zh-CN.md)
 
+## [1.2.7] - 2026-10-22
+
+### Changed
+
+- **Security patches** — tooling dependencies with newly published advisories were upgraded to their fixed releases; there is no user-perceivable change
+
 ## [1.2.6] - 2026-10-21
 
 ### Bug fixes
