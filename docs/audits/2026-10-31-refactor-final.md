@@ -1,8 +1,8 @@
 # EPYTOR v1.3.0 重构收尾报告（2026-10-31）
 
-- **仓库 / 分支**：`epytor`，`dev`，HEAD `252b647`（2026-10-22），工作区包含 1.3.0 功能批次 + 本轮重构，**未提交、未推送、未发布**。
+- **仓库 / 分支**：`epytor`，`dev`。代码已提交并推送：`5f14517 refactor: 完成 v1.3.0 重构收尾`、`6e16c0c chore: 升级 @azure/identity 4.14.1 修复 Dependabot #108`；**未打 tag、未发布**。
 - **本轮范围**：把三个巨型单元拆完（`MarkdownEditorProvider` / `webview/index.ts` / `webview/editor.ts`），收口 F10（状态所有权）/ F11（重复实现）/ F4（源码文本测试），修掉 9 条遗留缺陷，补自动化与真实产物冒烟，并把覆盖率抬到 73.75%。
-- **工作方式**：三个并行编码 teammate（src / webview-core / webview-ui，写范围互斥）+ Lead 集成与全量验证；所有结论以命令输出或测试结果为准，未真机执行的部分在本报告末尾如实标注。
+- **工作方式**：三个并行编码 teammate（src / webview-core / webview-ui，写范围互斥）+ Lead 集成与全量验证；所有结论以命令输出或测试结果为准；真实 VS Code E2E 见 §10，剩余人工项见 owner 清单。
 - **配套文档**：行为变更见 CHANGELOG 双份；剩余债务见 [`../tech-debt.md`](../tech-debt.md)；owner 手测见 [`../checklists/v1.3.0-manual-test.md`](../checklists/v1.3.0-manual-test.md)。
 
 ## 结论
@@ -98,23 +98,64 @@
 - 测试基建：`@vscode/test-electron + Mocha` 集成测试未搭建。
 - `DocumentState` 完全对象化（现状 Provider 920 行、状态已按职责外移，收益低，暂缓）。
 
-## 8. 交接与提交建议
+## 8. 提交记录与交接
 
-- **未提交**：按项目强制流程，等 owner 按 [`../checklists/v1.3.0-manual-test.md`](../checklists/v1.3.0-manual-test.md) 手测通过后再提交。
-- 建议 commit 拆分（每步独立、按 E10）：
-  1. `refactor(webview,extension): 拆分三个巨型单元并外移 Provider 职责`（结构 + 新模块 + 拆分测试）
-  2. `refactor(webview): 收敛浮层/灯箱/路径补全/修饰键/顶栏高度重复实现`（F11）
-  3. `fix(extension): 外部变更先读盘再决策、空保存守卫读真实磁盘`（B1/B2/B2b + 测试）
-  4. `fix: @/ 路径解析统一（重命名/无工作区回退/补全剩余路径）`（B3/B4 + A9 notice）
-  5. `test: 源码文本测试改行为断言 + 覆盖率阈值 70/70`（F4 + 覆盖率）
-  6. `chore: 写盘审计轮转、fireAndLog、真实产物冒烟脚本`（工具链）
-  7. `docs: 审计报告/tech-debt/AGENTS/CHANGELOG/手测清单`（文档）
-- 提交前检查：`pnpm run verify`、`git diff --check`、`git status` 无 TEMP 产物（`TEMP/`、`releases/`、`coverage/` 均已忽略）。
+- **实际提交**（用户 2026-10-31 要求「先提交一次」，因此合并为两次，未按下面的细分建议）：
+  1. `5f14517 refactor: 完成 v1.3.0 重构收尾`（245 文件：结构拆分/F10/F11/缺陷修复/测试/文档）
+  2. `6e16c0c chore: 升级 @azure/identity 4.14.1 修复 Dependabot #108`（dev-only 传递依赖）
+  3. 后续文档 commit：`docs: 补充真实 VS Code E2E 结果并收敛 owner 手测清单`（本报告 + 清单）
+- 均推送到 `origin/dev`；`origin/main` 未动，**未打 tag、未发布**。
+- 若以后要恢复「一提交一件事」的粒度，建议按：结构拆分 / F11 / B1-B2b / B3-B4+A9 / 测试与覆盖率 / 工具链 / 文档 拆（本次因用户要求未拆）。
+- **交接**：真实 VS Code E2E 已覆盖 14 项（§10）；剩余只能真机/人眼确认的项见 [`../checklists/v1.3.0-manual-test.md`](../checklists/v1.3.0-manual-test.md)（已按自动验证结果收敛）。
 
 ## 9. 未验证 / 限制（如实）
 
-- **未真机手测**（无 GUI/真实 VS Code 交互）：视觉、焦点、输入法、外部工具并发写盘、OneDrive、独立文件 `@/` 等，全部列在 owner 手测清单。
-- **未提交 / 未推送 / 未发布**：本报告只代表工作区状态。
-- 未跑 Extension Host 集成测试（依赖未安装）。
+- **没有人类视觉/主观判断**：截图与 DOM/computed-style 断言已覆盖大量"能否工作"，但"看起来顺不顺眼、位置是否像素级正确"仍需 owner 看一眼。
+- **无法自动覆盖**：真实输入法组词、OneDrive 占位符、多窗口/跨进程抢焦点、Extension Host API 集成测试（依赖未装）。
+- **真实 VS Code E2E 已做**（见 §10）：不是"只跑了 jsdom"，但其中 2 项受非前台窗口/测试驱动限制未定论，已列进 owner 清单。
 - bench 数字受机器负载影响，只用于数量级对照。
-- CI 尚未跑本轮：本地 `verify` 与 CI 的 `typecheck → test → build → package` 同构；push 后需按 E12/E13 查告警。
+- 提交状态：本报告对应的代码已提交并推到 `dev`（见 §8 的 commit 拆分说明已按用户要求合并为两个 commit）；未打 tag、未发布。
+
+## 10. 真实 VS Code E2E（2026-10-31）
+
+### 怎么做的
+
+- 真实 **VS Code 1.144.0**（本机安装版），扩展用当前工作区构建的 `dist`（`--extensionDevelopmentPath` / 复制 1.3.0 产物到独立 `extensions`），独立临时 profile + 临时 workspace，关闭工作区信任、关闭 Copilot onboarding。
+- 用 VS Code 自带的 Chromium 远程调试（`--remote-debugging-port`，通过 CLI 透传）连上 **真实窗口**：
+  - workbench 页 target：读状态栏、通知、标签栏、命令面板、源码视图；
+  - `type=iframe` 的 `vscode-webview://…extensionId=peiyucn.epytor-vscode` target：进入 webview 内层 execution context，直接读/点真实 Milkdown DOM。
+- 输入用 **CDP 真实鼠标/键盘事件**（`Input.dispatchMouseEvent` / `dispatchKeyEvent`，非纯 DOM `.click()`），因此 ProseMirror 真正走事务、`Ctrl+S` 走 VS Code 键位、命令面板真正执行命令；外部改动由 Node 直接写盘。
+- 8 个 fixture 文档（标题/列表/表格/公式/代码块/分割线/图片/frontmatter、外部改动、源码切换、`@/` 链接、列表退格）。
+- 工具与产物：`TEMP/e2e-vscode/`（临时，未提交），`suite-results.json`、关键截图 `suite-final.png` / `suite-toc.png` / `t4.png` 等；测试结束已关闭全部 E2E VS Code 进程。
+
+### 结果：14/16
+
+| # | 通过项 | 说明 |
+|---|---|---|
+| A1 | 启动/渲染/状态栏 | 标题、列表、表格、代码块齐全；`Lines(src): 25 Words: 71 Chars: 85 Size: 415 B` |
+| A2 | KaTeX | 2 个公式节点 |
+| A3 | `@/` 图片 | `image-node` 加载，512×512 |
+| A4 | 分割线 | computed height `1px` |
+| A5 | 状态栏 Size | 415 B，与磁盘一致 |
+| A6 | 未编辑保存 | 前后逐字一致（68 chars） |
+| A7 | 编辑后保存 | 落盘且未改动的列表/代码块原样保留 |
+| A8 | 外部改动（有未保存编辑） | 真实通知 + 编辑器内容保留 |
+| A9 | 同场景 Ctrl+S | 按警告语义覆盖磁盘 |
+| A10 | 源码视图往返 | `EPYTOR OFF` 内容正确；`EPYTOR ON` webview 重新挂载 |
+| A11 | `@/` 链接 Ctrl+点击 | 打开 `note.md`，仍用 epytor |
+| A12 | 状态栏 Size 随外部改动 | 56 B → 4.4 KB |
+| A13 | TOC | 展开后 6 个 `.toc-item` |
+| A14 | Reload Window | webview 重新挂载；滚动位置 500 → 274（恢复，非归零） |
+
+**2 项未定论**：
+1. **外部改动 + 无编辑时自动重建**：harness 里扩展走 defer 路径（显示同款"内容已保留"警告），而截图表明内容在后续交互后会更新；无法区分"面板非前台导致的合理 defer"与产品问题，留给 owner 真机确认。
+2. **亮色主题实时切换**：通过直接改 `settings.json` 未在运行中实时生效（拍到仍暗色），判断是测试驱动方式问题，未算产品失败；owner 用命令面板切一次即可确认。
+
+### 附带发现（待 owner 真机确认）
+
+- `Developer: Reload Window` 后截图里，编辑器左上角曾出现一个灰底浮层，内容为源码行（`# E2E 测试文档` / `## 列表` / `132 —`）。可能是重载竞态下的临时瞬态，也可能是吸顶/TOC 浮层残留。请 reload 后留意是否复现；若稳定复现，把现象发我。
+
+### 这套 E2E 覆盖不到什么
+
+- 真实输入法组词、OneDrive/占位符、多窗口/跨窗口焦点、拖拽、像素级视觉与主题观感、真实图床/上传、Extension Host API 级集成。
+- 本次 harness 依赖本机 VS Code 的远程调试开关，属于临时验证工具（`TEMP/`，未提交）；若以后要长期化，可把它整理成 `scripts/e2e-vscode/` 的正式工具并接入 CI（当前不做）。
