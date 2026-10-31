@@ -66,3 +66,7 @@ overrides:
   "undici@8": ^8.12.3
   # 6.16.0 修 GHSA-4mjr-xmp4-gh2g 与 GHSA-x5fp-wj9c-mxmx（isBuffer DoS / 括号键逗号解析）
   qs: ^6.16.1
+  # 4.14.1 起依赖 @azure/msal-node ^7.1.0，修 MSAL Node 授权码流程向攻击者可控端点泄露参数
+  # （Dependabot #108，high，2026-10-30）。仅 dev 链（vsce → @azure/identity），不进产物；
+  # vsce 3.9.2 声明 ^4.1.0，4.14.1 在其范围内。Node 引擎 >=22，本仓库 CI 与本地均为 24。
+  "@azure/identity": ^4.14.1
