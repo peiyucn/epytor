@@ -1,26 +1,32 @@
-// ─── 表格换行两档映射（Extension 与 WebView 共用） ──────────
-// Extension 端（Node）和 WebView 端（Browser）均可 import
-
+/** Table wrapping styles shared by Extension (Node) and WebView (Browser). */
 export type TableWrapMode = "wrap" | "nowrap";
 
+/**
+ * Coerce a raw config value into a supported mode.
+ *
+ * Cross-boundary values are untyped (config JSON, message payloads), so callers used to string
+ * through arbitrary text and each consumer had to re-lean on `resolveTableWrapVars`' default.
+ * Normalizing at the boundary keeps the message type honest. Legacy `"none"` means nowrap.
+ */
+export function normalizeTableWrapMode(value: unknown): TableWrapMode {
+    return value === "nowrap" || value === "none" ? "nowrap" : "wrap";
+}
+
 export interface TableWrapVars {
-    /** th/td 的 word-break */
+    /** th/td word-break. */
     wordBreak: "keep-all" | "break-all";
-    /** th/td 的 white-space */
+    /** th/td white-space. */
     whiteSpace: "normal" | "nowrap";
-    /** 表格外层滚动容器（.ProseMirror:has(>table)）的 overflow-x */
+    /** overflow-x of the scroll container; nowrap lets the table overflow horizontally. */
     overflowX: "visible" | "auto";
-    /** table 元素宽度：nowrap 档 max-content 让内容撑开表格触发横向滚动 */
+    /** table width; `max-content` lets content widen the table and trigger scrolling. */
     tableWidth: "auto" | "max-content";
 }
 
 /**
- * 两档语义（2026-09-07 用户决策：三档简化为两档）：
- * - wrap（默认）：任意字符处断行（word-break: break-all），适合长 URL/代码
- * - nowrap：不换行 + 横向滚动（white-space: nowrap + table max-content + overflow-x: auto）
- *
- * 旧档位迁移：aggressive/normal/未知值 → wrap；none → nowrap
- * （旧配置无需手动改，行为自动落到两档）。
+ * Two modes (user decision 2026-09-07, reduced from three):
+ * wrap = break anywhere (long URLs/code), nowrap = no wrap + horizontal scroll.
+ * Legacy values: "none" maps to nowrap, everything else to wrap.
  */
 export function resolveTableWrapVars(mode: string): TableWrapVars {
     switch (mode) {

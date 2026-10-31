@@ -1,0 +1,241 @@
+/*
+ * Code-block extras owned by this component: the CodeMirror host, the toolbar buttons we
+ * inject, the language dropdown and the fullscreen lightbox. Moved out of the global
+ * style.css so a change here stays local; loaded after style.css (cascade order changed, but a
+ * pairwise check found no same-specificity conflicts, 2026-10-29).
+ */
+
+/* Code block (Crepe CodeMirror). */
+
+/* Consumes the injected --code-block-max-height. Regression: the setting was dead while
+ * no rule read the variable. */
+.milkdown .milkdown-code-block .cm-editor {
+    max-height: var(--code-block-max-height);
+    overflow: auto;
+}
+
+.milkdown .milkdown-code-block .cm-editor .cm-content {
+    font-family: var(--vscode-editor-font-family, monospace) !important;
+}
+
+.milkdown .milkdown-code-block .cm-editor .cm-activeLine {
+    background: var(--vscode-editor-lineHighlightBackground, rgba(128,128,128,0.08)) !important;
+}
+.milkdown .milkdown-code-block .cm-editor .cm-selectionBackground,
+.milkdown .milkdown-code-block .cm-editor .cm-selectionBackground *,
+.milkdown .milkdown-code-block .cm-editor ::selection {
+    background: var(--vscode-editor-selectionBackground, rgba(0,122,204,0.3)) !important;
+}
+.milkdown .milkdown-code-block .cm-editor ::selection {
+    color: var(--vscode-editor-selectionForeground, inherit);
+}
+.milkdown .milkdown-code-block {
+    border-radius: 6px;
+    border: 1px solid var(--vscode-panel-border, rgba(128,128,128,0.2));
+    padding: 0 14px 14px !important;
+    margin: 0 0 var(--epytor-block-gap);
+}
+
+/* Tools bar. */
+.milkdown .milkdown-code-block .tools {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--vscode-panel-border, rgba(128,128,128,0.15));
+    padding: 6px 0;
+}
+
+/* Buttons always visible, styled like the top bar. */
+.milkdown .milkdown-code-block .tools .language-button,
+.milkdown .milkdown-code-block .tools .tools-button-group > button,
+.milkdown .milkdown-code-block .epytor-fullscreen-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 26px;
+    height: 24px;
+    padding: 0 6px;
+    background: transparent;
+    color: var(--vscode-editor-foreground);
+    border: 1px solid transparent;
+    border-radius: 3px;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    line-height: 1;
+    opacity: 1;
+    transition: background 0.1s, border-color 0.1s;
+}
+.milkdown .milkdown-code-block .tools .language-button:hover,
+.milkdown .milkdown-code-block .tools .tools-button-group > button:hover,
+.milkdown .milkdown-code-block .epytor-fullscreen-btn:hover {
+    background: var(--vscode-toolbar-hoverBackground, rgba(128, 128, 128, 0.2));
+    border-color: var(--vscode-toolbar-hoverOutline, transparent);
+}
+
+/* Make the language button stand out. */
+.milkdown .milkdown-code-block .tools .language-button {
+    background: var(--vscode-input-background, rgba(128,128,128,0.1));
+    border: 1px solid var(--vscode-input-border, rgba(128,128,128,0.4));
+    border-radius: 3px;
+    padding: 0 8px;
+    font-weight: 500;
+    margin-bottom: 0 !important;
+    text-transform: capitalize;
+}
+.milkdown .milkdown-code-block .tools .language-button:hover {
+    border-color: transparent;
+}
+.milkdown .milkdown-code-block .expand-icon svg {
+    color: var(--vscode-editor-foreground) !important;
+    opacity: 0.6 !important;
+}
+
+/* Language dropdown, compact. */
+.milkdown .milkdown-code-block .language-picker {
+    z-index: 1000;
+    padding-top: 4px;
+}
+.milkdown .milkdown-code-block .list-wrapper {
+    width: auto;
+    padding: 0 !important;
+    border: none;
+    border-radius: 6px;
+    background: var(--vscode-dropdown-background, var(--vscode-editorWidget-background));
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    overflow: hidden;
+}
+/* Search box spans the full width, separated by its background. */
+.milkdown .milkdown-code-block .search-box,
+.milkdown .milkdown-code-block .search-box:has(input:focus) {
+    padding: 6px 8px;
+    margin: 0;
+    outline: none !important;
+    background: var(--vscode-input-background, rgba(128,128,128,0.08));
+    border-bottom: 1px solid var(--vscode-panel-border, rgba(128,128,128,0.15));
+}
+/* Keep the accent border while the dropdown is open. */
+.milkdown .milkdown-code-block .language-button[data-expanded="true"] {
+    border-color: var(--vscode-toolbar-hoverOutline, transparent) !important;
+}
+.milkdown .milkdown-code-block .search-box input {
+    font-size: 12px;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    caret-color: var(--vscode-editor-foreground);
+    color: var(--vscode-input-foreground, var(--vscode-editor-foreground));
+    width: 100%;
+    background: transparent;
+}
+.milkdown .milkdown-code-block .language-list {
+    max-height: 180px;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+.milkdown .milkdown-code-block .language-list-item:last-child {
+    margin-bottom: 0;
+}
+/* Beat the runtime-injected Vue scoped rules. */
+#editor .milkdown .milkdown-code-block .language-list-item {
+    padding: 4px 10px !important;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 18px;
+}
+#editor .milkdown .milkdown-code-block .language-list {
+    padding: 0 !important;
+}
+.milkdown .milkdown-code-block .language-list-item:hover {
+    background: var(--vscode-list-hoverBackground, rgba(128,128,128,0.12));
+}
+.milkdown .milkdown-code-block .language-list-item.focused {
+    background: var(--vscode-list-hoverBackground, rgba(128,128,128,0.15));
+}
+
+/* Undo Crepe's joined button group; separate buttons. */
+.milkdown .milkdown-code-block .tools .tools-button-group {
+    gap: 4px;
+}
+/* Fixed order preview → copy → fullscreen, independent of DOM order. */
+.milkdown .milkdown-code-block .tools .preview-toggle-button { order: 0; }
+.milkdown .milkdown-code-block .tools .copy-button { order: 1; }
+.milkdown .milkdown-code-block .tools .epytor-fullscreen-btn { order: 2; }
+.milkdown .milkdown-code-block .tools .tools-button-group > button:first-child,
+.milkdown .milkdown-code-block .tools .tools-button-group > button:last-child {
+    border-radius: 3px !important;
+}
+.milkdown .milkdown-code-block .expand-icon svg {
+    color: var(--vscode-editor-foreground);
+    opacity: 0.7;
+}
+
+.milkdown .milkdown-code-block .expand-icon svg {
+    color: var(--vscode-editor-foreground);
+    opacity: 0.7;
+}
+
+/* Keep the dropdown above the editor. */
+.milkdown .milkdown-code-block .language-picker {
+    z-index: 1000;
+}
+
+/* Fullscreen lightbox. */
+.epytor-fs-lightbox {
+    position: fixed; inset: 0; z-index: 9999;
+    background: var(--vscode-editor-background, #1e1e1e);
+    display: flex; flex-direction: column;
+}
+.epytor-fs-header {
+    display: flex; align-items: center;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--vscode-panel-border, rgba(128,128,128,0.2));
+    flex-shrink: 0;
+}
+.epytor-fs-lang {
+    font-size: 13px; font-weight: 600;
+    color: var(--vscode-descriptionForeground);
+    text-transform: capitalize;
+}
+.epytor-fs-close {
+    margin-left: auto;
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 26px; height: 24px; padding: 0 4px;
+    background: transparent;
+    color: var(--vscode-editor-foreground);
+    border: 1px solid transparent;
+    border-radius: 3px;
+    font-size: 16px; line-height: 1;
+    cursor: pointer;
+    transition: background 0.1s, border-color 0.1s;
+}
+.epytor-fs-close:hover {
+    background: var(--vscode-toolbar-hoverBackground, rgba(128,128,128,0.2));
+    border-color: var(--vscode-toolbar-hoverOutline, transparent);
+}
+.epytor-fs-body {
+    flex: 1; min-height: 0;
+    overflow-y: auto;
+}
+.epytor-fs-body > .cm-editor {
+    max-height: none;
+    border-radius: 0;
+}
+.epytor-fs-body > .cm-editor .cm-scroller {
+    font-family: var(--vscode-editor-font-family, monospace);
+}
+.epytor-fs-body > .preview-panel {
+    padding: 0 32px 24px;
+}
+.epytor-fs-body .preview-panel .preview-divider {
+    height: 1px; opacity: 0.2;
+    background: var(--vscode-editorWidget-border, #454545);
+    margin: 6px 0;
+}
+.epytor-fs-body .preview-panel .preview-label {
+    margin: 6px 0; font-size: 12px;
+    color: var(--vscode-descriptionForeground);
+    font-weight: 600; text-transform: uppercase;
+}
+.epytor-fs-body .preview-panel .preview {
+    text-align: center; overflow-x: auto;
+}

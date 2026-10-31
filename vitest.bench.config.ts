@@ -16,5 +16,7 @@ export default defineConfig({
         environment: "jsdom",
         include: ["webview/__tests__/**/*.bench.ts"],
         setupFiles: ["./webview/__tests__/setup.ts"],
+        // Wall-clock probes must not share the CPU with other bench files' editor creations.
+        fileParallelism: false,
     },
 });

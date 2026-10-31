@@ -1,0 +1,121 @@
+/*
+ * Frontmatter panel styles (moved out of the global style.css so the panel is self-contained).
+ * Loaded after style.css via the component import; the cascade order changed, but a pairwise
+ * check found no same-specificity conflicts (2026-10-29).
+ */
+
+/* Frontmatter panel. */
+.frontmatter-panel {
+    /* Same width as #editor; --editor-max-width is always injected. */
+    max-width: var(--editor-max-width);
+    margin: 0 auto;
+    /* Leave room for the fixed top bar, otherwise it covers the first row. */
+    padding: 44px 48px 0;
+    /* Scroll anchoring would push the viewport into the panel's own content when
+     * its height changes. Regression: opening a document landed on the first heading. */
+    overflow-anchor: none;
+}
+
+.frontmatter-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85em;
+    border: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.2));
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.frontmatter-table td {
+    padding: 5px 10px;
+    border-bottom: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.15));
+    vertical-align: top;
+    line-height: 1.5;
+}
+
+.frontmatter-table tr:last-child td {
+    border-bottom: none;
+}
+
+.frontmatter-table .fm-key {
+    white-space: nowrap;
+    color: var(--vscode-symbolIcon-keywordForeground, var(--vscode-descriptionForeground));
+    font-family: var(--vscode-editor-font-family, monospace);
+    font-weight: bold;
+    /* Regression: width:1% squeezed the key column to a few pixels, so only the value
+     * input was visible and keyless rows were dropped on save. */
+    width: 30%;
+    min-width: 150px;
+    padding-right: 16px;
+}
+
+.frontmatter-table .fm-val {
+    color: var(--vscode-editor-foreground);
+    word-break: break-word;
+}
+
+/* Frontmatter inputs and buttons. */
+.frontmatter-table .fm-key-input,
+.frontmatter-table .fm-val-input {
+    width: 100%;
+    box-sizing: border-box;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 2px;
+    color: inherit;
+    font: inherit;
+    padding: 0 2px;
+    outline: none;
+}
+.frontmatter-table .fm-key-input {
+    font-weight: bold;
+    font-family: var(--vscode-editor-font-family, monospace);
+}
+.frontmatter-table .fm-key-input::placeholder,
+.frontmatter-table .fm-val-input::placeholder {
+    color: var(--vscode-input-placeholderForeground, var(--vscode-descriptionForeground, rgba(128,128,128,0.7)));
+    font-weight: normal;
+}
+.frontmatter-table .fm-key-input:hover,
+.frontmatter-table .fm-val-input:hover {
+    border-color: var(--vscode-input-border, rgba(128, 128, 128, 0.4));
+}
+.frontmatter-table .fm-key-input:focus,
+.frontmatter-table .fm-val-input:focus {
+    border-color: var(--vscode-focusBorder, #007acc);
+    background: var(--vscode-input-background, #3c3c3c);
+}
+/* Error state: value filled but key empty; those rows are dropped on save. */
+.frontmatter-table .fm-key-input--error,
+.frontmatter-table .fm-key-input--error:focus {
+    border-color: var(--vscode-errorForeground, #f44336) !important;
+    background: color-mix(in srgb, var(--vscode-errorForeground, #f44336) 12%, transparent);
+}
+.frontmatter-table .fm-del {
+    width: 1%;
+}
+.fm-del-btn {
+    border: none;
+    background: transparent;
+    color: var(--vscode-descriptionForeground, #858585);
+    cursor: pointer;
+    padding: 0 4px;
+    border-radius: 3px;
+    line-height: 1.4;
+}
+.fm-del-btn:hover {
+    background: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, 0.31));
+    color: var(--vscode-errorForeground, #f48771);
+}
+.fm-add-btn {
+    margin-top: 4px;
+    border: none;
+    background: transparent;
+    color: var(--vscode-descriptionForeground, #858585);
+    cursor: pointer;
+    border-radius: 3px;
+    padding: 1px 8px;
+}
+.fm-add-btn:hover {
+    background: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, 0.31));
+    color: var(--vscode-editor-foreground, #cccccc);
+}

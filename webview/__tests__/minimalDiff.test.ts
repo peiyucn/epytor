@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyMinimalChanges } from "../utils/minimalDiff";
+import { applyMinimalChanges } from "../markdown/minimalDiff";
 
 describe("minimalDiff", () => {
     it("单行编辑应该保留未修改行的原始源码", () => {
@@ -55,6 +55,36 @@ describe("minimalDiff", () => {
         const serialized = "- a\n  - b";
 
         expect(applyMinimalChanges(saved, serialized)).toBe("- a\n  - b");
+    });
+
+    it("父项与子列表之间有空行时 嵌套项提升为同级 应该 采用新缩进（回归：层级被写回旧值）", () => {
+        // 手测反馈 2026-10-26：任务列表中间某项退格提升后「下面的层级跟着带乱」。
+        // 旧实现按「连续列表行段」取缩进档位：源文件里父项与子列表之间有空行，段在空行处
+        // 断开，子项各自独占一段、档位一律算 0；序列化结果没有空行、是完整一段，父项 0 档、
+        // 子项 1 档 —— 两边档位基准不同，提升后的 C2（0 档）反而与源文件里的 C2（0 档）签名
+        // 相同，于是整行沿用旧文本，刚做的层级提升被静默写回。
+        const saved = "- [ ] P\n\n  - [ ] C1\n  - [ ] C2\n  - [ ] C3";
+        const serialized = "- [ ] P\n  - [ ] C1\n- [ ] C2\n  - [ ] C3";
+
+        expect(applyMinimalChanges(saved, serialized)).toBe(serialized);
+    });
+
+    it("父项与子列表之间有空行时 未改动的嵌套项 应该 保留原文缩进宽度", () => {
+        // 同一条回归的另一面：真正的写法差异（4 空格 vs 2 空格）仍要被保留，不能因为
+        // 换用「文档级缩进单位」就把用户的手写缩进整段改写。
+        // 注：这里刻意不放空行——「源文件有空行、序列化没有」属于空行口径的既有差异
+        // （签名行集合规模不同即走重建），不在本用例范围内。
+        const saved = "- P\n    - C1\n    - C2";
+        const serialized = "- P\n  - C1\n  - C2";
+
+        expect(applyMinimalChanges(saved, serialized)).toBe(saved);
+    });
+
+    it("缩进用 tab 而序列化用空格 但层级相同 应该 保留原文", () => {
+        const saved = "- P\n\t- C1\n\t- C2";
+        const serialized = "- P\n  - C1\n  - C2";
+
+        expect(applyMinimalChanges(saved, serialized)).toBe(saved);
     });
 
     it("有序列表的编号是内容 不应该被当成写法差异", () => {

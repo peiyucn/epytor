@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 async function loadThemeBus() {
     vi.resetModules();
-    return import("../../webview/utils/themeBus");
+    return import("../editor/themeBus");
 }
 
 describe("themeBus", () => {

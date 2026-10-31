@@ -1,19 +1,18 @@
 /**
- * Mermaid 预览缩放增强：DOM 层 SVG 百分比宽度缩放 + 控制条（＋/−/×）。
- * 不触碰文档内容；主题重绘后由宿主重新调用以重挂控制条。
+ * Mermaid preview zoom: SVG width scaling in the DOM plus a control bar (＋/−/×).
+ * Never touches document content; the host re-invokes it after a theme re-render.
  */
 import "./mermaidZoom.css";
-import { clampZoom, MERMAID_ZOOM_STEP } from "@/utils/mermaidZoom";
+import { clampZoom, MERMAID_ZOOM_STEP } from "@/code/mermaidZoom";
 import { t } from "@/i18n";
 import { IconResetZoom } from "@/ui/icons";
 
 const DEFAULT_ZOOM = 0.8;
 
 /**
- * SVG 原始渲染宽度（px）。
- * 回归：此前 zoom 直接写容器百分比（如 80%），与 SVG 原始尺寸无关——
- * 宽容器下 80% 可能比原始渲染（受 mermaid 内联 max-width 限制）还大，
- * 导致「默认放大、缩到最小才接近原始」的错位。
+ * SVG's rendered base width in px.
+ * Regression: zoom used to write a container percentage (80%) regardless of the SVG's own
+ * rendered size, so wide containers appeared "zoomed in" and only the minimum looked normal.
  */
 function measureSvgBaseWidth(svg: SVGElement): number {
     const rect = svg.getBoundingClientRect();
@@ -23,14 +22,13 @@ function measureSvgBaseWidth(svg: SVGElement): number {
     return 0;
 }
 
-/** 为已渲染的 mermaid 预览容器注入控制条与缩放交互；倍率存于容器 dataset，主题重绘后保持 */
+/** Inject the control bar into a rendered mermaid preview; the ratio persists in the container dataset. */
 export function enhanceMermaidPreview(container: HTMLElement, svg: SVGElement): void {
-    // 防重复挂载（主题重绘重入时旧条未清理则直接跳过）
+    // Do not mount twice (a theme re-render may re-enter before the old bar is cleaned up).
     if (container.querySelector(".epytor-mermaid-zoom-bar")) return;
     const savedZoom = Number(container.dataset["epytorMermaidZoom"]);
-    // 默认 0.8×（mermaid 原始尺寸偏大）；未保存过倍率时用默认值
+    // Default 0.8× (mermaid's native size is large); reuse a previously saved ratio if any.
     let zoom = Number.isFinite(savedZoom) && savedZoom > 0 ? savedZoom : DEFAULT_ZOOM;
-    // 基准 = 增强时的原始渲染宽度（px）
     const baseWidth = measureSvgBaseWidth(svg);
 
     const bar = document.createElement("div");
@@ -53,12 +51,12 @@ export function enhanceMermaidPreview(container: HTMLElement, svg: SVGElement): 
 
     const apply = (): void => {
         if (baseWidth > 0) {
-            // 以原始渲染宽度为基准的像素缩放：倍数语义与用户直觉一致（1× = 原始大小）
+            // Pixel scaling from the rendered base width: 1× means "original size".
             svg.style.width = `${baseWidth * zoom}px`;
-            // mermaid SVG 自带内联 max-width（useMaxWidth 默认），放大时必须解除才能生效
+            // mermaid sets an inline max-width (useMaxWidth); zooming in only works without it.
             svg.style.maxWidth = "none";
         } else {
-            // jsdom/极端环境无布局：回退容器百分比（旧行为）
+            // No layout (jsdom/extreme cases): fall back to container percentages.
             svg.style.width = `${zoom * 100}%`;
             svg.style.maxWidth = `${zoom * 100}%`;
         }

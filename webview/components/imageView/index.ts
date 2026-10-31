@@ -16,22 +16,21 @@ import {
 import { t } from "@/i18n";
 import { createButton, createSeparator, setupInputKeyboard } from "@/ui/dom";
 import { showTooltipAt } from "@/ui/tooltip";
+import { createLightboxHost, type Lightbox } from "@/ui/lightbox";
 import { attachImgPathComplete, resolveToWebviewUri } from './imgPathComplete';
 import './imageView.css';
 
-// ─── 常量 ────────────────────────────────────────────────────
 const MAX_IMAGE_LOAD_RETRIES = 5;
 const IMAGE_RETRY_BASE_DELAY_MS = 200;
 const IMAGE_RETRY_MAX_DELAY_MS = 2000;
 const MIN_IMAGE_RESIZE_HEIGHT = 40;
 const MAX_IMAGE_RESIZE_RATIO = 0.8;
 
-// ─── webviewUri → relPath 映射（由 index.ts 在收到 init/revert 消息时写入，展示用）──
-// 回归 P8：此前另存一份 relPath → webviewUri 反向镜像，重命名后不同步（陈旧映射靠
-// 异步解析兜底）——反向翻译统一走 Extension 的 resolveImagePath（已有 3s 超时回退）
-const _uriToRel = new Map<string, string>(); // webviewUri → relPath
+// webviewUri → relPath for display only. No reverse mirror: it went stale on rename, so
+// reverse lookups go through the Extension's resolveImagePath (3s timeout fallback).
+const _uriToRel = new Map<string, string>();
 
-/** 由外部（index.ts）在 init/revert 收到 imageUriMap 后调用 */
+/** Written by index.ts after init/revert delivers the image URI map. */
 export function setImageUriMap(map: Record<string, string>): void {
     _uriToRel.clear();
     for (const [uri, rel] of Object.entries(map)) {
@@ -39,84 +38,67 @@ export function setImageUriMap(map: Record<string, string>): void {
     }
 }
 
-/**
- * 图片重命名后同步展示映射（回归：此前 map 只在 init/revert 刷新，重命名后的
- * 新 webviewUri 查不到 → 编辑路径时输入框里显示的是编码过的 URI 尾巴）。
- */
+/** Keep the display map in sync after a rename; init/revert alone would show the encoded URI. */
 export function remapImageUri(oldWebviewUri: string, newWebviewUri: string, newRelPath: string): void {
     _uriToRel.delete(oldWebviewUri);
     _uriToRel.set(newWebviewUri, newRelPath);
 }
 
-/** 将 webviewUri 转为可显示的 relPath（找不到时原样返回） */
+/** Display path for a webviewUri; unknown URIs fall through unchanged. */
 function toDisplayPath(src: string): string {
     return _uriToRel.get(src) ?? src;
 }
 
 type ViewMutationRecord = MutationRecord | { type: "selection"; target: Node };
 
-// ─── Lightbox ──────────────────────────────────────────────
-let activeLightbox: HTMLElement | null = null;
-/** 当前 lightbox 的完整清理函数（NodeView.destroy 需要一并释放 document keydown 监听） */
-let activeLightboxCleanup: (() => void) | null = null;
+/** Page-lifecycle singleton: one image lightbox at a time. */
+const imageLightboxHost = createLightboxHost();
 
-export function showGlobalLightbox(src: string, alt: string): void {
-    if (activeLightbox) {
-        return;
-    }
+/**
+ * Show an image full size. Returns the handle when it opened (callers that may outlive the
+ * lightbox — the image NodeView — close only the lightbox they opened), or null when another
+ * lightbox is already open.
+ */
+export function showGlobalLightbox(src: string, alt: string): Lightbox | null {
+    return imageLightboxHost.open({
+        className: "img-editor-lightbox",
+        build: (root) => {
+            const img = document.createElement("img");
+            img.className = "img-editor-lightbox-img";
+            img.src = src;
+            img.alt = alt;
 
-    const lb = document.createElement("div");
-    lb.className = "img-editor-lightbox";
+            const closeBtn = document.createElement("button");
+            closeBtn.className = "img-editor-lightbox-close";
+            closeBtn.innerHTML = IconX;
+            closeBtn.title = t("Close");
 
-    const img = document.createElement("img");
-    img.className = "img-editor-lightbox-img";
-    img.src = src;
-    img.alt = alt;
-
-    const closeBtn = document.createElement("button");
-    closeBtn.className = "img-editor-lightbox-close";
-    closeBtn.innerHTML = IconX;
-    closeBtn.title = t("Close");
-
-    lb.appendChild(img);
-    lb.appendChild(closeBtn);
-    document.body.appendChild(lb);
-    activeLightbox = lb;
-
-    function close(): void {
-        if (activeLightbox && document.body.contains(activeLightbox)) {
-            document.body.removeChild(activeLightbox);
-        }
-        activeLightbox = null;
-        activeLightboxCleanup = null;
-        document.removeEventListener("keydown", onKeyDown);
-    }
-
-    function onKeyDown(e: KeyboardEvent): void {
-        if (e.key === "Escape") {
-            e.preventDefault();
-            close();
-        }
-    }
-
-    lb.addEventListener("mousedown", (e) => {
-        if (e.target === lb) {
-            close();
-        }
+            root.appendChild(img);
+            root.appendChild(closeBtn);
+            return { closeButton: closeBtn };
+        },
     });
-    closeBtn.addEventListener("mousedown", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        close();
-    });
-    document.addEventListener("keydown", onKeyDown);
-    activeLightboxCleanup = close;
 }
 
-// ─── 阻止输入框事件冒泡到 ProseMirror ────────────────────
-// ProseMirror 在 view.dom 上监听 copy/cut/paste/keydown 等事件，
-// input 内的剪贴板操作会冒泡被拦截（ProseMirror 的 copy handler 会 preventDefault）。
-// 统一在 input 上阻止这些事件的冒泡，让浏览器原生行为正常触发。
+/**
+ * Close the active lightbox when it shows `src`. NodeView.destroy keeps the historical
+ * src-identity rule, so a lightbox opened from the editor container for this image still drops
+ * its document keydown listener when the node disappears (undo / revert).
+ */
+function closeLightboxShowing(src: string): void {
+    const lightbox = imageLightboxHost.active();
+    if (!lightbox) {
+        return;
+    }
+    const lbImg = lightbox.el.querySelector("img");
+    if (lbImg && lbImg.src === src) {
+        lightbox.close();
+    }
+}
+
+// ProseMirror listens for copy/cut/paste on view.dom and preventDefaults them, so input
+// clipboard events must not bubble. keydown is left alone: the webview needs it to reach
+// window for native clipboard handling.
 function isolateInput(input: HTMLInputElement): void {
     const stopOnly = (e: Event) => e.stopPropagation();
     input.addEventListener("copy", stopOnly);
@@ -125,18 +107,14 @@ function isolateInput(input: HTMLInputElement): void {
     input.addEventListener("mousedown", stopOnly);
     input.addEventListener("click", stopOnly);
     input.addEventListener("select", stopOnly);
-    // 注意：不能在此处 stopPropagation keydown——
-    // VS Code WebView 依赖 keydown 冒泡到 window 才能触发原生剪贴板操作
 }
 
-// ─── 辅助：从 src 提取文件名（不含扩展名） ───────────────
 function basenameNoExt(src: string): string {
     const name = src.split("/").pop() ?? src;
     const dot = name.lastIndexOf(".");
     return dot > 0 ? name.slice(0, dot) : name;
 }
 
-// ─── 工具栏按钮工厂 ────────────────────────────────────────
 function makeBtn(icon: string, label: string): HTMLButtonElement {
     return createButton({ className: "img-tb-btn", icon, tabIndex: -1, title: label, tooltipPlacement: "above" });
 }
@@ -145,19 +123,13 @@ function makeSep(): HTMLElement {
     return createSeparator("img-tb-sep", "span");
 }
 
-// ─── 工具栏内联编辑辅助 ──────────────────────────────────────
 interface ToolbarInlineEditOptions {
     initialValue: string;
     placeholder: string;
-    /** 确认回调，value 为输入值，input 保留 dataset 等属性 */
+    /** `input` is kept so callers can read dataset written by autocomplete. */
     onConfirm: (value: string, input: HTMLInputElement) => void;
-    /** 取消回调 */
     onCancel?: () => void;
-    /**
-     * 可选的输入增强（如 autocomplete）。
-     * 传入 input + confirm/cancel 回调，返回 detach 清理函数。
-     * 不提供时默认使用 setupInputKeyboard 处理 Enter/Escape。
-     */
+    /** Optional autocomplete hook; returns a detach function. Default is setupInputKeyboard. */
     setupComplete?: (
         input: HTMLInputElement,
         confirm: () => void,
@@ -165,14 +137,12 @@ interface ToolbarInlineEditOptions {
     ) => (() => void) | void;
 }
 
-/**
- * 在工具栏上启动内联编辑：隐藏原有内容，显示 input + 确认/取消按钮。
- * 确认/取消后自动恢复工具栏原貌。
- */
-function startToolbarInlineEdit(
+/** Swap the toolbar for input + confirm/cancel, restoring it on confirm/cancel. */
+/** Exported for tests: the inline-edit lifecycle (cleanup must be idempotent). */
+export function startToolbarInlineEdit(
     toolbar: HTMLElement,
     options: ToolbarInlineEditOptions,
-): void {
+): () => void {
     const input = document.createElement("input");
     input.className = "img-rename-input";
     input.value = options.initialValue;
@@ -204,7 +174,6 @@ function startToolbarInlineEdit(
         onClick: doCancel,
     });
 
-    // 隐藏原有工具栏内容，显示编辑控件
     Array.from(toolbar.children).forEach((el) => {
         (el as HTMLElement).style.display = "none";
     });
@@ -223,7 +192,10 @@ function startToolbarInlineEdit(
         setupInputKeyboard(input, doConfirm, doCancel);
     }
 
+    let cleaned = false;
     function cleanup(): void {
+        if (cleaned) { return; }
+        cleaned = true;
         detachComplete?.();
         if (toolbar.contains(input)) toolbar.removeChild(input);
         if (toolbar.contains(confirmBtn)) toolbar.removeChild(confirmBtn);
@@ -232,9 +204,10 @@ function startToolbarInlineEdit(
             (el as HTMLElement).style.display = "";
         });
     }
+
+    return cleanup;
 }
 
-// ─── NodeView 工厂 ─────────────────────────────────────────
 export function createImageView(
     node: PMNode,
     view: EditorView,
@@ -252,12 +225,13 @@ export function createImageView(
     destroy: () => void;
 } {
     let currentNode = node;
+    /** Detaches a still-open inline edit (path autocomplete) when the node dies mid-edit. */
+    let detachActiveInlineEdit: (() => void) | null = null;
 
-    // ── 外层 wrapper ──────────────────────────────────────────
     const wrapper = document.createElement("div");
     wrapper.className = "image-wrapper";
 
-    // ── ratio 编解码（存储在 title 末尾，不修改 schema）──────
+    // Ratio is encoded at the end of `title` so the schema stays untouched.
     const RATIO_RE = /\s*ratio:([\d.]+)\s*$/;
     function parseRatio(title: string): { clean: string; ratio: number } {
         const m = title.match(RATIO_RE);
@@ -272,7 +246,6 @@ export function createImageView(
 
     let currentRatio = parseRatio((node.attrs["title"] as string) ?? "").ratio;
 
-    // ── 图片 ──────────────────────────────────────────────────
     const img = document.createElement("img");
     img.className = "image-node";
     img.src = (node.attrs["src"] as string) ?? "";
@@ -288,19 +261,17 @@ export function createImageView(
         img.style.width = "";
     }
 
-    // ── 加载中占位符 ──────────────────────────────────────────
     let imgErrored = false;
     const loadingPlaceholder = document.createElement("div");
     loadingPlaceholder.className = "img-loading-placeholder";
     loadingPlaceholder.innerHTML = '<span class="img-loading-spinner"></span><span>Loading...</span>';
 
-    // ── 图片加载失败占位符 ────────────────────────────────────
     const errorPlaceholder = document.createElement("div");
     errorPlaceholder.className = "img-error-placeholder";
     errorPlaceholder.style.display = "none";
 
     let retryCount = 0;
-    /** 加载失败重试 timer 句柄（destroy 时清理，防节点销毁后仍改写已脱离 DOM 的 img.src） */
+    /** Retry timer; cleared in destroy so a detached img is never mutated again. */
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
     img.addEventListener("error", () => {
         if (retryCount < MAX_IMAGE_LOAD_RETRIES) {
@@ -331,19 +302,17 @@ export function createImageView(
         applyRatio();
     });
 
-    // 初始显示加载中（图片稍后自然触发 load/error 切换）
+    // Start in loading state; the browser's load/error event swaps it.
     loadingPlaceholder.style.display = "flex";
 
-    // ── Caption 显示（图片下方说明文字）─────────────────────────
     const captionEl = document.createElement("div");
     captionEl.className = "image-caption";
     captionEl.textContent = parseRatio((node.attrs["title"] as string) ?? "").clean;
     captionEl.addEventListener("mousedown", (e) => {
-        // 双击 caption 进入编辑
+        // Double-click to edit.
         if (e.detail === 2) { e.preventDefault(); startCaptionEdit(); }
     });
 
-    // ── 缩放 handle ─────────────────────────────────────────────
     const resizeHandle = document.createElement("div");
     resizeHandle.className = "img-resize-handle";
     let resizeStartY = 0, resizeStartH = 0;
@@ -376,12 +345,10 @@ export function createImageView(
         }));
     }
 
-    // ── 工具栏 ────────────────────────────────────────────────
     const toolbar = document.createElement("div");
     toolbar.className = "image-toolbar";
     toolbar.contentEditable = "false";
 
-    // 放大按钮
     const zoomBtn = makeBtn(IconZoomIn, t("View Full Size"));
     zoomBtn.addEventListener("mousedown", (e) => {
         e.preventDefault();
@@ -389,7 +356,7 @@ export function createImageView(
         showGlobalLightbox(img.src, img.alt);
     });
 
-    // Caption 编辑（存到 title，和 ratio 共存）
+    // Caption lives in `title` next to the ratio suffix.
     const captionBtn = createButton({
         className: "img-tb-btn",
         tabIndex: -1,
@@ -400,7 +367,7 @@ export function createImageView(
     });
     captionBtn.style.fontWeight = "600";
 
-    // 铅笔图标：常驻，点击编辑图片路径（src 属性）
+    // Always visible: edits the src attribute.
     const renameBtn = makeBtn(IconPencil, t("Edit Image Path"));
     renameBtn.addEventListener("mousedown", (e) => {
         e.preventDefault();
@@ -408,7 +375,6 @@ export function createImageView(
         startSrcEdit();
     });
 
-    // 删除按钮
     const deleteBtn = makeBtn(IconTrash2, t("Delete"));
     deleteBtn.style.color = "var(--vscode-errorForeground, #f44)";
     deleteBtn.addEventListener("mousedown", (e) => {
@@ -422,7 +388,7 @@ export function createImageView(
         view.focus();
     });
 
-    // ── 信息区：span（只读，远程图片）+ input（可编辑文件名，本地图片）──
+    // Read-only span for remote images, editable input for local filenames.
     const infoSpan = document.createElement("span");
     infoSpan.className = "img-tb-info";
 
@@ -445,7 +411,7 @@ export function createImageView(
         }
     }
 
-    // 本地图片识别：vscode-webview-resource:（旧）或 vscode-cdn.net / vscode-resource（新）
+    // Local webview URIs only (old and new forms).
     function isLocalImage(src: string): boolean {
         return /vscode-resource|vscode-cdn\.net/.test(src);
     }
@@ -459,7 +425,6 @@ export function createImageView(
         }
     }
 
-    // infoInput 键盘事件（本地图片文件名重命名）
     infoInput.addEventListener("keydown", (e) => {
         if (e.isComposing) {
             return;
@@ -471,12 +436,12 @@ export function createImageView(
             const orig = basenameNoExt(rawSrc);
             if (newBasename && newBasename !== orig && onRenameImage) {
                 onRenameImage(rawSrc, newBasename).catch((error) => {
-                    // 回归：失败被空 catch 吞掉，输入框静默复位、用户以为重命名成功
-                    // （文件名非法/被占用/超时均无任何提示）
+                    // Regression: a swallowed failure reset the input silently, so users assumed
+                    // the rename had worked. Show the host's already-localized message.
                     infoInput.value = orig;
                     showTooltipAt(
                         infoInput,
-                        // 错误消息来自宿主（Extension 侧已本地化）；极端无 message 时用英文兜底
+                        // Fallback only for a message-less error.
                         error instanceof Error && error.message ? error.message : "Rename failed",
                         "above",
                     );
@@ -496,7 +461,7 @@ export function createImageView(
     });
 
     infoInput.addEventListener("blur", () => {
-        // blur 时未提交则恢复原值
+        // Uncommitted edit: restore the original name.
         infoInput.value = basenameNoExt(rawSrc);
     });
 
@@ -504,14 +469,13 @@ export function createImageView(
         infoInput.select();
     });
 
-    // ── 组装工具栏（固定布局，renameBtn 常驻）────────────────
-    toolbar.appendChild(currentInfoEl); // 初始为 infoSpan
+    toolbar.appendChild(currentInfoEl); // infoSpan initially
     toolbar.appendChild(makeSep());
     toolbar.appendChild(zoomBtn);
     toolbar.appendChild(makeSep());
     toolbar.appendChild(captionBtn);
     toolbar.appendChild(makeSep());
-    toolbar.appendChild(renameBtn);     // 常驻
+    toolbar.appendChild(renameBtn);
     toolbar.appendChild(makeSep());
     toolbar.appendChild(deleteBtn);
 
@@ -522,12 +486,10 @@ export function createImageView(
     wrapper.appendChild(errorPlaceholder);
     wrapper.appendChild(toolbar);
 
-    // ── 初始化信息区 ──────────────────────────────────────────
     let rawSrc = (node.attrs["src"] as string) ?? "";
     updateInfo(rawSrc, img.alt);
-    updateInfoElement(rawSrc); // 可能将 infoSpan 替换为 infoInput
+    updateInfoElement(rawSrc); // may swap infoSpan for infoInput
 
-    // ── Caption 内联编辑（存 title，和 ratio 共存）──────────
     let isEditingCaption = false;
 
     function startCaptionEdit(): void {
@@ -535,7 +497,7 @@ export function createImageView(
         isEditingCaption = true;
 
         const caption = parseRatio((currentNode.attrs["title"] as string) ?? "").clean;
-        startToolbarInlineEdit(toolbar, {
+        detachActiveInlineEdit = startToolbarInlineEdit(toolbar, {
             initialValue: caption,
             placeholder: t("Caption"),
             onConfirm: (newCaption) => {
@@ -559,20 +521,19 @@ export function createImageView(
         });
     }
 
-    // ── 编辑图片路径（src 属性）────────────────────────────────
     let isEditingSrc = false;
 
     function startSrcEdit(): void {
         if (isEditingSrc) return;
         isEditingSrc = true;
 
-        startToolbarInlineEdit(toolbar, {
+        detachActiveInlineEdit = startToolbarInlineEdit(toolbar, {
             initialValue: toDisplayPath(rawSrc),
             placeholder: t("Image path or URL"),
             setupComplete: attachImgPathComplete,
             onConfirm: (displayVal, input) => {
                 isEditingSrc = false;
-                // ① 补全时 dataset 存的 webviewUri 最可靠
+                // Autocomplete's dataset URI is the most reliable source.
                 const datasetUri = (input.dataset.imgWebviewUri ?? "").trim();
 
                 const applyUri = (newSrc: string) => {
@@ -583,7 +544,7 @@ export function createImageView(
                     const tr = view.state.tr.setNodeMarkup(pos, null, { ...currentNode.attrs, src: newSrc });
                     const afterPos = pos + nodeSize;
                     if (afterPos <= tr.doc.content.size) {
-                        try { tr.setSelection(TextSelection.near(tr.doc.resolve(afterPos), 1)); } catch { /* setNodeMarkup 后节点位置可能偏移，光标恢复失败忽略 */ }
+                        try { tr.setSelection(TextSelection.near(tr.doc.resolve(afterPos), 1)); } catch { /* cursor restore may fail after setNodeMarkup */ }
                     }
                     view.dispatch(tr);
                     view.focus();
@@ -592,8 +553,8 @@ export function createImageView(
                 if (datasetUri) {
                     applyUri(datasetUri);
                 } else if (displayVal) {
-                    // 绝对 URL 直接使用，不经过 Extension 解析；其余一律交给
-                    // Extension 解析（回归 P8：不再用陈旧的反向镜像短路）
+                    // Absolute URLs are used verbatim; everything else goes through the
+                    // Extension (no stale reverse-mirror shortcut).
                     if (/^https?:\/\//i.test(displayVal)) {
                         applyUri(displayVal);
                     } else {
@@ -608,7 +569,6 @@ export function createImageView(
         });
     }
 
-    // ── NodeView 接口 ─────────────────────────────────────────
     return {
         dom: wrapper,
 
@@ -655,32 +615,28 @@ export function createImageView(
         },
 
         stopEvent(e: Event): boolean {
-            // 工具栏内的事件（按钮、输入框）阻止 ProseMirror 处理
+            // Toolbar events (buttons, input) are ours, not ProseMirror's.
             return toolbar.contains(e.target as Node);
         },
 
         ignoreMutation(_m: ViewMutationRecord): boolean {
-            // 无 contentDOM，所有 DOM 变动都是 UI 层，ProseMirror 不需要感知
+            // No contentDOM: every DOM mutation is UI-only.
             return true;
         },
 
         destroy(): void {
-            // 清理 lightbox（若此图片触发的 lightbox 仍在显示）——经完整 cleanup 一并
-            // 移除 document keydown 监听（回归：此前只 removeChild，onKeyDown 悬空到
-            // 用户下次按 Escape 才自愈）
-            if (activeLightbox && document.body.contains(activeLightbox)) {
-                const lbImg = activeLightbox.querySelector("img");
-                if (lbImg && lbImg.src === img.src) {
-                    activeLightboxCleanup?.();
-                }
-            }
-            // 加载重试 timer（回归：节点销毁后仍改写已脱离 DOM 的 img.src）
+            // A node destroyed while the path autocomplete is open must drop its document listener.
+            detachActiveInlineEdit?.();
+            detachActiveInlineEdit = null;
+            // A node destroyed while its lightbox is open must drop the lightbox's keydown
+            // listener too (revert / undo / external change).
+            closeLightboxShowing(img.src);
+            // A pending retry would rewrite a detached img.
             if (retryTimer !== null) {
                 clearTimeout(retryTimer);
                 retryTimer = null;
             }
-            // 拖拽 resize 的 window 监听（回归：拖拽中途删除节点，监听滞留到下次 pointerup，
-            // onResizeMove 持续操作已销毁的 img）
+            // A mid-drag delete would leave the resize listeners mutating the detached img.
             window.removeEventListener("pointermove", onResizeMove);
             window.removeEventListener("pointerup", onResizeUp);
             document.body.style.cursor = "";

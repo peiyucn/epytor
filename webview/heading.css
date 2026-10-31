@@ -1,15 +1,8 @@
-/* 标题折叠 + 吸顶（全部使用 --vscode-* 变量） */
+/* Heading folding and sticky titles; colours come from --vscode-* only. */
 
-/* ── 折叠 gutter ─────────────────────────────────────── */
-/* 折叠按钮挂在正文列**外面**（负 margin + 固定宽度）：
-   它是标题的第一个子元素，若按常规占位会把标题文字整体右推 26px，
-   于是所有 H 标题都比正文缩进一格（用户反馈「看着不舒服」）。
-   悬挑到左侧内边距里之后，标题文字与正文左缘严格对齐，
-   而按钮落在 `#editor` 的 48px 左内边距内，不会被裁切。
-
-   间距要留在**按钮与文字之间**：gutter 28px、按钮 20px 且靠左（flex-start），
-   按钮占 -28~-8px，与标题文字之间留 8px。
-   回归：第一版写成 justify-content: flex-end，按钮右缘正好贴住文字（用户反馈「都挨上了」）。 */
+/* The fold button hangs outside the text column: as a normal child it pushed every heading
+ * 26px right. A 28px gutter with a 20px left-aligned button leaves 8px between button and
+ * text. Regression: justify-content: flex-end put the button flush against the text. */
 .heading-fold-gutter {
     display: inline-flex;
     align-items: center;
@@ -48,18 +41,17 @@
     height: 14px;
 }
 
-/* ── 折叠隐藏 ────────────────────────────────────────── */
 .heading-fold-hidden {
     display: none !important;
 }
 
-/* 折叠中的标题：chevron 常显，便于发现展开入口 */
+/* Collapsed heading: keep the chevron visible so the toggle stays discoverable. */
 .heading-fold-heading--collapsed .heading-fold-gutter {
     opacity: 0.6;
 }
 
-/* ── 吸顶标题条（多级：外层在上，内层在下；源码形式纯文本行） ─────────── */
-/* hidden 属性兜底：display:flex 会覆盖 UA 的 [hidden]{display:none}，需显式声明 */
+/* Sticky title bar: outer level on top, inner level below, plain text rows. */
+/* display: flex outranks the UA [hidden] rule, so restate it. */
 .heading-sticky-title[hidden] {
     display: none !important;
 }
@@ -69,7 +61,7 @@
     z-index: 90;
     display: flex;
     flex-direction: column;
-    /* 行高与 JS 的 STICKY_ROW_HEIGHT_PX 同源（几何判定按行高算，务必一致） */
+    /* Must equal STICKY_ROW_HEIGHT_PX in JS — geometry is measured in rows. */
     --epytor-sticky-row-height: 22px;
     padding: 0;
     box-sizing: border-box;

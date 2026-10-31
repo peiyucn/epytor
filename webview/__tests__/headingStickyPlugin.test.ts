@@ -8,8 +8,11 @@
  */
 import { describe, expect, it, vi } from "vitest";
 import { createEditor, destroyEditor, getEditorView } from "../editor";
-import { getActiveHeadingPos } from "../headingStickyPlugin";
-import { buildHeadingIndex } from "../utils/headingFold";
+import {
+    getActiveHeadingPos,
+    onActiveHeadingChange,
+} from "../editor/plugins/headingStickyPlugin";
+import { buildHeadingIndex } from "../outline/headingFold";
 
 if (typeof (window as unknown as Record<string, unknown>).IntersectionObserver === "undefined") {
     (window as unknown as Record<string, unknown>).IntersectionObserver = class {
@@ -378,5 +381,31 @@ describe("标题吸顶完整链路", () => {
         } finally {
             vi.useRealTimers();
         }
+    }, 60000);
+
+    it("destroy 应该 复位当前标题位置并通知订阅者（F10：重建不继承旧文档的高亮）", async () => {
+        setViewport(1024, 768);
+        scrollY = 100;
+        headingLeft = 100;
+        headingWidth = 800;
+        const root = await mountWithStubLayout(
+            Array.from({ length: 4 }, (_, i) => `## 标题 ${i}\n正文一行`).flatMap((s) => s.split("\n")),
+            (i) => 60 + i * 120,
+        );
+        await settle();
+        expect(getActiveHeadingPos()).not.toBeNull();
+
+        const published: Array<number | null> = [];
+        const unsubscribe = onActiveHeadingChange((pos) => published.push(pos));
+        try {
+            destroyEditor();
+            // Milkdown's destroy() is async; wait for the plugin teardown before asserting.
+            await vi.waitFor(() => expect(getActiveHeadingPos()).toBeNull());
+        } finally {
+            unsubscribe();
+        }
+
+        expect(published).toEqual([null]); // 只通知一次「清空」，不重放旧文档位置
+        root.remove();
     }, 60000);
 });

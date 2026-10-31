@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findMatches, MAX_MATCHES } from "../utils/findMatches";
+import { findMatches, MAX_MATCHES } from "../find/findMatches";
 
 describe("findMatches：普通模式", () => {
     it("存在多个匹配时 应该 返回全部区间", () => {

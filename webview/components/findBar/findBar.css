@@ -1,6 +1,5 @@
-/* ── Find Bar — 与 VSCode 编辑器内置搜索框风格保持一致 ──── */
+/* Find bar, styled after the VS Code editor widget. */
 
-/* 容器 */
 .find-bar {
     position: fixed;
     top: calc(var(--milkdown-topbar-height, 40px) + 6px);
@@ -31,7 +30,6 @@
     pointer-events: auto;
 }
 
-/* 输入框 */
 .find-bar__input {
     flex: 1;
     min-width: 0;
@@ -56,7 +54,6 @@
     background: var(--vscode-inputValidation-errorBackground, rgba(244,71,71,0.1));
 }
 
-/* 匹配数量 */
 .find-bar__count {
     padding: 0 6px;
     font-size: 12px;
@@ -71,7 +68,6 @@
     color: var(--vscode-inputValidation-errorForeground, var(--vscode-editorError-foreground, #f48771));
 }
 
-/* 分隔线 */
 .find-bar__sep {
     width: 1px;
     height: 16px;
@@ -80,7 +76,6 @@
     flex-shrink: 0;
 }
 
-/* 按钮通用 */
 .find-bar__btn {
     -webkit-appearance: none;
     appearance: none;

@@ -1,4 +1,4 @@
-/* 表格网格选择器：全部使用 --vscode-* 变量适配亮/暗主题 */
+/* Table grid picker (theme variables only). */
 .epytor-grid-picker {
     position: fixed;
     z-index: 1000;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createEditor, destroyEditor, getEditorView } from "../editor";
-import { changeRangeInFinalDoc, normalizeListSpread } from "../utils/listSpread";
+import { changeRangeInFinalDoc, normalizeListSpread } from "../markdown/listSpread";
 
 if (typeof (window as unknown as Record<string, unknown>).IntersectionObserver === "undefined") {
     (window as unknown as Record<string, unknown>).IntersectionObserver = class { observe() {} unobserve() {} disconnect() {} takeRecords() { return []; } };
@@ -77,7 +77,7 @@ describe("changeRangeInFinalDoc（纯逻辑）", () => {
 });
 
 describe("normalizeListSpread（纯逻辑）", () => {
-    it("列表项含多块时 应该 把 spread 置 true", async () => {
+    it("列表项含多个段落时 应该 把该项标为松散（但不动列表级 spread）", async () => {
         const root = await mount("- a\n- b");
         const view = getEditorView()!;
         const list = view.state.doc.firstChild!;
@@ -87,6 +87,54 @@ describe("normalizeListSpread（纯逻辑）", () => {
         const tr2 = view.state.tr;
         normalizeListSpread(doc, view.state.schema, tr2, { from: 0, to: doc.content.size });
         expect(tr2.steps.length).toBeGreaterThan(0);
+        // 关键：列表级 spread 不动（用户写的项间空行由原文决定，这里不该被强标）
+        const after = tr2.doc.firstChild!;
+        expect(after.firstChild!.attrs.spread).toBe(true);
+        expect(after.attrs.spread).toBe(false);
+        destroyEditor(); root.remove();
+    }, 60000);
+
+    it("含子列表的列表项 不应该 被当成松散项（回归：退格提升后下面全部多出空行）", async () => {
+        const root = await mount("- p\n  - c1\n  - c2");
+        const view = getEditorView()!;
+        const list = view.state.doc.firstChild!;
+        // 该项有 paragraph + bullet_list 两块，但子列表不代表空行
+        expect(list.firstChild!.childCount).toBeGreaterThan(1);
+        const tr = view.state.tr;
+        normalizeListSpread(view.state.doc, view.state.schema, tr, { from: 0, to: view.state.doc.content.size });
+        // 不含多段落的项：不产生任何步骤
+        expect(tr.steps).toHaveLength(0);
+        destroyEditor(); root.remove();
+    }, 60000);
+
+    it("用户手写的松散列表 应该 不被压紧（空行保真）", async () => {
+        const root = await mount("- a\n\n- b\n\n- c");
+        const view = getEditorView()!;
+        const list = view.state.doc.firstChild!;
+        expect(list.attrs.spread).toBe(true);
+        const tr = view.state.tr;
+        normalizeListSpread(view.state.doc, view.state.schema, tr, { from: 0, to: view.state.doc.content.size });
+        expect(tr.steps).toHaveLength(0);
+        expect(view.state.doc.firstChild!.attrs.spread).toBe(true);
+        destroyEditor(); root.remove();
+    }, 60000);
+
+    it("列表项从多段落变回单段落 应该 同步收回该项的 spread", async () => {
+        const root = await mount("- a\n\n  second para\n\n- b");
+        const view = getEditorView()!;
+        const list = view.state.doc.firstChild!;
+        expect(list.firstChild!.childCount).toBe(2);
+        expect(list.firstChild!.attrs.spread).toBe(true);
+        // 删掉项内第二个段落 → 该项只剩一个段落，spread 应被收回
+        const itemStart = 1;
+        const secondParaPos = itemStart + 1 + list.firstChild!.firstChild!.nodeSize;
+        const secondParaSize = list.firstChild!.child(1).nodeSize;
+        const doc = view.state.tr.delete(secondParaPos, secondParaPos + secondParaSize).doc;
+        expect(doc.firstChild!.firstChild!.childCount).toBe(1);
+        const tr = view.state.tr;
+        expect(normalizeListSpread(doc, view.state.schema, tr, { from: 0, to: doc.content.size })).toBe(true);
+        expect(tr.steps.length).toBeGreaterThan(0);
+        expect(tr.doc.firstChild!.firstChild!.attrs.spread).toBe(false);
         destroyEditor(); root.remove();
     }, 60000);
 

@@ -2,8 +2,8 @@ import type { ToExtensionMessage, ToWebviewMessage, ProjectImage } from "../shar
 
 export type { ProjectImage };
 
-// Re-export 以保持现有消费者（webview/index.ts 等）对 IncomingMessage 的引用不变
-export type IncomingMessage = ToWebviewMessage;
+/** Message shape delivered to `onMessage`; not exported (no external consumer). */
+type IncomingMessage = ToWebviewMessage;
 
 declare function acquireVsCodeApi(): {
     postMessage(message: ToExtensionMessage): void;
@@ -11,7 +11,7 @@ declare function acquireVsCodeApi(): {
     setState(state: unknown): void;
 };
 
-// acquireVsCodeApi 只能调用一次
+// acquireVsCodeApi may only be called once.
 const vscode = acquireVsCodeApi();
 
 export function notifyReady(): void {
@@ -46,7 +46,7 @@ export function notifySwitchToTextEditor(line?: number): void {
     vscode.postMessage({ type: "switchToTextEditor", ...(line !== undefined ? { line } : {}) });
 }
 
-/** 视口顶部源码行上报（滚动防抖后调用；切回文本编辑器时按它定位） */
+/** Top visible source line (sent after the scroll debounce; used to position the text editor on switch-back). */
 export function notifyViewportLine(line: number): void {
     vscode.postMessage({ type: "viewportLine", line });
 }
@@ -95,10 +95,8 @@ export function notifyWordCount(
 
 export function onMessage(handler: (msg: IncomingMessage) => void): void {
     window.addEventListener("message", (event: MessageEvent) => {
-        // 最小运行时守卫：只校验载荷形状（回归：event.data 曾直接断言为 IncomingMessage，
-        // 无任何校验）。注意：不做 event.source 校验——VS Code WebView 中 Extension 的
-        // postMessage 到达时 source 是父窗口而非自身 window，校验来源会丢光合法消息
-        // （2026-09-08 曾误加 `event.source === window` 导致整页不渲染，已回退）。
+        // Minimal payload-shape guard. Do NOT check event.source: in a VS Code webview the
+        // Extension's postMessage arrives with the parent window as source, so it drops all messages.
         const data = event.data as unknown;
         if (data === null || typeof data !== "object") {
             return;

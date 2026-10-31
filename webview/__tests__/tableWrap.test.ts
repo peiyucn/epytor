@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { resolveTableWrapVars } from "../../shared/tableWrap";
-import { applyTableWrapVars } from "../utils/tableWrap";
+import { applyTableWrapVars } from "../table/tableWrap";
 
 describe("applyTableWrapVars", () => {
     beforeEach(() => {

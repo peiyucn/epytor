@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { TABLE_GRID_SIZE, gridIndexToCell, isCellHighlighted } from "../utils/tableGrid";
+import { TABLE_GRID_SIZE, gridIndexToCell, isCellHighlighted } from "../table/tableGrid";
 
 describe("tableGrid 纯逻辑", () => {
     it("gridIndexToCell 应该 正确换算 1-based 行列", () => {

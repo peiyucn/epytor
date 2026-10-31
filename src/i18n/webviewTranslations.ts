@@ -1,4 +1,4 @@
-/** WebView 侧中文翻译表（key 为英文原文） */
+/** WebView-side Simplified Chinese table (keys are the English source text). */
 export const ZH_CN_WEBVIEW: Record<string, string> = {
     'Contents': '目录',
     'Collapse': '收起',
@@ -39,7 +39,7 @@ export const ZH_CN_WEBVIEW: Record<string, string> = {
     'Project Images': '项目图片',
     'Click or drag image here': '点击选择或拖拽图片到此处',
     'Insert': '插入',
-    // imageView 工具栏
+    // imageView toolbar
     'Close': '关闭',
     'View Full Size': '查看原图',
     'Delete': '删除',
@@ -62,7 +62,7 @@ export const ZH_CN_WEBVIEW: Record<string, string> = {
     'Invalid Regex': '无效的正则表达式',
     'No results': '无结果',
     // toc
-    // 面板/溢出菜单/标题折叠（此前缺翻译，中文环境显示英文原文）
+    // Panel / overflow menu / heading fold (previously untranslated, so the Chinese UI showed English).
     'Add': '添加',
     'More': '更多',
     'Expand content': '展开内容',

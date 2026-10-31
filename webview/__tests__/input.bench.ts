@@ -6,7 +6,7 @@ import { describe, it } from "vitest";
 import { CrepeBuilder } from "@milkdown/crepe";
 import { editorViewCtx, remarkStringifyOptionsCtx } from "@milkdown/kit/core";
 import type { EditorView } from "@milkdown/kit/prose/view";
-import { withTableBreakHandler } from "../utils/markdownSerializer";
+import { withTableBreakHandler } from "../markdown/markdownSerializer";
 
 if (typeof (window as unknown as Record<string, unknown>).ResizeObserver === "undefined") {
     (window as unknown as Record<string, unknown>).ResizeObserver = class {

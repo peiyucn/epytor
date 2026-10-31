@@ -1,19 +1,20 @@
 /**
- * WebView 内一次性提示条（Extension → WebView 的 notice 消息）。
+ * One-shot notice bar inside the webview (the Extension → WebView `notice` message).
  *
- * 用例：图床目标来自工作区级配置时降级为本地存储——提示必须出现在用户正看着的
- * 编辑器里（宿主通知容易被忽略）；文案已由 Extension 用 vscode.l10n 本地化。
- * 文本走 textContent，不解析 HTML。
+ * Used when, say, the image host target is degraded to local storage because it came from
+ * workspace-level config: the warning has to appear in the editor the user is looking at
+ * (host notifications get missed). The text is already localized by the Extension via
+ * vscode.l10n and is written with `textContent` — never parsed as HTML.
  */
 import "./notice.css";
 
-/** 自动消失时间（点击提示条可提前关闭） */
+/** Auto-dismiss delay (clicking the notice closes it early). */
 const NOTICE_VISIBLE_MS = 8000;
 
 let current: HTMLElement | null = null;
 let hideTimer: ReturnType<typeof setTimeout> | null = null;
 
-/** 显示提示条（同一时刻只保留一条：新的顶掉旧的） */
+/** Show a notice (only one at a time: a new one replaces the old). */
 export function showNotice(message: string): void {
     dismissNotice();
     const el = document.createElement("div");
@@ -26,7 +27,7 @@ export function showNotice(message: string): void {
     hideTimer = setTimeout(dismissNotice, NOTICE_VISIBLE_MS);
 }
 
-/** 移除提示条并清理 timer（重复调用安全） */
+/** Remove the notice and clear the timer (safe to call repeatedly). */
 export function dismissNotice(): void {
     if (hideTimer !== null) {
         clearTimeout(hideTimer);

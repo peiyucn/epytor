@@ -2,7 +2,7 @@
  * 回归（owner 手测 2026-09-17）：「点击 toc 内容切换没问题，但高亮表现不稳定、经常自己乱跑」。
  *
  * 根因：**跳转落点与「当前章节」判据用了两套基准**。
- *   - 判据（utils/headingSticky.ts 的 currentHeadingIndex）：当前章节 = 最后一个
+ *   - 判据（outline/headingSticky.ts 的 currentHeadingIndex）：当前章节 = 最后一个
  *     **顶边已划过阅读线**的标题（`top < readingLineY`）；
  *   - 旧落点：`标题顶边 - 顶栏底 - 8px` → 目标标题停在阅读线**下方 8px**，判据不成立。
  *
@@ -10,8 +10,8 @@
  * 1→0、2→1、3→2）。本测试把「落点必须让被点标题成为当前章节」锁成不变量。
  */
 import { describe, expect, it } from "vitest";
-import { HEADING_JUMP_OVERLAP_PX, headingScrollTop } from "../utils/headingScroll";
-import { currentHeadingIndex, type StickyHeadingRect } from "../utils/headingSticky";
+import { HEADING_JUMP_OVERLAP_PX, headingScrollTop } from "../outline/headingScroll";
+import { currentHeadingIndex, type StickyHeadingRect } from "../outline/headingSticky";
 
 const READING_LINE_Y = 36;
 const HEADING_HEIGHT = 40;

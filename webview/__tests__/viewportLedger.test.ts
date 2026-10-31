@@ -12,7 +12,7 @@ import {
     nextLastBodyWidth,
     nextTinyReal,
     shouldSkipViewportWork,
-} from "../utils/viewportLedger";
+} from "../scroll/viewportLedger";
 
 /** 改写 jsdom 视口尺寸（只读属性需 defineProperty） */
 function setViewport(width: number, height: number): void {

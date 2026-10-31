@@ -13,7 +13,7 @@ import { editorViewCtx } from "@milkdown/kit/core";
 import { getMarkdown } from "@milkdown/kit/utils";
 import { TextSelection } from "@milkdown/kit/prose/state";
 import type { EditorView } from "@milkdown/kit/prose/view";
-import { listBackspacePlugin } from "../utils/listBackspace";
+import { listBackspacePlugin } from "../markdown/listBackspace";
 
 if (typeof (window as unknown as Record<string, unknown>).ResizeObserver === "undefined") {
     (window as unknown as Record<string, unknown>).ResizeObserver = class {

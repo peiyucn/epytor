@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeStickyRows, STICKY_ROW_HEIGHT_PX } from "../utils/headingSticky";
+import { computeStickyRows, STICKY_ROW_HEIGHT_PX } from "../outline/headingSticky";
 
 const TOP = 36;
 const ROW = STICKY_ROW_HEIGHT_PX;

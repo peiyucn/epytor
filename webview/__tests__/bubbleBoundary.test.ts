@@ -1,7 +1,7 @@
 /**
  * 行内公式编辑气泡的定位（回归：气泡越出编辑区 / 压住固定工具栏）。
  *
- * 定位算法在 webview/utils/bubbleBoundary.ts 的 placeBubble（纯函数，可直测）。
+ * 定位算法在 webview/editor/bubbleBoundary.ts 的 placeBubble（纯函数，可直测）。
  * 这里测的是**数学结果**，不是「代码里有没有某个字符串」——前几轮吃过的教训：
  * 断言接线存在，但算出来的坐标是错的，真机照样不对。
  *
@@ -14,7 +14,7 @@ import {
     BUBBLE_BOUNDARY_PADDING,
     BUBBLE_GAP,
     placeBubble,
-} from "../utils/bubbleBoundary";
+} from "../editor/bubbleBoundary";
 
 /** 典型编辑区：左侧 TOC 占 200，顶部工具栏占 36，视口 1200×800 */
 const VIEW = {
@@ -101,6 +101,13 @@ describe("placeBubble：气泡必须落在编辑区内", () => {
     });
 });
 
+/**
+ * 接线（latexFeature）——F4 例外，理由在 latexBubbleBounds.test.ts 文件头：
+ * vendor/latexFeature.ts 是 vendored 上游实现（保持与上游逐节对照），floating-ui 中间件
+ * 只在真实布局引擎里执行，jsdom 无法对「气泡是否真的被 clamp」做行为断言，因此这里锁
+ * 接线结构（不用 flip/shift、placeBubble 委托、fixed 策略）而非坐标结果——坐标结果由
+ * 上面的 placeBubble 纯函数用例覆盖。
+ */
 describe("接线（latexFeature）", () => {
     const latexSrc = readFileSync(
         path.resolve(process.cwd(), "webview/vendor/latexFeature.ts"),
@@ -187,6 +194,13 @@ describe("样式（latex.css）", () => {
 
 
 
+/**
+ * 外观（latex.css）——CSS 结构断言保留说明（F4 例外）：
+ * 这一组要求 latex.css 的气泡外观逐项镜像 style.css 里 link 弹层的覆盖值（上游 crepe 值
+ * 被 owner 判定不对）。jsdom 的 getComputedStyle 无法跨两张样式表比较「同一属性是否取到
+ * 同一个变量/数值」，也不能验证伪元素与 !important 级联，所以按选择器解析出声明体后逐项
+ * 比对是这里唯一诚实可行的检查；规则本身在 vendored 外观文件里，改动风险低。
+ */
 describe("外观必须与链接/文件引用弹层完全一致（镜像 style.css 的覆盖值）", () => {
     const latexCssNoComments = latexCss.replace(/\/\*[\s\S]*?\*\//g, "");
     const styleCss = readFileSync(

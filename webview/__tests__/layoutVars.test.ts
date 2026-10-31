@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { applyCodeBlockMaxHeight, applyEditorMaxWidth } from "../utils/layoutVars";
+import { applyCodeBlockMaxHeight, applyEditorMaxWidth } from "../shell/layoutVars";
 
 describe("layoutVars 布局 CSS 变量", () => {
     beforeEach(() => {

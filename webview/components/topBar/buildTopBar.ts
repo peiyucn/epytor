@@ -1,8 +1,5 @@
-/**
- * 顶栏构建（从 editor.ts createEditor 中提取，回归：290 行巨型回调内联 5 个业务块）：
- * 历史/清除格式/图片/引用切换/列表切换/目录/设置按钮组定制 + 组重排 +
- * 溢出菜单元数据快照。类型从 Crepe 官方 TopBarFeatureConfig 推导，无 any。
- */
+/** Top-bar assembly: replaces Crepe's default item groups and snapshots overflow-menu metadata. */
+import "./topBar.css";
 import type { Ctx } from "@milkdown/kit/ctx";
 import { commandsCtx, editorViewCtx } from "@milkdown/kit/core";
 import type { EditorState } from "@milkdown/kit/prose/state";
@@ -27,7 +24,7 @@ type BuiltGroup = ReturnType<TopBarBuilder["build"]>[number];
 type BuiltItem = BuiltGroup["items"][number];
 
 export function buildTopBarConfig(builder: TopBarBuilder, onTocToggle?: () => void): void {
-    // Undo/Redo — 最前面独立组
+    // History: its own group, moved to slot 1 once every group exists.
     builder.addGroup('history', '').addItem('undo', {
         icon: TbUndo,
         active: (ctx: Ctx) => undo(ctx.get(editorViewCtx).state),
@@ -37,7 +34,7 @@ export function buildTopBarConfig(builder: TopBarBuilder, onTocToggle?: () => vo
         active: (ctx: Ctx) => redo(ctx.get(editorViewCtx).state),
         onRun: (ctx: Ctx) => { const v = ctx.get(editorViewCtx); redo(v.state, v.dispatch, v); },
     });
-    // 清除格式 — formatting 组末尾（行内代码后面）
+    // Clear formatting goes at the end of the formatting group (after inline code).
     builder.getGroup('formatting').addItem('clear-format', {
         icon: TbEraser,
         active: (ctx) => {
@@ -48,7 +45,7 @@ export function buildTopBarConfig(builder: TopBarBuilder, onTocToggle?: () => vo
                 v.state.doc.nodesBetween(from, to, (n) => { if (n.marks.length) { has = true; return false; } return true; });
                 return has;
             }
-            // 无选区时：光标在链接内即为 active
+            // No selection: a link at the caret counts as active.
             const linkType = v.state.schema.marks['link'];
             if (!linkType) return false;
             return linkType.isInSet(v.state.doc.resolve(from).marks()) !== undefined;
@@ -59,7 +56,7 @@ export function buildTopBarConfig(builder: TopBarBuilder, onTocToggle?: () => vo
             const tr = v.state.tr;
             const linkType = v.state.schema.marks['link'];
 
-            // 光标在链接内（无选区）→ 取消整个链接
+            // Caret inside a link: remove the whole link.
             if (empty && linkType) {
                 const $from = v.state.doc.resolve(from);
                 if (linkType.isInSet($from.marks())) {
@@ -72,7 +69,7 @@ export function buildTopBarConfig(builder: TopBarBuilder, onTocToggle?: () => vo
                 }
             }
 
-            // 有选区 → 扩展链接边界后清除所有标记
+            // Selection: grow over the full links first, otherwise removal leaves fragments.
             if (linkType) {
                 while (from > 0 && v.state.doc.rangeHasMark(from - 1, from, linkType)) from--;
                 const docSize = v.state.doc.content.size;
@@ -89,7 +86,7 @@ export function buildTopBarConfig(builder: TopBarBuilder, onTocToggle?: () => vo
             v.dispatch(tr);
         },
     });
-    // 图片 — insert 组，link 和 table 之间（清空后按序重建）
+    // Rebuild the insert group so image sits between link and table.
     {
         const g = builder.getGroup('insert'); const items = g.group.items;
         const linkItem = items.find((i) => i.key === 'link');
@@ -106,7 +103,7 @@ export function buildTopBarConfig(builder: TopBarBuilder, onTocToggle?: () => vo
         if (tableItem) g.addItem('table', {
             ...tableItem,
             onRun: (ctx) => {
-                // 网格选择器：hover 预览行列，点击插入（官方 insertTableCommand 支持任意行列）
+                // Grid picker: hover previews rows × cols; insertTableCommand takes any size.
                 const viewDom = ctx.get(editorViewCtx).dom;
                 const topBar = viewDom.parentElement?.querySelector<HTMLElement>('.milkdown-top-bar');
                 const anchor = (topBar ? findTopBarButtonEl(topBar, 'table') : null) ?? topBar ?? viewDom;
@@ -116,7 +113,7 @@ export function buildTopBarConfig(builder: TopBarBuilder, onTocToggle?: () => vo
             },
         });
     }
-    // 引用块一键退出：在引用内点击 → lift 解包，否则 → 包裹
+    // Blockquote toggles: lift out when inside, wrap otherwise.
     {
         const isInBlockquote = (state: EditorState) => {
             const bqType = state.schema.nodes['blockquote'];
@@ -149,7 +146,7 @@ export function buildTopBarConfig(builder: TopBarBuilder, onTocToggle?: () => vo
         });
         if (hrItem) moreG.addItem('hr', hrItem);
     }
-    // 列表切换：不在列表 → 包裹；在列表且类型不同 → 直接切换；类型相同 → 取消列表
+    // List toggle: wrap outside a list, retype the outer list, cancel on the same type.
     {
         const findListItems = (state: EditorState) => {
             const liType = state.schema.nodes['list_item'];
@@ -169,7 +166,7 @@ export function buildTopBarConfig(builder: TopBarBuilder, onTocToggle?: () => vo
             }
             return items;
         };
-        // 找到包含这些 list_item 的顶层列表节点（去重）
+        // Top-level list nodes containing those items, deduped.
         const findTopLists = (state: EditorState, items: Array<{ pos: number; node: ProseNode }>) => {
             const lists: Array<{ pos: number; node: ProseNode }> = [];
             const seen = new Set<number>();
@@ -202,7 +199,7 @@ export function buildTopBarConfig(builder: TopBarBuilder, onTocToggle?: () => vo
             const schema = state.schema;
             const kind = listKind(state);
             if (!kind) {
-                // 不在列表 → 原包裹行为
+                // Not in a list: wrap.
                 let nodeType: NodeType | null = null;
                 let attrs: Attrs | null = null;
                 if (target === 'bullet') nodeType = schema.nodes['bullet_list'];
@@ -212,13 +209,13 @@ export function buildTopBarConfig(builder: TopBarBuilder, onTocToggle?: () => vo
                 return;
             }
             if (kind === target) {
-                // 同类型 → 取消/降级（lift 一层）
+                // Same type: cancel (lift one level).
                 const liType = schema.nodes['list_item'];
                 liftListItem(liType)(state, dispatch);
                 return;
             }
-            // 不同类型 → 换外层列表类型 + 更新 list_item attrs
-            // 用 setNodeMarkup（不改变节点大小，光标位置自动保留，不会跳行）
+            // Different type: retype the outer list and rewrite item attrs.
+            // setNodeMarkup keeps node sizes, so the cursor never jumps.
             const items = findListItems(state);
             const lists = findTopLists(state, items);
             if (!lists.length) return;
@@ -229,9 +226,9 @@ export function buildTopBarConfig(builder: TopBarBuilder, onTocToggle?: () => vo
                     : schema.nodes['bullet_list'];
                 const newAttrs = { ...node.attrs };
                 if (target === 'ordered') newAttrs.order = 1;
-                // 换外层类型（content 保留）
+                // Retype the wrapper, keeping its content.
                 tr.setNodeMarkup(pos, newType, newAttrs);
-                // 逐个 list_item 更新 attrs
+                // Rewrite each item's attrs.
                 let order = 1;
                 node.forEach((item: ProseNode, _off: number, itemPos: number) => {
                     const itemAttrs = { ...item.attrs };
@@ -278,7 +275,7 @@ export function buildTopBarConfig(builder: TopBarBuilder, onTocToggle?: () => vo
             });
         }
     }
-    // 目录切换 — 设置前独立组
+    // TOC toggle: its own group.
     builder.addGroup('toc', '').addItem('toc', {
         icon: TbToc,
         active: () => false,
@@ -286,7 +283,7 @@ export function buildTopBarConfig(builder: TopBarBuilder, onTocToggle?: () => vo
             onTocToggle?.();
         },
     });
-    // 设置 — 末尾独立组
+    // Settings: its own group, always in the overflow menu.
     builder.addGroup('settings', '').addItem('settings', {
         icon: TbGear,
         active: () => false,
@@ -294,7 +291,7 @@ export function buildTopBarConfig(builder: TopBarBuilder, onTocToggle?: () => vo
             document.dispatchEvent(new CustomEvent('epytor:openSettings', { bubbles: true }));
         },
     });
-    // 将 toc、history 组移到最前面
+    // Order: toc, history, then the rest.
     const groups = builder.build();
     const tocGroup = groups.find((g) => g.key === 'toc');
     if (tocGroup) {
@@ -308,7 +305,7 @@ export function buildTopBarConfig(builder: TopBarBuilder, onTocToggle?: () => vo
         groups.splice(idx, 1);
         groups.splice(1, 0, historyGroup);
     }
-    // 顶栏溢出菜单按钮元数据（key/icon/onRun 快照，供溢出面板渲染副本）
+    // Snapshot key/icon/onRun in DOM order for the overflow panel.
     setTopBarButtonMeta(
         groups.flatMap((g: BuiltGroup) =>
             g.items.map((item: BuiltItem) => ({

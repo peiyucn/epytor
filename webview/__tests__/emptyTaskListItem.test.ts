@@ -6,7 +6,7 @@
  * 全部如此）。本函数在解析后补齐，让空复选框与 `- [ ] a` 同构。
  */
 import { describe, expect, it } from "vitest";
-import { fixEmptyTaskListItems, type MdastNode } from "../utils/emptyTaskListItem";
+import { fixEmptyTaskListItems, type MdastNode } from "../markdown/emptyTaskListItem";
 
 /** 造一棵 `- [标记]` 的列表树：marker 为 null 表示没有标记文本 */
 function listTree(marker: string | null, checked: boolean | null = null, extra: MdastNode[] = []): MdastNode {

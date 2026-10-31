@@ -4,7 +4,7 @@ import { EditorView as CMEditorView } from "@codemirror/view";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { defaultHighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { languages } from "@codemirror/language-data";
-import { CM_RECONFIGURE_DELAY_MS, observeCmEditorCount } from "../utils/cmThemeObserver";
+import { CM_RECONFIGURE_DELAY_MS, observeCmEditorCount } from "../editor/cmThemeObserver";
 
 /** 建一个容器，内含 count 个 .cm-editor */
 function makeContainer(count: number): HTMLElement {

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockVscodeApi } from "./setup";
 import { attachImgPathComplete, dispatchImagePathResolved, resolveToWebviewUri } from "../components/imageView/imgPathComplete";
-import { resolvePathSuggestionRequest } from "../utils/pathSuggestionRequests";
+import { resolvePathSuggestionRequest } from "../images/pathSuggestionRequests";
 import type { PathSuggestionItem } from "../../shared/messages";
 
 const item = (path: string, isDir = false, webviewUri?: string): PathSuggestionItem => ({ path, isDir, webviewUri });

@@ -1,11 +1,12 @@
 import "./findBar.css";
-import { DEFAULT_TOPBAR_HEIGHT, VIEWPORT_PADDING } from "../../../shared/constants";
+import { VIEWPORT_PADDING } from "../../../shared/constants";
+import { topbarHeight } from "../../ui/topbarMetrics";
 import { createButton } from "@/ui/dom";
 import { IconChevronUp, IconChevronDown, IconX } from "@/ui/icons";
 import { t, kbd } from "@/i18n";
-import { findMatches, MAX_MATCHES } from "@/utils/findMatches";
+import { findMatches, MAX_MATCHES } from "@/find/findMatches";
 
-// TypeScript 类型声明：CSS Custom Highlight API（Chromium 105+ / Electron 22+）
+// CSS Custom Highlight API (Chromium 105+ / Electron 22+); not in the DOM lib yet.
 declare class Highlight {
     constructor(...ranges: Range[]);
 }
@@ -13,8 +14,11 @@ declare namespace CSS {
     const highlights: Map<string, Highlight>;
 }
 
-/** 输入防抖：查找是逐键重算全部匹配，间隔太小会在长文档上拖慢输入 */
+/** Input debounce: every keystroke recomputes all matches, which is slow on long documents. */
 const SEARCH_DEBOUNCE_MS = 150;
+
+/** Space above the first match when scrolling it into view. */
+const FIND_SCROLL_OFFSET_PX = 60;
 
 export interface FindBarController {
     open(initialQuery?: string): void;
@@ -23,7 +27,6 @@ export interface FindBarController {
 }
 
 export function initFindBar(getEditorEl: () => HTMLElement | null): FindBarController {
-    // ── DOM 结构 ─────────────────────────────────────────
     const bar = document.createElement("div");
     bar.className = "find-bar";
     bar.setAttribute("role", "search");
@@ -79,21 +82,18 @@ export function initFindBar(getEditorEl: () => HTMLElement | null): FindBarContr
     });
     btnClose.setAttribute("aria-label", t("Close"));
 
-    // 布局：input → count → prev↑ → next↓ → sep → Aa → .* → close
     bar.append(input, count, btnPrev, btnNext, sep, btnCase, btnRegex, btnClose);
     document.body.appendChild(bar);
 
-    // ── 状态 ─────────────────────────────────────────────
     let visible = false;
     let caseSensitive = false;
     let useRegex = false;
     let matchRanges: Range[] = [];
     let currentIdx = 0;
     let debounceTimer = 0;
-    /** 本轮搜索是否因达到上限被截断（计数显示「N+」） */
+    /** True when the match list hit MAX_MATCHES (the count then renders "N+"). */
     let truncated = false;
 
-    // ── 高亮更新 ─────────────────────────────────────────
     function updateHighlights() {
         if (!("highlights" in CSS)) { return; }
         if (!matchRanges.length) {
@@ -113,9 +113,8 @@ export function initFindBar(getEditorEl: () => HTMLElement | null): FindBarContr
         CSS.highlights.delete("find-highlight-current");
     }
 
-    // ── 搜索 ──────────────────────────────────────────────
     function search(query: string) {
-        if (!visible) return; // 双保险：关闭后任何迟到调用都不执行（见 close 的 timer 清理）
+        if (!visible) return; // Late call after close (see the timer cleanup there).
         matchRanges = [];
         currentIdx = 0;
         truncated = false;
@@ -140,7 +139,7 @@ export function initFindBar(getEditorEl: () => HTMLElement | null): FindBarContr
                 break;
             }
             for (const m of result.matches) {
-                // 聚合上限：匹配总数封顶 MAX_MATCHES（防单个 Highlight 注册海量 Range）
+                // Cap the total: one Highlight with thousands of Ranges is expensive.
                 if (matchRanges.length >= MAX_MATCHES) {
                     truncated = true;
                     break;
@@ -184,11 +183,10 @@ export function initFindBar(getEditorEl: () => HTMLElement | null): FindBarContr
         const node = r.startContainer;
         const el = node instanceof Element ? node : (node as ChildNode).parentElement;
         if (el) {
-            const FIND_SCROLL_OFFSET = 60;
-            const topbarH = document.querySelector(".milkdown-top-bar")?.getBoundingClientRect().height ?? DEFAULT_TOPBAR_HEIGHT;
+            const topbarH = topbarHeight();
             const rect = el.getBoundingClientRect();
             if (rect.top < topbarH + VIEWPORT_PADDING || rect.bottom > window.innerHeight - VIEWPORT_PADDING) {
-                window.scrollTo({ top: rect.top + window.scrollY - topbarH - FIND_SCROLL_OFFSET });
+                window.scrollTo({ top: rect.top + window.scrollY - topbarH - FIND_SCROLL_OFFSET_PX });
             }
         }
     }
@@ -203,7 +201,6 @@ export function initFindBar(getEditorEl: () => HTMLElement | null): FindBarContr
         scrollToMatch((currentIdx - 1 + matchRanges.length) % matchRanges.length);
     }
 
-    // ── 事件绑定 ─────────────────────────────────────────
     input.addEventListener("input", () => {
         clearTimeout(debounceTimer);
         debounceTimer = window.setTimeout(() => search(input.value), SEARCH_DEBOUNCE_MS);
@@ -240,10 +237,9 @@ export function initFindBar(getEditorEl: () => HTMLElement | null): FindBarContr
         search(input.value);
     });
 
-    // 阻止搜索栏内的 mousedown 冒泡，防止编辑器捕获
+    // Keep mousedown inside the bar away from the editor.
     bar.addEventListener("mousedown", (e) => e.stopPropagation());
 
-    // ── 公开 API ─────────────────────────────────────────
     function open(initialQuery?: string) {
         visible = true;
         bar.classList.add("find-bar--visible");
@@ -257,8 +253,8 @@ export function initFindBar(getEditorEl: () => HTMLElement | null): FindBarContr
 
     function close() {
         visible = false;
-        // 回归（P3）：此前不清防抖 timer——关闭后 150ms 内 pending 搜索照常执行，
-        // 高亮复活、计数写回隐藏栏、页面被 scrollToMatch 拽动
+        // Regression (P3): the pending debounce used to run after close, reviving highlights,
+        // writing the count into the hidden bar and scrolling the page.
         clearTimeout(debounceTimer);
         debounceTimer = 0;
         bar.classList.remove("find-bar--visible");

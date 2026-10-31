@@ -6,6 +6,13 @@ type OnPick = (file: File) => Promise<unknown>;
 type OnSelectProject = (relPath: string) => void;
 type OnUrl = (url: string) => void;
 
+let activePickerClose: (() => void) | null = null;
+
+/** Close the picker overlay if it is open (rebuild path: the overlay lives on document.body). */
+export function closeImagePicker(): void {
+    activePickerClose?.();
+}
+
 export function showImagePicker(
     onPick: OnPick,
     onSelectProject: OnSelectProject,
@@ -20,7 +27,6 @@ export function showImagePicker(
     const dialog = document.createElement("div");
     dialog.className = "epytor-img-picker";
 
-    // Tabs
     const tabs = document.createElement("div");
     tabs.className = "epytor-img-picker-tabs";
     const makeTab = (label: string, key: typeof activeTab) => {
@@ -46,7 +52,6 @@ export function showImagePicker(
     tabs.appendChild(tabProject);
     tabs.appendChild(tabUrl);
 
-    // Upload panel
     const panelUpload = document.createElement("div");
     panelUpload.className = "epytor-img-picker-panel";
     const dropZone = document.createElement("div");
@@ -55,17 +60,15 @@ export function showImagePicker(
     const fileInput = document.createElement("input");
     fileInput.type = "file"; fileInput.accept = "image/*";
     fileInput.style.display = "none";
-    // 不放进 dropZone：dropZone 的 click 处理器会调 fileInput.click()，若 input 嵌套其内，
-    // 合成 click 冒泡回 dropZone 将形成无界递归（回归：RangeError call stack 溢出）
+    // Keep the input outside dropZone: dropZone.click() forwards to fileInput.click(), and a
+    // nested input would bubble the synthetic click back → unbounded recursion (RangeError).
     panelUpload.appendChild(fileInput);
     panelUpload.appendChild(dropZone);
-    // 上传状态行（进行中/失败提示；默认隐藏）
     const uploadStatus = document.createElement("div");
     uploadStatus.className = "epytor-img-picker-status";
     uploadStatus.style.display = "none";
     panelUpload.appendChild(uploadStatus);
 
-    // URL panel
     const panelUrl = document.createElement("div");
     panelUrl.className = "epytor-img-picker-panel";
     panelUrl.style.display = "none";
@@ -83,12 +86,10 @@ export function showImagePicker(
     urlInput.addEventListener("keydown", (e) => { if (e.key === "Enter") urlInsertBtn.click(); });
     panelUrl.appendChild(urlInput);
     panelUrl.appendChild(urlInsertBtn);
-    // 路径自动补全：保存 detach，关闭对话框时必须移除 document 级监听——
-    // 回归：detach 被丢弃时每开一次选择器泄漏一个 document mousedown 监听，
-    // 且关闭后防抖回调可让下拉游离复活到页面左上角
+    // Keep the detach handle and drop it on close: a leaked document mousedown listener let the
+    // debounced suggestion re-open a stray dropdown after the dialog was gone.
     const detachComplete = attachImgPathComplete(urlInput);
 
-    // Project images panel
     const panelProject = document.createElement("div");
     panelProject.className = "epytor-img-picker-panel";
     panelProject.style.display = "none";
@@ -106,15 +107,17 @@ export function showImagePicker(
     dialog.appendChild(panelProject);
     overlay.appendChild(dialog);
 
-    // Close（先 detach 补全监听再移除 overlay）
+    // Detach autocomplete listeners before removing the overlay.
     const close = () => {
+        if (activePickerClose === close) { activePickerClose = null; }
         detachComplete();
         overlay.remove();
     };
+    activePickerClose = close;
     overlay.addEventListener("mousedown", (e) => { if (e.target === overlay) close(); });
 
-    // 上传提交：对话框保持打开直到成功（成功才关闭），失败展示错误并允许重试——
-    // 回归：选完文件立即关闭 + 宿主空 catch，上传失败完全静默、用户反复重试不知原因
+    // Keep the dialog open until the upload succeeds; on failure show the error and allow a
+    // retry (regression: closing immediately + a host-side empty catch made failures silent).
     async function submitFile(file: File): Promise<void> {
         dropZone.style.pointerEvents = "none";
         uploadStatus.style.display = "";
@@ -128,7 +131,6 @@ export function showImagePicker(
         }
     }
 
-    // Upload events
     dropZone.addEventListener("click", () => fileInput.click());
     dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("drag-over"); });
     dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
@@ -140,11 +142,10 @@ export function showImagePicker(
     });
     fileInput.addEventListener("change", () => {
         const f = fileInput.files?.[0];
-        fileInput.value = ""; // 同一文件重选也能再次触发 change（失败重试用）
+        fileInput.value = ""; // Allow re-picking the same file on retry.
         if (f) { void submitFile(f); }
     });
 
-    // Project images
     let imagesLoaded = false;
     function loadProjectImages(): void {
         if (imagesLoaded) return;

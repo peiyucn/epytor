@@ -1,21 +1,16 @@
 /**
- * 图床配置解析（纯函数，可单测；运行时不 import vscode）。
- *
- * 背景：1.2.0 将 `epytor.imageServerUrl` / `imageServerFieldName` /
- * `imageServerExtraParams` / `imageServerResponsePath` 四项合并为
- * `epytor.imageServer` 对象。旧 4 键保留但已弃用，解析时**新键优先、旧键兜底**，
- * 逐字段生效：新键提供了有效值就用新键，否则回退旧键，全无有效值才用默认值。
- * 解析只读配置，绝不改写用户 settings.json。
- *
- * 安全边界：multipart 表单的字段名与字段值都由这些配置拼接——key/value 一律剥掉
- * CRLF 与双引号（防请求头注入与 multipart 边界破坏）；fieldName 另走白名单
- * `/^[A-Za-z0-9_.\-]+$/`，非法值不得进入请求。
+ * Image server config resolution (pure; no runtime vscode import).
+ * Per field, a value in `epytor.imageServer` wins, the deprecated `epytor.imageServer*` keys fill
+ * the gaps, and defaults come last. Resolution only reads settings — it never rewrites the user's
+ * settings.json.
+ * Security: names and values are spliced into the multipart body, so both lose CRLF and quotes,
+ * and `fieldName` must match the whitelist pattern.
  */
 import type * as vscode from "vscode";
 
 export const DEFAULT_IMAGE_SERVER_FIELD_NAME = "file";
 export const DEFAULT_IMAGE_SERVER_RESPONSE_PATH = "url";
-/** fieldName 白名单（multipart Content-Disposition 的 name 参数） */
+/** Whitelist for the multipart `Content-Disposition` name parameter. */
 export const IMAGE_SERVER_FIELD_NAME_PATTERN = /^[A-Za-z0-9_.\-]+$/;
 
 export interface ImageServerSettings {
@@ -25,43 +20,39 @@ export interface ImageServerSettings {
     responsePath: string;
 }
 
-/** 弃用 4 键的原始值（未校验，逐字段兜底用） */
-export interface LegacyImageServerSettings {
+/** Raw values of the deprecated keys, unvalidated. */
+interface LegacyImageServerSettings {
     url?: unknown;
     fieldName?: unknown;
     extraParams?: unknown;
     responsePath?: unknown;
 }
 
-export type ImageServerIssueKind =
-    /** `epytor.imageServer` 整体不是对象 */
+type ImageServerIssueKind =
     | "settingsNotObject"
-    /** `extraParams` 不是对象（数组/字符串/数字/null 等） */
     | "extraParamsNotObject"
-    /** 弃用键 `imageServerExtraParams` 的 JSON 字符串解析失败 */
     | "extraParamsInvalidJson"
-    /** `extraParams` 的某个值不是字符串/数字/布尔（含嵌套对象、数组） */
     | "extraParamsUnsupportedValue";
 
+/** Every invalid value is reported here; callers must surface it, never ignore it silently. */
 export interface ImageServerIssue {
     kind: ImageServerIssueKind;
-    /** extraParamsUnsupportedValue：被忽略的键 */
+    /** Ignored keys, for `extraParamsUnsupportedValue`. */
     keys?: string[];
 }
 
-export interface ImageServerResolution {
+interface ImageServerResolution {
     settings: ImageServerSettings;
-    /** 非法配置（一律要求调用方给出用户可见反馈，不得静默忽略） */
     issues: ImageServerIssue[];
 }
 
-/** 本地化文案描述：message 为英文原文（l10n bundle 的键），args 为占位符实参 */
-export interface LocalizableIssueMessage {
+/** A l10n-ready message: `message` is the English source string, `args` its placeholders. */
+interface LocalizableIssueMessage {
     message: string;
     args: string[];
 }
 
-/** issue → 用户可见文案（调用方交给 `vscode.l10n.t` 翻译后展示） */
+/** Callers pass the result to `vscode.l10n.t`. */
 export function describeImageServerIssue(issue: ImageServerIssue): LocalizableIssueMessage {
     switch (issue.kind) {
         case "settingsNotObject":
@@ -91,15 +82,12 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-/**
- * 剥掉 CRLF 与双引号并 trim（multipart 头注入 / 边界破坏防护）。
- * 返回空串表示该值不可用。
- */
+/** Strip CRLF and quotes (header injection / boundary corruption); empty means unusable. */
 export function sanitizeMultipartText(value: string): string {
     return value.replace(/[\r\n"]/g, "").trim();
 }
 
-/** 逐字段取值：候选按优先级排列，第一个通过规范化（返回非 undefined）的生效 */
+/** The first candidate that normalizes to a value wins. */
 function firstValid<T>(
     candidates: unknown[],
     normalize: (value: unknown) => T | undefined,
@@ -124,7 +112,7 @@ function normalizeFieldName(value: unknown): string | undefined {
     return IMAGE_SERVER_FIELD_NAME_PATTERN.test(trimmed) ? trimmed : undefined;
 }
 
-/** 值 → multipart 字段值：仅字符串/数字/布尔可表达，其余（含嵌套对象、数组）返回 undefined */
+/** A multipart value can only be a string, finite number or boolean. */
 function normalizeParamValue(value: unknown): string | undefined {
     if (typeof value === "string") { return sanitizeMultipartText(value); }
     if (typeof value === "number" && Number.isFinite(value)) { return String(value); }
@@ -158,7 +146,7 @@ function normalizeExtraParams(input: unknown): {
     };
 }
 
-/** 弃用键的 extraParams（JSON 对象字符串）→ 对象；非法时给出 issue */
+/** The deprecated key holds a JSON object string; invalid JSON is reported, not thrown. */
 function parseLegacyExtraParams(raw: unknown): {
     params: Record<string, string>;
     issues: ImageServerIssue[];
@@ -174,10 +162,7 @@ function parseLegacyExtraParams(raw: unknown): {
     return normalizeExtraParams(parsed);
 }
 
-/**
- * 解析图床配置：新键 `epytor.imageServer` 优先，弃用 4 键兜底。
- * 任何非法配置都通过 issues 返回（调用方必须给用户可见反馈）。
- */
+/** New key per field, legacy fallback, defaults last; invalid input always lands in `issues`. */
 export function resolveImageServerConfig(
     server: unknown,
     legacy: LegacyImageServerSettings = {},
@@ -216,23 +201,19 @@ export function resolveImageServerConfig(
     return { settings: { url, fieldName, extraParams: extra.params, responsePath }, issues };
 }
 
-/** 图床目标（存储方式 / 上传地址）的来源 */
-export interface ServerStorageOrigin {
-    /** imageStorage 来自工作区级配置 */
+/** Which config level picked the upload target. */
+interface ServerStorageOrigin {
+    /** imageStorage came from workspace-level config. */
     storageFromWorkspace: boolean;
-    /** 生效的上传地址来自工作区级配置（新旧键都查） */
+    /** The effective upload URL matches a workspace-level candidate (old or new key). */
     urlFromWorkspace: boolean;
 }
 
 /**
- * 安全：判断图床目标是否由工作区级配置决定。
- *
- * 克隆仓库可随 `.vscode/settings.json` 注入 imageStorage=server 或
- * imageServer.url，把用户粘贴的图片上传到攻击者服务器；用户级全局配置是用户
- * 自己的选择，信任放行（与 imageLocalPath 同口径）。
- *
- * url 的判定口径：生效地址与任一处「工作区级」候选值文本相同（含新旧键）。
- * 宁可多降级一次，也不放过工作区级注入。
+ * Whether a cloned repo's `.vscode/settings.json` alone can pick the upload target
+ * (imageStorage=server or imageServer.url) and thus send pasted images to an attacker host.
+ * User-level config is the user's own choice. Any workspace-level candidate matching the
+ * effective URL counts — over-downgrading beats leaking.
  */
 export function readServerStorageOrigin(
     cfg: Pick<vscode.WorkspaceConfiguration, "inspect">,
@@ -262,12 +243,12 @@ export function readServerStorageOrigin(
     return { storageFromWorkspace, urlFromWorkspace };
 }
 
-/** 是否必须把已配置的 server 存储降级为本地（安全） */
+/** Downgrade server storage to local when workspace-level config can steer the target. */
 export function shouldDowngradeServerStorage(origin: ServerStorageOrigin): boolean {
     return origin.storageFromWorkspace || origin.urlFromWorkspace;
 }
 
-/** 从 VS Code 配置读取（`cfg` 为 `getConfiguration("epytor", uri)`） */
+/** Read from `getConfiguration("epytor", uri)`; the deprecated keys are the legacy fallbacks. */
 export function readImageServerConfig(
     cfg: Pick<vscode.WorkspaceConfiguration, "get">,
 ): ImageServerResolution {

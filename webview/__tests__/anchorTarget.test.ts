@@ -7,7 +7,7 @@
  */
 import { afterEach, describe, expect, it } from "vitest";
 import { CrepeBuilder } from "@milkdown/crepe";
-import { anchorIdCandidates } from "../utils/anchorTarget";
+import { anchorIdCandidates } from "../shell/anchorTarget";
 
 if (typeof (window as unknown as Record<string, unknown>).ResizeObserver === "undefined") {
     (window as unknown as Record<string, unknown>).ResizeObserver = class {

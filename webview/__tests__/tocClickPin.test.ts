@@ -3,7 +3,7 @@
  * 「点击 toc 没法精准定位到被点项，**内容少的时候比较明显**，内容多的时候基本没事」）。
  *
  * 为什么单开一个文件：本用例需要「可滚动量偏小」的桩测布局——这时阅读线（尾部逐级下滑，
- * 见 utils/headingSticky.ts 的 effectiveReadingLineY）与「被点项」对不上，纯几何判据会
+ * 见 outline/headingSticky.ts 的 effectiveReadingLineY）与「被点项」对不上，纯几何判据会
  * 把高亮推到别的项上。
  *
  * 判别力说明（自查过）：光断言「点完立刻高亮在 k」**不足以**证明钉住生效——点击处理器

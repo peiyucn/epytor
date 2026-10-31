@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { clampZoom, MERMAID_ZOOM_MAX, MERMAID_ZOOM_MIN } from "../utils/mermaidZoom";
+import { clampZoom, MERMAID_ZOOM_MAX, MERMAID_ZOOM_MIN } from "../code/mermaidZoom";
 import { enhanceMermaidPreview } from "../components/mermaidZoom";
 
 afterEach(() => {

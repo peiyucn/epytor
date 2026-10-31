@@ -7,13 +7,12 @@ import * as vscode from "vscode";
 import { planImageLocalDir } from "./imageLocalDir";
 import type { ImageServerSettings } from "./imageServerConfig";
 
-// ─── 常量 ────────────────────────────────────────────────────
 const MAX_ALT_TEXT_LENGTH = 20;
+/** A hung image server must not block the save chain forever. */
 const UPLOAD_TIMEOUT_MS = 30_000;
-/** 上传响应体大小上限（回归：chunks 无界累积可造成内存峰值） */
+/** Cap on the response body; without it a hostile server can drive memory growth. */
 const MAX_UPLOAD_RESPONSE_BYTES = 1024 * 1024;
 
-// 按点分路径从对象中提取值
 export function getByPath(obj: unknown, dotPath: string): unknown {
     return dotPath.split(".").reduce<unknown>((acc, key) => {
         if (acc != null && typeof acc === "object") {
@@ -23,7 +22,6 @@ export function getByPath(obj: unknown, dotPath: string): unknown {
     }, obj);
 }
 
-// 从 MIME type 推导扩展名
 export function mimeToExt(mimeType: string): string {
     const map: Record<string, string> = {
         "image/png": "png",
@@ -38,7 +36,6 @@ export function mimeToExt(mimeType: string): string {
     return map[mimeType] ?? "png";
 }
 
-// 生成不冲突的文件名
 export function generateFilename(altText: string, mimeType: string): string {
     const sanitized =
         (altText || "image")
@@ -52,7 +49,6 @@ export function generateFilename(altText: string, mimeType: string): string {
     return `${sanitized}_${ts}_${rand}.${ext}`;
 }
 
-// 检测目录是否存在
 async function dirExists(uri: vscode.Uri): Promise<boolean> {
     try {
         const stat = await vscode.workspace.fs.stat(uri);
@@ -62,7 +58,7 @@ async function dirExists(uri: vscode.Uri): Promise<boolean> {
     }
 }
 
-/** 按候选顺序返回第一个已存在的目录（都不存在返回 null） */
+/** First existing directory from `candidates`; null when none exists. */
 export async function firstExistingDir(candidates: string[]): Promise<string | null> {
     for (const candidate of candidates) {
         if (await dirExists(vscode.Uri.file(candidate))) { return candidate; }
@@ -71,22 +67,22 @@ export async function firstExistingDir(candidates: string[]): Promise<string | n
 }
 
 /**
- * 配置项是否来自工作区级设置（workspace / workspaceFolder）。
- * 工作区级配置随克隆仓库生效、内容不可信；用户级全局配置是用户自己的选择，信任放行。
+ * Workspace-level settings travel with a cloned repo and are untrusted; user-level settings are
+ * the user's own choice, so only the former are checked.
  */
 export function isWorkspaceLevelSetting(cfg: vscode.WorkspaceConfiguration, key: string): boolean {
     const inspect = cfg.inspect?.(key);
     return inspect?.workspaceValue !== undefined || inspect?.workspaceFolderValue !== undefined;
 }
 
-export interface SaveImageResult {
+interface SaveImageResult {
     relPath: string;
     absUri: vscode.Uri;
+    /** Workspace-level `imageLocalPath` was out of bounds, so the doc's own images dir was used. */
+    downgraded: boolean;
 }
 
-/**
- * 将图片保存到本地磁盘，返回相对于 .md 文件的路径和绝对 Uri
- */
+/** Save the image next to the document; see planImageLocalDir for target resolution. */
 export async function saveImageLocally(
     docUri: vscode.Uri,
     cfg: vscode.WorkspaceConfiguration,
@@ -97,8 +93,7 @@ export async function saveImageLocally(
     const ext = mimeToExt(mimeType);
     let targetDir: vscode.Uri;
 
-    // 目录解析与图库列举路径共用同一份纯逻辑（见 imageLocalDir.ts）：
-    // 自定义路径解析 + 工作区级越界降级 + 候选目录展开
+    // Target resolution is shared with the gallery listing path (imageLocalDir.ts).
     const plan = planImageLocalDir({
         customPath: cfg.get<string>("imageLocalPath", "").trim(),
         docDir: docUri.scheme === "file" ? path.dirname(docUri.fsPath) : null,
@@ -106,19 +101,20 @@ export async function saveImageLocally(
         workspaceLevel: isWorkspaceLevelSetting(cfg, "imageLocalPath"),
     });
 
+    // Workspace-level settings may not choose the directory: an out-of-bounds value is
+    // downgraded to the document's own images dir and must be reported to the user.
+    const localDirDowngraded = plan.kind === "fixed" && plan.downgraded;
+
     if (plan.kind === "fixed") {
-        // 自定义路径：绝对路径直接用，相对路径优先 workspace root 再退回 .md 目录。
-        // 边界校验仅针对「工作区级」配置（恶意仓库可随 .vscode/settings.json 注入、
-        // 把 imageLocalPath 指向任意目录如 ~/.ssh）；越界时 plan 已降级为
-        // <mdDir>/images。确保目录存在。
+        // Containment is enforced for workspace-level config only; the plan already downgraded.
         targetDir = vscode.Uri.file(plan.dir);
         await vscode.workspace.fs.createDirectory(targetDir);
     } else if (docUri.scheme !== "file") {
-        // untitled 文件降级保存到 home/images/
+        // Untitled document: it has no directory of its own, so fall back to ~/images.
         targetDir = vscode.Uri.file(path.join(os.homedir(), "images"));
         await vscode.workspace.fs.createDirectory(targetDir);
     } else {
-        // 自动检测：先在 workspace root 下找，再在 .md 同级目录找；都没有则在 .md 同级创建 images/
+        // Probe the workspace root first, then the document's own directory.
         const fallback = plan.fallbackDir ?? path.join(path.dirname(docUri.fsPath), "images");
         const found = await firstExistingDir(plan.candidates);
         targetDir = vscode.Uri.file(found ?? fallback);
@@ -127,13 +123,13 @@ export async function saveImageLocally(
         }
     }
 
-    // ── 去重：MD5 比对目录内同扩展名文件 ────────────────
+    // Reuse an existing file with identical bytes instead of writing a duplicate copy.
     const newHash = crypto.createHash("md5").update(data).digest("hex");
     let entries: [string, vscode.FileType][] = [];
     try {
         entries = await vscode.workspace.fs.readDirectory(targetDir);
     } catch {
-        /* ignore */
+        /* unreadable directory: nothing to compare against */
     }
     for (const [name, type] of entries) {
         if (type !== vscode.FileType.File) {
@@ -147,7 +143,7 @@ export async function saveImageLocally(
         try {
             existingData = await vscode.workspace.fs.readFile(existingUri);
         } catch {
-            /* ignore */
+            /* unreadable file: skip it */
         }
         if (!existingData) {
             continue;
@@ -157,9 +153,8 @@ export async function saveImageLocally(
             .update(existingData)
             .digest("hex");
         if (existingHash === newHash) {
-            // 复用已有文件
             const relPath = buildRelPath(docUri, existingUri);
-            return { relPath, absUri: existingUri };
+            return { relPath, absUri: existingUri, downgraded: localDirDowngraded };
         }
     }
 
@@ -168,12 +163,12 @@ export async function saveImageLocally(
     await vscode.workspace.fs.writeFile(fileUri, data);
 
     const relPath = buildRelPath(docUri, fileUri);
-    return { relPath, absUri: fileUri };
+    return { relPath, absUri: fileUri, downgraded: localDirDowngraded };
 }
 
 export function buildRelPath(docUri: vscode.Uri, fileUri: vscode.Uri): string {
     if (docUri.scheme !== "file") {
-        return fileUri.fsPath; // untitled：返回绝对路径
+        return fileUri.fsPath; // untitled: absolute path, there is no document directory
     }
     const mdDir = path.dirname(docUri.fsPath);
     let rel = path.relative(mdDir, fileUri.fsPath).replace(/\\/g, "/");
@@ -184,10 +179,8 @@ export function buildRelPath(docUri: vscode.Uri, fileUri: vscode.Uri): string {
 }
 
 /**
- * 上传图片到远程服务器，返回图片 URL。
- *
- * `settings` 必须来自 `readImageServerConfig` / `resolveImageServerConfig`
- * （已做白名单、CRLF/引号剥离与类型校验），本函数不再直接读配置。
+ * Upload the image and return its URL. `settings` must come from readImageServerConfig /
+ * resolveImageServerConfig (already whitelisted and stripped); this function reads no config.
  */
 export async function uploadImageToServer(
     settings: ImageServerSettings,
@@ -204,14 +197,12 @@ export async function uploadImageToServer(
     const responsePath = settings.responsePath;
     const extraParams = settings.extraParams;
 
-    // 构建 multipart/form-data
     const boundary = `----FormBoundary${Date.now().toString(16)}`;
     const filename = generateFilename(altText, mimeType);
     const CRLF = "\r\n";
 
     const parts: Buffer[] = [];
 
-    // 额外参数
     for (const [key, value] of Object.entries(extraParams)) {
         parts.push(
             Buffer.from(
@@ -222,7 +213,6 @@ export async function uploadImageToServer(
         );
     }
 
-    // 图片文件
     parts.push(
         Buffer.from(
             `--${boundary}${CRLF}` +
@@ -257,7 +247,7 @@ export async function uploadImageToServer(
             res.on("data", (chunk: Buffer) => {
                 totalBytes += chunk.length;
                 if (totalBytes > MAX_UPLOAD_RESPONSE_BYTES) {
-                    // 响应体大小上限：直接结算（不依赖 error 事件），destroy 断开连接
+                    // Settle here: destroy() may not emit "error", and the promise must not hang.
                     req.destroy();
                     reject(new Error(vscode.l10n.t("Upload response exceeds {0} bytes", MAX_UPLOAD_RESPONSE_BYTES)));
                     return;
@@ -271,7 +261,6 @@ export async function uploadImageToServer(
 
         req.on("error", reject);
 
-        // 30 秒超时
         req.setTimeout(UPLOAD_TIMEOUT_MS, () => {
             req.destroy(new Error(vscode.l10n.t("Image upload timed out after {0}s", UPLOAD_TIMEOUT_MS / 1000)));
         });
@@ -284,8 +273,7 @@ export async function uploadImageToServer(
     try {
         parsed = JSON.parse(responseBody);
     } catch {
-        // 不回显响应体（回归：服务器响应可能回显请求参数——imageServerExtraParams
-        // 可能含 token，原样进错误提示与 WebView 面板）
+        // Never echo the body: a server may mirror request params, and extraParams can hold a token.
         throw new Error(vscode.l10n.t("Server returned a non-JSON response"));
     }
 

@@ -52,7 +52,7 @@ import {
     BUBBLE_BOUNDARY_PADDING,
     BUBBLE_MIN_WIDTH,
     placeBubble,
-} from "@/utils/bubbleBoundary";
+} from "@/editor/bubbleBoundary";
 import { textblockTypeInputRule } from "@milkdown/kit/prose/inputrules";
 import { defineComponent, h, shallowRef, createApp } from "vue";
 import type { App, ShallowRef, VNodeRef } from "vue";
@@ -385,7 +385,7 @@ function placeInsideContentViewport(): Middleware {
                 ? Math.max(0, topBar.getBoundingClientRect().bottom)
                 : 0;
 
-            // 定位算法在 utils/bubbleBoundary.ts（纯函数，可直测）——
+            // 定位算法在 editor/bubbleBoundary.ts（纯函数，可直测）——
             // 这里只负责把浏览器实测的几何喂给它。
             return placeBubble(
                 rects.reference,

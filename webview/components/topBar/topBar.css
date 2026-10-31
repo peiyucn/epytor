@@ -1,0 +1,155 @@
+/*
+ * Top bar chrome owned by this component: the brand mark, the fixed bar itself, its buttons
+ * and the heading dropdown. Moved out of the global style.css; loaded after it (cascade order
+ * changed, but a pairwise check found no same-specificity conflicts, 2026-10-29).
+ * Collapse-guard rules stay in style.css because they are viewport geometry, not bar styling.
+ */
+
+/* Brand mark; absolute so it stays out of the flex flow. */
+.epytor-brand {
+    position: absolute;
+    left: 12px;
+    top: 0;
+    line-height: 36px;
+    font-size: 13px;
+    font-style: italic;
+    font-weight: 600;
+    color: var(--vscode-editor-foreground);
+    user-select: none;
+    pointer-events: none;
+}
+
+/* Crepe top bar pinned with position: fixed. */
+.milkdown .milkdown-top-bar {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 102;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    /* Room for the fixed overflow "⋯" button, which is not a child of this bar. */
+    padding: 0 40px 0 85px;
+    background: color-mix(in srgb, color-mix(in srgb, var(--vscode-editor-background) 93%, #808080) 85%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: none !important;
+    flex-wrap: nowrap;
+}
+
+.milkdown .milkdown-top-bar .top-bar-inner {
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: nowrap;
+    overflow: visible;
+}
+
+.milkdown .milkdown-top-bar .top-bar-item {
+    min-width: 26px !important;
+    width: auto !important;
+    height: 24px !important;
+    margin: 0 2px !important;
+    padding: 0 4px !important;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    transition: background 0.1s, border-color 0.1s;
+}
+.milkdown .milkdown-top-bar .top-bar-item:hover {
+    background: var(--vscode-toolbar-hoverBackground, rgba(128,128,128,0.2));
+    border-color: var(--vscode-toolbar-hoverOutline, transparent);
+}
+.milkdown .milkdown-top-bar .top-bar-item.active {
+    background: var(--vscode-toolbar-activeBackground, rgba(128,128,128,0.3));
+}
+
+.milkdown .milkdown-top-bar .top-bar-item svg {
+    color: var(--vscode-editor-foreground) !important;
+    fill: var(--vscode-editor-foreground) !important;
+    width: 18px !important;
+    height: 18px !important;
+}
+.milkdown .milkdown-top-bar .top-bar-item.active svg {
+    color: var(--vscode-focusBorder, #007acc) !important;
+    fill: var(--vscode-focusBorder, #007acc) !important;
+}
+
+.milkdown .milkdown-top-bar .top-bar-divider {
+    width: 1px;
+    height: 18px;
+    margin: 0 4px;
+    background: var(--vscode-panel-border, rgba(128,128,128,0.3));
+    flex-shrink: 0;
+}
+
+.milkdown .milkdown-top-bar .top-bar-heading-selector {
+    position: relative;
+    flex-shrink: 0;
+    padding: 0;
+}
+.milkdown .milkdown-top-bar .top-bar-heading-button {
+    display: flex !important;
+    align-items: center;
+    gap: 2px;
+    height: 24px !important;
+    padding: 0 4px 0 8px !important;
+    background: transparent;
+    color: var(--vscode-editor-foreground) !important;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    font-size: 12px !important;
+    box-sizing: border-box !important;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.1s;
+}
+.milkdown .milkdown-top-bar .top-bar-heading-button:hover {
+    background: var(--vscode-toolbar-hoverBackground, rgba(128,128,128,0.2));
+}
+.milkdown .milkdown-top-bar .top-bar-heading-label {
+    display: inline-block !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    width: 22px !important;
+    min-width: 22px !important;
+    text-align: center;
+    line-height: 20px !important;
+    color: var(--vscode-editor-foreground) !important;
+}
+.milkdown .milkdown-top-bar .top-bar-heading-button .top-bar-chevron {
+    width: 14px;
+    height: 14px;
+}
+.milkdown .milkdown-top-bar .top-bar-heading-button .top-bar-chevron svg {
+    width: 12px !important;
+    height: 12px !important;
+    color: var(--vscode-editor-foreground) !important;
+    fill: var(--vscode-editor-foreground) !important;
+}
+.milkdown .milkdown-top-bar .top-bar-heading-dropdown {
+    margin-top: 4px;
+    min-width: 100% !important;
+    width: auto !important;
+    background: var(--vscode-dropdown-background, var(--vscode-editorWidget-background));
+    border: none;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    border-radius: 6px;
+    padding: 4px;
+}
+.milkdown .milkdown-top-bar .top-bar-heading-option {
+    font-size: 12px;
+    padding: 4px 10px;
+    color: var(--vscode-editor-foreground);
+    line-height: 18px;
+    border-radius: 4px;
+}
+.milkdown .milkdown-top-bar .top-bar-heading-option:hover {
+    background: var(--vscode-list-hoverBackground);
+}
+.milkdown .milkdown-top-bar .top-bar-heading-option.active {
+    color: var(--vscode-focusBorder, #007acc);
+}

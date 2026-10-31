@@ -1,8 +1,8 @@
 import "./pathLink.css";
 import { notifyOpenFile } from "@/messaging";
+import { isModifierActive, onModifierChange } from "@/ui/modifierKeys";
 
-// ── 路径检测正则 ──────────────────────────────────────────────────────
-// 匹配：@/path、./path、../path、dir/file、file.ext
+// Matches @/path, ./path, ../path, dir/file and file.ext (with an optional :line / :line-range).
 const PATH_REGEX =
     /^(@\/[^\s]+|\.{1,2}\/[^\s]+|[a-zA-Z0-9_-][a-zA-Z0-9._-]*\/[^\s]+|[a-zA-Z0-9_-][a-zA-Z0-9._-]*\.[a-zA-Z][a-zA-Z0-9]*(#\d+(-\d+)?)?)$/;
 
@@ -10,8 +10,7 @@ function isPathLike(text: string): boolean {
     return PATH_REGEX.test(text.trim());
 }
 
-// 判断 <code> 元素是否可响应路径跳转：
-//   排除 pre > code（代码块）、<a> > code（已是链接）、内容不像路径
+// Eligible: a <code> that is not inside a code block or an existing link and looks like a path.
 function isEligibleCode(el: Element): boolean {
     if (el.tagName !== "CODE") return false;
     if (el.closest("pre")) return false;
@@ -20,9 +19,6 @@ function isEligibleCode(el: Element): boolean {
 }
 
 export function setupPathLink(container: HTMLElement): void {
-    const isMac = window.__i18n?.isMac ?? false;
-
-    let cmdHeld = false;
     let activeCode: Element | null = null;
     let lastHoveredCode: Element | null = null;
 
@@ -39,36 +35,24 @@ export function setupPathLink(container: HTMLElement): void {
         activeCode = null;
     }
 
-    // ── 修饰键追踪 ──────────────────────────────────────────────────
-    document.addEventListener("keydown", (e) => {
-        if (isMac ? e.key === "Meta" : e.key === "Control") {
-            cmdHeld = true;
-            // 先按 Cmd 后悬浮的场景：鼠标已在目标上，立即高亮
-            if (lastHoveredCode && isEligibleCode(lastHoveredCode)) {
-                highlight(lastHoveredCode);
-            }
-        }
-    });
-
-    document.addEventListener("keyup", (e) => {
-        if (isMac ? e.key === "Meta" : e.key === "Control") {
-            cmdHeld = false;
+    // Ctrl/Meta tracking is shared with the CSS body class (ui/modifierKeys); page-lifecycle
+    // setup, so the subscription is never torn down.
+    onModifierChange((held) => {
+        if (!held) {
             unhighlight();
+            return;
+        }
+        // Modifier pressed while already hovering: highlight immediately.
+        if (lastHoveredCode && isEligibleCode(lastHoveredCode)) {
+            highlight(lastHoveredCode);
         }
     });
 
-    // Cmd+Tab 切走时 keyup 不会触发，通过 blur 重置
-    window.addEventListener("blur", () => {
-        cmdHeld = false;
-        unhighlight();
-    });
-
-    // ── 鼠标悬浮 ────────────────────────────────────────────────────
     container.addEventListener("mouseover", (e) => {
         const code = (e.target as Element).closest("code");
         if (code && isEligibleCode(code)) {
             lastHoveredCode = code;
-            if (cmdHeld) highlight(code);
+            if (isModifierActive()) highlight(code);
         } else {
             lastHoveredCode = null;
             unhighlight();
@@ -77,13 +61,12 @@ export function setupPathLink(container: HTMLElement): void {
 
     container.addEventListener("mouseout", (e) => {
         const related = e.relatedTarget as Node | null;
-        // 若鼠标仍在 activeCode 内部（如移向子节点），不清除高亮
+        // Moving into a child keeps the code element highlighted.
         if (activeCode && related && activeCode.contains(related)) return;
         lastHoveredCode = null;
-        if (cmdHeld) unhighlight();
+        if (isModifierActive()) unhighlight();
     });
 
-    // ── Cmd+Click ────────────────────────────────────────────────────
     container.addEventListener("click", (e) => {
         const me = e as MouseEvent;
         if (!me.metaKey && !me.ctrlKey) return;

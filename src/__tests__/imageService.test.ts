@@ -194,6 +194,24 @@ describe("saveImageLocally — MD5 去重", () => {
         expect(result.relPath).toMatch(/\.png$/);
     });
 
+    it("工作区级 imageLocalPath 越界时 应该 标 downgraded（上层据此提示用户）", async () => {
+        // Workspace-level settings may not escape the workspace: the plan downgrades to
+        // <docDir>/images. Without the flag the user would believe the configured dir was used.
+        const cfg = {
+            get: vi.fn((key: string, def?: unknown) => (key === "imageLocalPath" ? "../../outside" : def)),
+            inspect: vi.fn(() => ({ workspaceValue: "../../outside" })),
+        };
+        const result = await saveImageLocally(docUri, cfg as never, imageData, "image/png", "photo");
+        expect(result.downgraded).toBe(true);
+        expect(result.relPath).toMatch(/^\.\/images\//);
+    });
+
+    it("普通文档相对目录 应该 不标 downgraded", async () => {
+        const cfg = { get: vi.fn((_key: string, def?: unknown) => def), inspect: vi.fn(() => ({})) };
+        const result = await saveImageLocally(docUri, cfg as never, imageData, "image/png", "photo");
+        expect(result.downgraded).toBe(false);
+    });
+
     it("目录中存在相同 MD5 的同扩展名文件时复用，不重复写入", async () => {
         // 模拟目录中已有一个 .png 文件
         const existingName = "photo_abc123_def4.png";

@@ -1,50 +1,38 @@
 /**
- * 将 Markdown 内容映射为「渲染块行区间表」（用于行号映射、滚动同步定位）。
- *
- * 关键约束：**这张表必须与编辑器的块结构一一对应**。webview 侧按
- * `view.state.doc` 的顶层子节点顺序取 DOM 块（见 webview/index.ts 的
- * getContentBlockElements），表项与块按索引对齐；一旦两者错位，滚动同步就会
- * 整体偏移——行号越靠后偏差越大（回归：用户实测「源码在 3. 保存链路，切回预览
- * 跑到 6」「预览切源码完全无法定位」）。
- *
- * 历史坑：旧实现按「空行分段」扫行——列表项之间有空行时每个列表项各成一段，
- * 而 CommonMark 把它们解析成**一个** list 块。实测一份 554 行清单：DOM 块 142 个、
- * 旧表 232 项，整体错位最多 90 块。现在改用与渲染端同一套解析（remark + GFM + math）
- * 取 mdast 顶层节点的真实起止行，块数与块序都与渲染结果一致。
+ * Line ranges of rendered blocks, for scroll sync and go-to-line. They must line up one-to-one
+ * with the editor's top-level blocks (webview blocks follow `view.state.doc` child order), so an
+ * offset shifts sync for every later block. Ranges come from the same remark+GFM+math parse as
+ * the renderer; the old blank-line scan made a spaced list one block per item (142 DOM blocks vs
+ * 232 entries in a 554-line file).
+ * Regression: source→preview jumps landed in the wrong block.
  */
-export interface LineRange {
-    start: number;
-    end: number;
-}
-
 import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 
-/** mdast 顶层节点在本模块用到的最小形状（不引 @types/mdast，避免多一份类型依赖） */
+export interface LineRange {
+    start: number;
+    end: number;
+}
+
+/** Minimal mdast shape; avoids depending on @types/mdast. */
 interface MdastTopLevelNode {
     type: string;
     position?: { start: { line: number }; end: { line: number } };
 }
 
-/**
- * 不产生编辑器块的 mdast 顶层节点：链接引用定义、脚注定义、frontmatter。
- * 它们必须从表里剔除，否则块索引会整体后移。
- */
+/** Top-level node types that render no editor block; keeping them would shift every index. */
 const NON_RENDERED_NODE_TYPES = new Set(["definition", "footnoteDefinition", "yaml", "toml"]);
 
-/** 与 webview 渲染端同口径的解析器（GFM 表格/任务列表 + $..$ 数学） */
+/** Same parser and extensions as the renderer (GFM tables/task lists, $..$ math). */
 const parser = unified().use(remarkParse).use(remarkGfm).use(remarkMath);
 
-/**
- * 最近一次解析结果缓存（单条）：保存链路会在内容未变时重复请求映射
- * （原生 autoSave、切标签前的落盘），解析一份大文档约 100ms，不值得重算。
- */
+/** Cache: unchanged-content saves re-request the map, and a large document parses in ~100ms. */
 let cachedContent: string | undefined;
 let cachedRanges: LineRange[] = [];
 
-/** 渲染块行区间表（1-indexed 闭区间，与 mdast 顶层节点同序） */
+/** 1-indexed closed ranges, in mdast top-level node order. */
 export function computeLineRanges(content: string): LineRange[] {
     if (content === cachedContent) { return cachedRanges; }
     const tree = parser.parse(content) as unknown as { children: MdastTopLevelNode[] };
@@ -61,7 +49,7 @@ export function computeLineRanges(content: string): LineRange[] {
     return ranges;
 }
 
-/** 从完整内容中切出 YAML frontmatter 与其行数（与 contentTransform 同口径，避免循环依赖） */
+/** Regex mirrors contentTransform.extractFrontmatter, so both agree on where the body starts. */
 function splitFrontmatter(content: string): { frontmatterLines: number; body: string } {
     const match = content.match(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/);
     if (!match) return { frontmatterLines: 0, body: content };
@@ -69,10 +57,8 @@ function splitFrontmatter(content: string): { frontmatterLines: number; body: st
 }
 
 /**
- * 渲染块行区间表（显示口径）：ranges[i] = 第 i 个**正文块**在完整源码中的起止行。
- *
- * 回归（用户实测：源码/预览来回切，光标总回到 1 行 1 列）：frontmatter 不是渲染块，
- * 行号表必须跳过它，否则块索引与行号表错位一格。
+ * Display ranges: `ranges[i]` = source lines of the i-th body block. Frontmatter renders no
+ * block, so it is skipped and its line count re-added; otherwise every index is off by one.
  */
 export function computeDisplayLineRanges(content: string): LineRange[] {
     const { frontmatterLines, body } = splitFrontmatter(content);

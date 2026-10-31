@@ -1,16 +1,21 @@
 import { notifyGetPathSuggestions } from "@/messaging";
 import { getFileIcon } from "./fileIcons";
 import type { EditorView } from "@milkdown/kit/prose/view";
-import { createPathDropdown } from "@/ui/pathCompleteCore";
-import { PATH_COMPLETE_DEBOUNCE_MS, PATH_COMPLETE_RETRIGGER_DELAY_MS, PATH_PREFIX_REGEX } from "../../../shared/constants";
-import { beginPathSuggestionRequest } from "@/utils/pathSuggestionRequests";
+import {
+    createCompletionTeardown,
+    createPathDropdown,
+    renderPathSuggestionItem,
+    retriggerCompletionAfterDirectoryPick,
+} from "@/ui/pathCompleteCore";
+import { PATH_COMPLETE_DEBOUNCE_MS, PATH_PREFIX_REGEX } from "../../../shared/constants";
+import { beginPathSuggestionRequest } from "@/images/pathSuggestionRequests";
 import type { PathSuggestionItem } from "../../../shared/messages";
 
 const PATH_ACTIVE_CLASS = "path-complete-item--active";
 
 type SuggestionItem = PathSuggestionItem;
 
-/** 获取当前光标所在的 inline code 元素（排除 pre>code 和 a>code） */
+/** Current inline <code> at the caret (excludes pre>code and a>code). */
 function getActiveInlineCode(): HTMLElement | null {
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) { return null; }
@@ -25,7 +30,7 @@ function getActiveInlineCode(): HTMLElement | null {
     return code as HTMLElement;
 }
 
-/** 通过当前 ProseMirror 选区位置查找 inlineCode mark 的文本范围 */
+/** InlineCode mark range under the selection (null when the caret is not in such a mark). */
 function getCodeNodeRangeFromSelection(view: EditorView): { from: number; to: number } | null {
     const { state } = view;
     const codeMark = state.schema.marks["inlineCode"];
@@ -48,7 +53,12 @@ function getCodeNodeRangeFromSelection(view: EditorView): { from: number; to: nu
     return from !== undefined && to !== undefined ? { from, to } : null;
 }
 
-export function initPathComplete(getEditorViewFn: () => EditorView | null): void {
+/**
+ * Inline-code path completion. Page-lifecycle singleton: the webview calls it once per page,
+ * so no rebuild path tears it down. The returned detach exists for tests and keeps the
+ * listener/timer cleanup contract explicit.
+ */
+export function initPathComplete(getEditorViewFn: () => EditorView | null): () => void {
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     let savedRange: { from: number; to: number } | null = null;
 
@@ -56,16 +66,11 @@ export function initPathComplete(getEditorViewFn: () => EditorView | null): void
         listClass: "path-complete-list",
         itemClass: "path-complete-item",
         activeClass: PATH_ACTIVE_CLASS,
-        renderItem: (item) => {
-            const iconEl = document.createElement("span");
-            iconEl.className = "path-complete-icon";
-            iconEl.innerHTML = getFileIcon(item.path, item.isDir);
-            const lastSeg = item.path.replace(/\/$/, '').split('/').pop() ?? item.path;
-            const label = document.createElement("span");
-            label.className = "path-complete-label";
-            label.textContent = lastSeg;
-            return `${iconEl.outerHTML}${label.outerHTML}`;
-        },
+        renderItem: (item) => renderPathSuggestionItem(item, {
+            iconHtml: getFileIcon(item.path, item.isDir),
+            iconClass: "path-complete-icon",
+            labelClass: "path-complete-label",
+        }),
         getTitle: (item) => item.path,
         onClose: () => { savedRange = null; },
         onSelect: (item) => applySelection(item),
@@ -89,11 +94,10 @@ export function initPathComplete(getEditorViewFn: () => EditorView | null): void
         view.focus();
 
         if (item.isDir) {
-            dropdown.close();
-            setTimeout(() => {
+            retriggerCompletionAfterDirectoryPick(dropdown, () => {
                 const newCode = getActiveInlineCode();
                 if (newCode) { triggerSuggest(newCode); }
-            }, PATH_COMPLETE_RETRIGGER_DELAY_MS);
+            });
         } else {
             dropdown.close();
         }
@@ -106,7 +110,7 @@ export function initPathComplete(getEditorViewFn: () => EditorView | null): void
             return;
         }
 
-        // 请求登记与超时清理统一走 pathSuggestionRequests（回归 P4：此前手写 Map + setTimeout）
+        // Request registration and timeout cleanup live in pathSuggestionRequests (P4: hand-rolled Map+setTimeout).
         const handle = beginPathSuggestionRequest();
         handle.promise.then((items) => {
             const currentCode = getActiveInlineCode();
@@ -118,17 +122,16 @@ export function initPathComplete(getEditorViewFn: () => EditorView | null): void
                 { left: rect.left + window.scrollX, top: rect.bottom + window.scrollY + 2 },
                 items,
             );
-        }).catch(() => { /* 超时/取消：静默放弃，下拉不复活 */ });
+        }).catch(() => { /* timeout/cancel: give up silently, never revive the dropdown */ });
         notifyGetPathSuggestions(handle.id, query);
     }
 
-    // 键盘导航（capture 阶段，优先于编辑器处理）
-    document.addEventListener("keydown", (e) => {
+    // Capture phase: the dropdown must see keys before the editor.
+    function onKeydown(e: KeyboardEvent): void {
         dropdown.handleKeydown(e);
-    }, true);
+    }
 
-    // 输入时触发补全（debounce 200ms）
-    document.addEventListener("keyup", (e) => {
+    function onKeyup(e: KeyboardEvent): void {
         if (["Escape", "ArrowDown", "ArrowUp", "Enter", "Tab"].includes(e.key)) { return; }
 
         const code = getActiveInlineCode();
@@ -142,17 +145,35 @@ export function initPathComplete(getEditorViewFn: () => EditorView | null): void
             debounceTimer = null;
             triggerSuggest(code);
         }, PATH_COMPLETE_DEBOUNCE_MS);
-    });
+    }
 
-    // 点击其他区域关闭下拉
-    document.addEventListener("mousedown", (e) => {
+    function onMousedown(e: MouseEvent): void {
         if (dropdown.isOpen() && !dropdown.contains(e.target as Node)) {
             dropdown.close();
         }
-    }, true);
+    }
 
-    // 失焦关闭
-    window.addEventListener("blur", () => {
+    function onWindowBlur(): void {
         dropdown.close();
+    }
+
+    document.addEventListener("keydown", onKeydown, true);
+    document.addEventListener("keyup", onKeyup);
+    document.addEventListener("mousedown", onMousedown, true);
+    window.addEventListener("blur", onWindowBlur);
+
+    const teardown = createCompletionTeardown({
+        clearTimer: () => {
+            if (debounceTimer) { clearTimeout(debounceTimer); debounceTimer = null; }
+        },
+        closeDropdown: () => dropdown.close(),
+        removeListeners: () => {
+            document.removeEventListener("keydown", onKeydown, true);
+            document.removeEventListener("keyup", onKeyup);
+            document.removeEventListener("mousedown", onMousedown, true);
+            window.removeEventListener("blur", onWindowBlur);
+        },
     });
+
+    return () => teardown.dispose();
 }

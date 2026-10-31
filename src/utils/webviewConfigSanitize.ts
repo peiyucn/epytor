@@ -1,24 +1,20 @@
 /**
- * WebView HTML 注入前的配置值净化（纯函数，可单测）。
+ * Sanitize configuration values before they are interpolated into the webview HTML
+ * (pure, unit-tested).
  *
- * 背景（安全）：workspace 级配置随克隆仓库生效，恶意 .vscode/settings.json 可注入
- * 任意值；未经净化的字符串直接拼入 <style> / 内联 <script> 可逃逸标签注入任意
- * HTML/CSS（钓鱼 UI、属性选择器信标外传等）。此处统一做边界校验，非法值回退安全
- * 默认值——净化后的值再进模板插值。
+ * Workspace-level settings travel with a cloned repo and are untrusted: an unsanitized value
+ * could escape `<style>` or the inline `<script>` and inject markup (phishing UI, CSS beacons).
  */
 
 export const DEFAULT_CODE_BLOCK_MAX_HEIGHT = 600;
 export const DEFAULT_EDITOR_MAX_WIDTH = 900;
-/** 与 package.json contributes.configuration 的 minimum 对齐（out-of-range 一律回退默认值） */
+/** Out-of-range values fall back to the default; aligned with the schema minimums. */
 export const MIN_CODE_BLOCK_MAX_HEIGHT = 100;
 export const MIN_EDITOR_MAX_WIDTH = 400;
-/** 与 schema 的 maximum 对齐 */
-export const MAX_CSS_NUMBER = 10_000;
+/** Aligned with the schema maximum. */
+const MAX_CSS_NUMBER = 10_000;
 
-/**
- * CSS 数值：必须是有限数且落在 [min, max] 内（防 `0;}</style><script>` 类注入与离谱值），
- * 否则回退。min/max 与配置 schema 的 minimum/maximum 保持同一口径。
- */
+/** Finite number within [min, max], otherwise `fallback`. */
 export function sanitizeCssNumber(
     value: unknown,
     fallback: number,
@@ -31,7 +27,7 @@ export function sanitizeCssNumber(
     return Math.round(value);
 }
 
-/** 序列化模式白名单（值进入内联脚本 JSON 前必须收敛到枚举，防 `</script>` 逃逸） */
+/** Whitelist, so the value cannot break out of the inline script JSON. */
 export function sanitizeSerializationMode(value: unknown): "clean" | "compatible" {
     return value === "compatible" ? "compatible" : "clean";
 }

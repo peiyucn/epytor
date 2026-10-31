@@ -3,7 +3,7 @@
  * 纯计算部分：层级 3 档循环，有序 1./a)/i.，无序 ●/■/◆。
  */
 import { describe, expect, it } from "vitest";
-import { computeListMarker, toLowerAlpha, toLowerRoman } from "../utils/listMarker";
+import { computeListMarker, toLowerAlpha, toLowerRoman } from "../markdown/listMarker";
 
 describe("多级列表标记：序号格式", () => {
     it("小写罗马数字 应该 覆盖常见值", () => {

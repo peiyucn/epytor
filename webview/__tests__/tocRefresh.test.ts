@@ -168,7 +168,7 @@ describe("输入正文时 TOC 不重建（回归：目录内容一下一下闪�
     it("标题位置平移后、下一次防抖刷新之前 高亮 不应该 中途消失（回归：高亮灭一下再亮）", async () => {
         setViewport(1024, 768);
         Object.defineProperty(document.documentElement, "scrollHeight", { get: () => 5000, configurable: true });
-        const { list, refresh } = await mount();
+        const { list } = await mount();
 
         // 先建立高亮：scrollY=400 时「1.1 小节」已划过阅读线
         window.dispatchEvent(new Event("scroll"));

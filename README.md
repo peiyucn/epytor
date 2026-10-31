@@ -24,6 +24,7 @@ A WYSIWYG Markdown editor for VS Code, powered by [Milkdown](https://milkdown.de
 * **Frontmatter**: editable key/value panel
 * **Path autocomplete**: `@/`, `./`, `../` triggers directory browsing
 * **Toolbars**: sticky top bar + floating selection toolbar + overflow menu on narrow windows
+* **Status bar**: line / word / character counts for the current document plus its size **on disk** (`Size: 12.3 KB`), refreshed after saving and after external writes
 * **Auto save**: follows the built-in VS Code `files.autoSave` setting (`off` / `afterDelay` / `onFocusChange` / `onWindowChange`)
 * **Clean Markdown save**: minimizes unnecessary escaping and redundant table breaks
 

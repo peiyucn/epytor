@@ -4,7 +4,7 @@
  * 根因是复用吸顶行栈的最内层：两节交替的那几帧它会退化成父标题（在上面、早已过去）。
  */
 import { describe, expect, it } from "vitest";
-import { currentHeadingIndex, computeStickyRows, effectiveReadingLineY, type StickyHeadingRect } from "../utils/headingSticky";
+import { currentHeadingIndex, computeStickyRows, effectiveReadingLineY, type StickyHeadingRect } from "../outline/headingSticky";
 
 /** 构造：depth/top/sectionBottom（视口坐标，顺序即文档顺序） */
 const h = (depth: number, top: number, sectionBottom: number): StickyHeadingRect => ({ depth, top, sectionBottom });

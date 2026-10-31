@@ -1,42 +1,54 @@
 /**
- * 顶栏装饰（从 webview/index.ts 提取）：自定义 tooltip 注入 + EPYTOR 品牌标识注入。
- * 依赖 Crepe 顶栏 DOM 顺序渲染，用 MutationObserver 扫描（tech-debt 已登记的
- * DOM 刮削反模式：官方 TopBarItem 无 label/title 字段，无官方 API 可替代）。
+ * Page-lifecycle decorations (tooltips + brand). The MutationObserver must keep running across
+ * editor rebuilds because the container is reused; disposing it would leave later buttons bare.
  */
 import { applyTooltip } from "@/ui/tooltip";
 import { t } from "@/i18n";
 
-/** 为 Crepe top-bar 按钮添加自定义 tooltip（i18n 翻译，无快捷键） */
+/** Warn only once: the MutationObserver rescans on every rebuild. */
+let tooltipsMismatchWarned = false;
+
+/** Add i18n tooltips to Crepe top-bar buttons (positional: order must match `.top-bar-item`). */
 export function setupTopBarTooltips(container: HTMLElement): void {
-    const TOOLTIPS = [
-        t('Table of Contents'), // toc
-        t('Undo'),             // history: undo
-        t('Redo'),             // history: redo
-        t('Bold'),             // formatting: bold
-        t('Italic'),           // formatting: italic
-        t('Strikethrough'),    // formatting: strikethrough
-        t('Inline Code'),      // formatting: code
-        t('Clear Formatting'), // formatting: clear-format
-        t('Bullet List'),      // list: bullet
-        t('Ordered List'),     // list: ordered
-        t('Task List'),        // list: task
-        t('Insert/Edit Link'), // insert: link
-        t('Insert Image'),     // insert: image
-        t('Insert Table'),     // insert: table
-        t('Code Block'),       // block: code-block
-        t('Math Formula'),     // block: math
-        t('Blockquote'),       // more: quote
-        t('Horizontal Rule'),  // more: hr
-        t('Settings'),         // settings
+    const tooltips = [
+        t('Table of Contents'),
+        t('Undo'),
+        t('Redo'),
+        t('Bold'),
+        t('Italic'),
+        t('Strikethrough'),
+        t('Inline Code'),
+        t('Clear Formatting'),
+        t('Bullet List'),
+        t('Ordered List'),
+        t('Task List'),
+        t('Insert/Edit Link'),
+        t('Insert Image'),
+        t('Insert Table'),
+        t('Code Block'),
+        t('Math Formula'),
+        t('Blockquote'),
+        t('Horizontal Rule'),
+        t('Settings'),
     ];
 
     const applyAll = () => {
         const topBar = container.querySelector('.milkdown-top-bar');
         if (!topBar) return;
         const items = topBar.querySelectorAll<HTMLElement>('.top-bar-item');
+        // Positional mapping is load-bearing: Crepe's TopBarItem exposes no id, so labels follow
+        // DOM order. The two lists do not even cover the same set (our configured groups vs every
+        // rendered button, Crepe defaults included), so drift would silently mislabel the bar.
+        // Warn once instead of shipping wrong tooltips.
+        if (items.length !== tooltips.length && !tooltipsMismatchWarned) {
+            tooltipsMismatchWarned = true;
+            console.warn(
+                `[epytor] top-bar tooltips: ${tooltips.length} labels vs ${items.length} buttons rendered`,
+            );
+        }
         items.forEach((item, idx) => {
             if (item.dataset.tip) return;
-            const text = TOOLTIPS[idx];
+            const text = tooltips[idx];
             if (text) {
                 item.dataset.tip = '1';
                 applyTooltip(item, text, { placement: 'below' });
@@ -49,7 +61,7 @@ export function setupTopBarTooltips(container: HTMLElement): void {
         .observe(container, { childList: true, subtree: true });
 }
 
-/** 将 🦖EPYTOR 品牌标识注入为 top-bar 真实 flex 子元素（替代 CSS ::after） */
+/** Inject the brand as a real flex child (a CSS `::after` would not take part in the layout). */
 export function setupTopBarBrand(container: HTMLElement): void {
     const inject = () => {
         const topBar = container.querySelector('.milkdown-top-bar');

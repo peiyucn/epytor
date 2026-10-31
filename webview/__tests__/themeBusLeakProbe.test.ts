@@ -6,7 +6,7 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createEditor, destroyEditor } from "../editor";
-import { getThemeListenerCount } from "../utils/themeBus";
+import { getThemeListenerCount } from "../editor/themeBus";
 
 if (typeof (window as unknown as Record<string, unknown>).ResizeObserver === "undefined") {
     (window as unknown as Record<string, unknown>).ResizeObserver = class {

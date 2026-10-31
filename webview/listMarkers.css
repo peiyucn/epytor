@@ -1,19 +1,13 @@
-/* ─── Word 式多级列表标记（只改显示，源码不变）─────────────────────────────
-   见 docs/specs/2026-09-12-word-style-multilevel-markers.md。
+/* Word-style multilevel markers; display only, source unchanged.
+ * listMarkerPlugin computes level/number/shape and exposes them as custom properties on
+ * the item: --epytor-marker for ordered text, --epytor-marker-size/radius/rotate for
+ * bullets. Custom properties beat per-level classes — a wrapped 4th level inherited the
+ * 3rd level's class rules and drew the wrong bullet.
+ * This file only paints: ordered items hide Milkdown's number text (box kept) and draw
+ * ::before instead; bullets hide the SVG the same way. .label-wrapper keeps its size, so
+ * the text edge does not move. */
 
-   层级、编号与形状都由 listMarkerPlugin 算好，以**自定义属性**挂在列表项上：
-     · `--epytor-marker`                       有序列表的显示文本（`1.` / `a)` / `i.`）
-     · `--epytor-marker-size/radius/rotate`    无序标记的形状
-   选自定义属性而不是「层级 class + 层级选择器」：后者只能表达"某层及其后代"，
-   第 4 层回绕时祖先层的规则会误命中它（实测第 4 层仍画第 3 层的 ◆）；
-   自定义属性由最近的祖先决定，天然只作用于该项本身。
-
-   本文件只负责画：
-     · 有序：藏掉 Milkdown 算出的编号文本（保留盒尺寸），用 ::before 画我们的文本；
-     · 无序：藏掉 Milkdown 的图标 SVG，用 ::before 画 CSS 图形。
-   标记盒仍沿用 .label-wrapper 的既有尺寸，因此行内文字左缘不变。 */
-
-/* 编号文本与图标：保留占位、只藏观感 */
+/* Keep the box, hide the paint. */
 .milkdown .ProseMirror .label-wrapper > .label.ordered {
     color: transparent;
 }
@@ -33,7 +27,7 @@
     pointer-events: none;
 }
 
-/* ── 有序：文本来自 --epytor-marker ── */
+/* Ordered: text comes from --epytor-marker. */
 .milkdown .ProseMirror .label-wrapper > .label.ordered::before {
     content: var(--epytor-marker, "");
     inset: 0;
@@ -46,7 +40,7 @@
     white-space: nowrap;
 }
 
-/* ── 无序：形状来自 --epytor-marker-* ── */
+/* Bullet: shape comes from --epytor-marker-*. */
 .milkdown .ProseMirror .label-wrapper > .label.bullet::before {
     content: "";
     top: 50%;

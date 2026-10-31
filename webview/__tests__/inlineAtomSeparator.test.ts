@@ -13,7 +13,6 @@
  *    防护规则必须进到产物 CSS 里，否则会被 epytor 的通用 img 规则（圆角、最大宽度）影响。
  */
 import { readFileSync } from "node:fs";
-import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createEditor, destroyEditor } from "../editor";
 import type { Editor } from "@milkdown/kit/core";
