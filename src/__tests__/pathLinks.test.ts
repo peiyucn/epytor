@@ -117,4 +117,23 @@ describe("openPathLink 路径链接", () => {
             { preview: true },
         );
     });
+
+    it("工作区外的独立文档 `@/` 链接 应该 相对文档目录解析（即使开了别的 workspace）", async () => {
+        const folder = { uri: vscode.Uri.file(ROOT), name: "proj", index: 0 };
+        vi.mocked(vscode.workspace.getWorkspaceFolder).mockReturnValue(undefined);
+        (vscode.workspace as unknown as {
+            workspaceFolders: vscode.WorkspaceFolder[] | undefined;
+        }).workspaceFolders = [folder];
+        const outsideDoc = path.join(path.resolve(path.sep, "outside"), "note.md");
+        const host = makeHost();
+
+        await openPathLink(outsideDoc, "@/sibling.md", host);
+
+        expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+            "vscode.openWith",
+            expect.objectContaining({ fsPath: path.join(path.dirname(outsideDoc), "sibling.md") }),
+            "epytor.editor",
+            { preview: true },
+        );
+    });
 });

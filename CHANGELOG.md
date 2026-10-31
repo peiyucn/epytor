@@ -31,7 +31,7 @@ English | [简体中文](CHANGELOG.zh-CN.md)
 ### Changed
 
 - **Blank lines *between* list items are no longer added or removed automatically** — they are now treated as the author's own formatting and preserved exactly. Blank lines inside a single list item (between two of its paragraphs) are still managed automatically
-- **`@/` links in files opened outside any workspace now always resolve next to the document** — previously file links fell back to the parent folder while images and path completion used the document folder; all now use the document folder, and the path-completion dropdown keeps the rest of the path (`@/a/b`) instead of dropping it
+- **`@/` in files that are not part of any workspace folder now always resolves next to the document** — this covers standalone files opened while another workspace is active (images, file links and path completion now share the same rule). Previously file links fell back to the parent folder while images and path completion used the document folder; they now all use the document folder, and the path-completion dropdown keeps the rest of the path (`@/a/b`) instead of dropping it
 
 ## [1.2.7] - 2026-10-22
 

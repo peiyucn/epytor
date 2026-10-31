@@ -6,8 +6,9 @@
  * 期望值用 `path` 自身构造，避免 Windows 盘符/分隔符导致的平台差异。
  */
 import * as path from "path";
-import { describe, expect, it } from "vitest";
-import { resolveDocPath } from "../utils/docPath";
+import { describe, expect, it, vi } from "vitest";
+import * as vscode from "vscode";
+import { resolveDocPath, resolveWorkspaceRoot } from "../utils/docPath";
 
 const ROOT = path.resolve(path.sep, "proj");
 const DOC = path.join(ROOT, "docs", "note.md");
@@ -40,5 +41,16 @@ describe("resolveDocPath 文档相对路径", () => {
 
     it("`@/` 带空相对部分 应该 指向根目录", () => {
         expect(resolveDocPath("@/", WITH_WS)).toBe(ROOT);
+    });
+
+    it("文档不在任何 workspace 文件夹内 应该 不借用第一个文件夹（回归：工作区外文档 @/ 解析错）", () => {
+        const folder = { uri: vscode.Uri.file(ROOT), name: "proj", index: 0 };
+        vi.mocked(vscode.workspace.getWorkspaceFolder).mockReturnValue(undefined);
+        (vscode.workspace as unknown as {
+            workspaceFolders: vscode.WorkspaceFolder[] | undefined;
+        }).workspaceFolders = [folder];
+
+        const outsideDoc = path.join(path.resolve(path.sep, "outside"), "note.md");
+        expect(resolveWorkspaceRoot(vscode.Uri.file(outsideDoc))).toBeUndefined();
     });
 });

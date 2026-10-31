@@ -35,9 +35,9 @@ export async function openPathLink(
     const containingFolder = vscode.workspace.workspaceFolders?.find(
         f => documentFsPath.startsWith(f.uri.fsPath + path.sep),
     );
-    const workspaceRootForDoc =
-        containingFolder?.uri.fsPath ??
-        vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? null;
+    // A file opened from outside the workspace must not borrow another folder's root:
+    // its `@/` falls back to the document directory (same rule as resolveDocPath).
+    const workspaceRootForDoc = containingFolder?.uri.fsPath ?? null;
     // `@/` is the workspace root alias; without a workspace it falls back to the document
     // directory, the same rule image display and save use (see resolveDocPath).
     const absPath = resolveDocPath(

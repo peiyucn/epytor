@@ -275,11 +275,8 @@ export async function handleGetPathSuggestions(
     }
 
     const docFsPath = ctx.documentUri.fsPath;
-    const sep = path.sep;
-    const workspaceFolder = vscode.workspace.workspaceFolders?.find(
-        f => docFsPath.startsWith(f.uri.fsPath + sep),
-    ) ?? vscode.workspace.workspaceFolders?.[0];
-    const workspaceRoot = workspaceFolder?.uri.fsPath;
+    // Owning folder only: a standalone file falls back to its own directory for `@/`.
+    const workspaceRoot = resolveWorkspaceRoot(ctx.documentUri);
 
     const lastSlash = q.lastIndexOf("/");
     const dirPart = lastSlash >= 0 ? q.slice(0, lastSlash + 1) : "";

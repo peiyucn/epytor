@@ -5,7 +5,7 @@ import { extractFrontmatter, restoreContentForSave, convertTableBrForDisplay, bu
 import { ContentRequestCoordinator } from "./utils/contentRequestCoordinator";
 import { shouldSkipSave } from "./utils/externalChangeDecision";
 import { fireAndLog } from "./utils/fireAndLog";
-import { resolveDocPath } from "./utils/docPath";
+import { resolveDocPath, resolveWorkspaceRoot } from "./utils/docPath";
 import {
     handleGetPathSuggestions,
     handleGetProjectImages,
@@ -859,8 +859,9 @@ export class MarkdownEditorProvider
         content = convertTableBrForDisplay(body);
 
         if (document.uri.scheme !== 'file') { return content; }
-        const workspaceRoot = vscode.workspace.getWorkspaceFolder(document.uri)?.uri.fsPath
-            ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        // Standalone files must not borrow the first open folder's root: their `@/` falls back
+        // to the document directory (E2E 2026-10-31: images in an outside-workspace doc 404'd).
+        const workspaceRoot = resolveWorkspaceRoot(document.uri);
         // Replace src per image; the regex must allow spaces/nested parens and leave the title alone.
         // Regression: a [^)\s"]+ pattern truncated paths with spaces and swallowed titles (404s).
         // uriMap keeps the raw document spelling even when normalization resolves the path.

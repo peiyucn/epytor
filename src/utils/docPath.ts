@@ -17,13 +17,15 @@ export interface DocPathContext {
 }
 
 /**
- * Workspace root for a document: its owning folder, else the first open folder.
+ * Workspace root for a document: its owning folder, or undefined for a standalone file.
  *
- * A single implementation prevents the three former copies from drifting on multi-root layouts.
+ * Regression: falling back to the first open folder made a file opened from outside the
+ * workspace resolve `@/` against that folder instead of its own directory (E2E 2026-10-31),
+ * which broke `@/images/...` in documents opened with a workspace already active.
+ * A single implementation prevents the former copies from drifting on multi-root layouts.
  */
 export function resolveWorkspaceRoot(uri: vscode.Uri): string | undefined {
-    return vscode.workspace.getWorkspaceFolder(uri)?.uri.fsPath
-        ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    return vscode.workspace.getWorkspaceFolder(uri)?.uri.fsPath;
 }
 
 /**
