@@ -185,3 +185,28 @@
 **第二轮仍然证实不了**：外部改动 + 无编辑的实时自动重建（非前台窗口下扩展走 defer 路径，与第一轮一致）；需真机前台验证。
 
 **工具状态**：harness 位于 `TEMP/e2e-vscode/`（临时，未提交）；`suite-results.json`（第一轮 14/16）、`suite2-results.json`（第二轮 12/13）与截图可复看。测试结束已关闭全部 E2E VS Code 进程。
+
+### 第三轮 E2E（列表 / 溢出 / 自动保存 / 工作区外）——发现并修复一个真 bug
+
+| # | 验证点 | 结果 |
+|---|---|---|
+| C1 | 松散列表：编辑某项后，项与项之间的空行保留 | 通过 |
+| C2 | 顶栏溢出菜单：窄窗口可打开（20 项）、Esc 关闭 | 通过；菜单项点击执行未验 |
+| C3 | 目录连续开合 10 次 | 通过（6 项稳定） |
+| C4 | `onFocusChange`：编辑后切标签自动落盘 | 通过 |
+| C5 | 真实命令 `File: Toggle Auto Save` 开启后打字自动落盘 | 通过 |
+| C6 | 工作区外独立 `.md` 的 `@/` 图片/链接 | **原实现有 bug**，修复后真机复测通过 |
+| C7 | 后台面板外部改动：切回后警告 | 警告出现，但编辑器显示磁盘内容（疑似失活时已 flush）；待确认期望 |
+| C8 | 嵌套列表退格 | E2E 点击定位不稳，无法下结论；需真机 |
+
+**C6 的 bug 与修复**：
+
+- 现象：VS Code 已打开一个 workspace，再打开一个**不在该 workspace 内**的独立 `.md`；其中 `![x](@/pic.png)` 被解析成 `workspace 根/pic.png`（404），`Ctrl+点击 @/note.md` 也落到 workspace 根。根因是多处保留了「文档不属于任何 workspace 时借用第一个 workspace 根」的回退：
+  - `src/utils/docPath.ts` 的 `resolveWorkspaceRoot`
+  - `src/editor/pathLinks.ts` 打开链接路径
+  - `src/MarkdownEditorProvider.ts` 的 `_prepareContentForDisplay`（图片显示 URI 映射）
+  - `src/editor/imageMessageHandlers.ts` 的路径补全
+- 修复：全部改为「只认文档所属的 workspace 文件夹；不属于任何文件夹就返回 null，让 `@/` 回退文档目录」，与 B4 的口径一致；新增 `docPath` / `pathLinks` 回归用例（969 例全绿）。
+- 真实 VS Code 复测：独立文件中的 `@/pic.png` 解析到 `outside/pic.png`（naturalWidth>0），`Ctrl+点击 @/note.md` 打开目标文件；截图 `TEMP/e2e-vscode/fix-outside-verified.png`。
+
+**第三轮结论**：真实窗口交互继续覆盖组件层；**发现并修复了 1 个此前单测覆盖不到的真 bug**。C7/C8 需要真机用真实鼠标/键盘复核。
