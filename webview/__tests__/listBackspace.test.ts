@@ -155,7 +155,7 @@ describe("列表项行首 Backspace：断开列表变成普通行", () => {
         setCursor(view, itemPositions(view)[2] + 1);
         expect(pressBackspace(view)).toBe(true);
 
-        expect(topLevelOutline(view)).toEqual(["ul[•a+<bullet_list>, •, •c]"]);
+        // 2026-11-01: 空嵌套项现在直接删除，不再提升为顶级空项。\n        expect(topLevelOutline(view)).toEqual(["ul[•a+<bullet_list>, •c]"]);
         expect(cursorInTextblock(view)).toBe(true);
     });
 
@@ -219,6 +219,27 @@ describe("列表项行首 Backspace：断开列表变成普通行", () => {
         expect(pressBackspace(view)).toBe(true);
 
         const expected = "- [ ] 嵌套任务列表中间某项退格\n  - [ ] 212313\n  - [ ] 1231\n  - [ ] 213131\n  - [ ] 123131312";
+        expect(serializeNormalized(editor)).toBe(expected);
+        const reopened = await makeEditor(serialize(editor));
+        expect(serializeNormalized(reopened)).toBe(expected);
+    });
+
+    it("嵌套空任务项退格 应该 直接删除空项，而不是把它逐级提到顶级", async () => {
+        // 2026-11-01 录屏：先把「4」删空，再继续 Backspace，空项被逐级外提，最后留下
+        // 一个顶级空项。空项没有内容可提升；直接删除才符合「退格清理」的预期。
+        const editor = await makeEditor("- [ ] parent\n  - [ ] 1\n  - [ ] 4\n  - [ ] 2\n");
+        const view = getView(editor);
+        let fourFrom = 0;
+        view.state.doc.descendants((node, pos) => {
+            if (node.isText && node.text === "4") { fourFrom = pos; }
+        });
+        view.dispatch(view.state.tr.delete(fourFrom, fourFrom + 1));
+        const emptyPositions = itemPositions(view).filter((pos) => view.state.doc.nodeAt(pos)?.textContent === "");
+        expect(emptyPositions).toHaveLength(1);
+        setCursor(view, emptyPositions[0] + 2);
+        expect(pressBackspace(view)).toBe(true);
+
+        const expected = "- [ ] parent\n  - [ ] 1\n  - [ ] 2";
         expect(serializeNormalized(editor)).toBe(expected);
         const reopened = await makeEditor(serialize(editor));
         expect(serializeNormalized(reopened)).toBe(expected);

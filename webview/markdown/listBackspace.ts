@@ -89,6 +89,42 @@ function mergeAdjacentTopLevelLists(tr: Transaction): void {
 }
 
 /**
+ * Delete an empty nested item instead of promoting it one level.
+ *
+ * If the user deleted the last character of a nested item and presses Backspace again, the
+ * item is empty. Lifting it on every Backspace walked it up to the top level and left an
+ * empty item there (hand-test 2026-11-01, recorded). An empty item with no children has no
+ * content worth keeping; remove it (and its now-empty parent list when it was the only child).
+ */
+function deleteEmptyNestedItem(
+    state: EditorState,
+    $from: ResolvedPos,
+    itemDepth: number,
+): Transaction | null {
+    const item = $from.node(itemDepth);
+    if (item.childCount !== 1) { return null; }
+    const paragraph = item.firstChild;
+    if (!paragraph || paragraph.type.name !== "paragraph" || paragraph.content.size !== 0) {
+        return null;
+    }
+
+    const parentListDepth = itemDepth - 1;
+    const parentList = $from.node(parentListDepth);
+    const parentListPos = $from.before(parentListDepth);
+    const itemPos = $from.before(itemDepth);
+
+    if (parentList.childCount === 1) {
+        const tr = state.tr.delete(parentListPos, parentListPos + parentList.nodeSize);
+        tr.setSelection(TextSelection.near(tr.doc.resolve(Math.min(parentListPos, tr.doc.content.size)), -1));
+        return tr;
+    }
+
+    const tr = state.tr.delete(itemPos, itemPos + item.nodeSize);
+    tr.setSelection(TextSelection.near(tr.doc.resolve(Math.min(itemPos - 1, tr.doc.content.size)), -1));
+    return tr;
+}
+
+/**
  * Move a nested list item up one level without dragging its following siblings into it.
  *
  * Before:  parentItem > parentList [.., item, following..]
@@ -177,6 +213,13 @@ export const listBackspacePlugin = $prose((ctx) => {
 
             // Nested item: custom lift (see file header); keeps the following siblings in place.
             if (isNestedList($from, itemDepth - 1, listItem)) {
+                // An empty item has no content to lift; Backspace should remove it rather than
+                // walk an empty row up to the top level.
+                const empty = deleteEmptyNestedItem(state, $from, itemDepth);
+                if (empty) {
+                    if (dispatch) { dispatch(empty.scrollIntoView()); }
+                    return true;
+                }
                 const tr = liftNestedItem(state, $from, itemDepth);
                 if (!tr) { return false; }
                 if (dispatch) { dispatch(tr.scrollIntoView()); }
