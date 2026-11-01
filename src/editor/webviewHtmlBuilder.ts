@@ -18,6 +18,12 @@ import {
 } from "../utils/webviewConfigSanitize";
 import { buildWebviewHtml } from "../utils/webviewHtml";
 import { normalizeTableWrapMode, resolveTableWrapVars } from "../../shared/tableWrap";
+
+/** Append a build stamp to a webview resource URL (the mock returns a plain string). */
+function appendCacheStamp(uri: string, stamp: string): string {
+    return `${uri}${uri.includes("?") ? "&" : "?"}v=${stamp}`;
+}
+
 export function buildEditorWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri): string {
     const cfg = vscode.workspace.getConfiguration("epytor");
     const maxHeight = sanitizeCssNumber(
@@ -45,12 +51,14 @@ export function buildEditorWebviewHtml(webview: vscode.Webview, extensionUri: vs
     } catch {
         buildStamp = Date.now().toString(36);
     }
-    const scriptUri = webview.asWebviewUri(
-        vscode.Uri.joinPath(extensionUri, "dist", "webview.js"),
-    ).with({ query: `v=${buildStamp}` });
-    const styleUri = webview.asWebviewUri(
-        vscode.Uri.joinPath(extensionUri, "dist", "webview.css"),
-    ).with({ query: `v=${buildStamp}` });
+    const scriptUri = appendCacheStamp(
+        webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, "dist", "webview.js")).toString(),
+        buildStamp,
+    );
+    const styleUri = appendCacheStamp(
+        webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, "dist", "webview.css")).toString(),
+        buildStamp,
+    );
     const nonce = getNonce();
 
     const lang = vscode.env.language.toLowerCase();
