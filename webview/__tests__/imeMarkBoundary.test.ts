@@ -1,16 +1,13 @@
 /**
- * IME composition at the end of an inline mark (2026-11-01 hand-test).
+ * Typing at the boundary of an inline mark (2026-11-01 hand-test).
  *
  * Regression: clicking just past **bold** or pressing End resolves the DOM caret to the
- * end of the strong text. Typing a full-width colon through the IME then joined the bold
- * mark and the caret stayed inside the span. The composition-start guard clears the
- * stored marks when the caret is at the end of (or outside) the mark, so the composed
- * text is plain; inside the mark the formatting is kept.
- *
- * jsdom has no layout, so the DOM side of the selection is represented by a small fake
- * strong element; what matters is the plugin's decision (at end/outside vs inside).
+ * end of the strong text. An IME-composed full-width colon then either joined the bold mark
+ * or the caret ended one character past the inserted colon. The fix makes strong/emphasis/
+ * strikethrough marks non-inclusive, so the boundary belongs outside the mark and the
+ * composed punctuation is plain; typing inside the marked text keeps the mark.
  */
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { TextSelection } from "@milkdown/kit/prose/state";
 import { createEditor, destroyEditor, getEditorView } from "../editor";
 
@@ -18,10 +15,6 @@ if (typeof (window as unknown as Record<string, unknown>).ResizeObserver === "un
     (window as unknown as Record<string, unknown>).ResizeObserver = class {
         observe() { /* noop */ } unobserve() { /* noop */ } disconnect() { /* noop */ }
     };
-}
-// jsdom has no layout; the virtual cursor reads client rects for the fake caret range.
-if (typeof Range.prototype.getClientRects !== "function") {
-    Range.prototype.getClientRects = () => [] as unknown as DOMRectList;
 }
 if (typeof window.matchMedia === "undefined") {
     window.matchMedia = (() => ({
@@ -48,7 +41,7 @@ async function openEditor(markdown: string): Promise<void> {
     throw new Error("editor was not mounted");
 }
 
-/** PM range of the strong text (positions), plus its text content. */
+/** PM range of the strong text. */
 function strongRange(): { from: number; to: number; text: string } {
     const view = getEditorView();
     if (!view) { throw new Error("view missing"); }
@@ -64,67 +57,64 @@ function strongRange(): { from: number; to: number; text: string } {
     return { from, to: from + text.length, text };
 }
 
-/** Put PM selection at `pos`; fake a DOM caret inside a detached <strong>. */
-function putCaret(pos: number, text: string, offset: number): void {
+function textNodes(): { text: string; marks: string[] }[] {
     const view = getEditorView();
     if (!view) { throw new Error("view missing"); }
-    view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, pos)));
-
-    const mark = document.createElement("strong");
-    const textNode = document.createTextNode(text);
-    mark.appendChild(textNode);
-    document.body.appendChild(mark);
-    const fakeRange = document.createRange();
-    fakeRange.selectNodeContents(textNode);
-    fakeRange.setStart(textNode, offset);
-    fakeRange.collapse(true);
-    vi.spyOn(window, "getSelection").mockReturnValue({
-        anchorNode: textNode,
-        anchorOffset: offset,
-        focusNode: textNode,
-        focusOffset: offset,
-        rangeCount: 1,
-        isCollapsed: true,
-        getRangeAt: () => fakeRange,
-    } as unknown as Selection);
+    const out: { text: string; marks: string[] }[] = [];
+    view.state.doc.descendants((node) => {
+        if (node.isText && node.text) {
+            out.push({ text: node.text, marks: node.marks.map((mark) => mark.type.name) });
+        }
+    });
+    return out;
 }
 
-function compositionStart(): void {
+function insertAt(pos: number, text: string): void {
     const view = getEditorView();
     if (!view) { throw new Error("view missing"); }
-    view.dom.dispatchEvent(new Event("compositionstart", { bubbles: true }));
+    view.dispatch(
+        view.state.tr
+            .setSelection(TextSelection.create(view.state.doc, pos))
+            .insertText(text),
+    );
 }
 
 afterEach(() => {
     destroyEditor();
     document.body.innerHTML = "";
-    vi.restoreAllMocks();
 });
 
-describe("IME composition at the end of an inline mark", () => {
-    it("在粗体末尾开始组合 应该 清空 storedMarks（冒号不再进入粗体）", async () => {
+describe("行内格式边界输入（2026-11-01 手测）", () => {
+    it("strong / emphasis / strikethrough 应该 都是非 inclusive（边界在格式外）", async () => {
         await openEditor("**粗体**\n");
-        const range = strongRange();
-        const view = getEditorView();
-        if (!view) { throw new Error("view missing"); }
-        putCaret(range.to, range.text, range.text.length);
-        expect(view.state.storedMarks).toBeNull();
-
-        compositionStart();
-
-        expect(Array.isArray(view.state.storedMarks)).toBe(true);
-        expect(view.state.storedMarks).toHaveLength(0);
+        const schema = getEditorView()?.state.schema;
+        if (!schema) { throw new Error("schema missing"); }
+        expect(schema.marks.strong.spec.inclusive).toBe(false);
+        expect(schema.marks.emphasis.spec.inclusive).toBe(false);
+        expect(schema.marks.strike_through.spec.inclusive).toBe(false);
     });
 
-    it("在粗体中间开始组合 应该 保留 storedMarks / 格式（不会被误清）", async () => {
+    it("在粗体末尾插入全角冒号 应该 不带粗体（光标不再被格式拖走）", async () => {
+        await openEditor("**粗体**\n");
+        const { to } = strongRange();
+
+        insertAt(to, "：");
+
+        const colon = textNodes().find((node) => node.text.includes("："));
+        expect(colon, "colon was not inserted").toBeDefined();
+        expect(colon!.marks).not.toContain("strong");
+    });
+
+    it("在粗体中间插入字符 应该 仍然带粗体（格式内输入不受影响）", async () => {
         await openEditor("**粗体文字**\n");
-        const range = strongRange();
-        const view = getEditorView();
-        if (!view) { throw new Error("view missing"); }
-        putCaret(range.from + 1, range.text, 1);
+        const { from, text } = strongRange();
 
-        compositionStart();
+        insertAt(from + 1, "x");
 
-        expect(view.state.storedMarks).toBeNull();
+        const inside = textNodes().find((node) => node.text.includes("x"));
+        expect(inside, "character was not inserted").toBeDefined();
+        expect(inside!.marks).toContain("strong");
+        expect(inside!.text).toContain("粗");
+        expect(text).toBe("粗体文字");
     });
 });
