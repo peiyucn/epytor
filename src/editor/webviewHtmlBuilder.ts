@@ -5,6 +5,7 @@
  * with a cloned repo and must not be able to escape the style/script context.
  */
 import * as vscode from "vscode";
+import { statSync } from "node:fs";
 import { getNonce } from "../utils/getNonce";
 import { ZH_CN_WEBVIEW } from "../i18n/webviewTranslations";
 import {
@@ -31,12 +32,25 @@ export function buildEditorWebviewHtml(webview: vscode.Webview, extensionUri: vs
     );
     // Normalize at the boundary: a config value can be any JSON scalar.
     const tableWrapVars = resolveTableWrapVars(normalizeTableWrapMode(cfg.get("tableWrapMode")));
+    // Webview resources are cached by URL. A reinstall with the same extension version
+    // keeps the same dist path, so without a build stamp a Reload Window could keep running
+    // the previous dist/webview.js (observed while iterating on 1.3.0 fixes). The mtime
+    // changes on every install/build and busts the cache; fall back to a unique value when
+    // the file cannot be stat-ed (tests, unusual packaging).
+    let buildStamp: string;
+    try {
+        buildStamp = Math.trunc(
+            statSync(vscode.Uri.joinPath(extensionUri, "dist", "webview.js").fsPath).mtimeMs,
+        ).toString(36);
+    } catch {
+        buildStamp = Date.now().toString(36);
+    }
     const scriptUri = webview.asWebviewUri(
         vscode.Uri.joinPath(extensionUri, "dist", "webview.js"),
-    );
+    ).with({ query: `v=${buildStamp}` });
     const styleUri = webview.asWebviewUri(
         vscode.Uri.joinPath(extensionUri, "dist", "webview.css"),
-    );
+    ).with({ query: `v=${buildStamp}` });
     const nonce = getNonce();
 
     const lang = vscode.env.language.toLowerCase();
