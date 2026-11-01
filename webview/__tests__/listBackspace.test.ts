@@ -210,6 +210,20 @@ describe("列表项行首 Backspace：断开列表变成普通行", () => {
         expect(serializeNormalized(reopened)).toBe(saved);
     });
 
+    it("嵌套项下面还有同级项时退格 应该 只提升被按项，同级项保持原层（2026-11-01 手测结构）", async () => {
+        const editor = await makeEditor(
+            "* [ ] 嵌套任务列表中间某项退格\n  * [ ] 212313\n  * [ ] 1231\n    * [ ] 213131\n  * [ ] 123131312\n",
+        );
+        const view = getView(editor);
+        setCursor(view, itemPositions(view)[3] + 1);
+        expect(pressBackspace(view)).toBe(true);
+
+        const expected = "- [ ] 嵌套任务列表中间某项退格\n  - [ ] 212313\n  - [ ] 1231\n  - [ ] 213131\n  - [ ] 123131312";
+        expect(serializeNormalized(editor)).toBe(expected);
+        const reopened = await makeEditor(serialize(editor));
+        expect(serializeNormalized(reopened)).toBe(expected);
+    });
+
     it("非行首退格 不应该 改变列表结构（字符删除由浏览器原生处理）", async () => {
         const editor = await makeEditor("- ab\n- c\n");
         const view = getView(editor);

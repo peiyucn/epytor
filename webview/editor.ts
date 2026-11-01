@@ -15,7 +15,7 @@ import {
 } from "@milkdown/kit/core";
 import { inlineCodeSchema } from "@milkdown/kit/preset/commonmark";
 import type { EditorView } from "@milkdown/kit/prose/view";
-import type { Node as ProseNode } from "@milkdown/kit/prose/model";
+import { Mark, type Node as ProseNode } from "@milkdown/kit/prose/model";
 import { closeHistory } from "@milkdown/kit/prose/history";
 import { Plugin } from "@milkdown/kit/prose/state";
 import { $prose, $remark } from "@milkdown/kit/utils";
@@ -252,6 +252,38 @@ export async function createEditor(
     crepe.editor.use(
         inlineCodeSchema.extendSchema((prev) => (ctx) => ({ ...prev(ctx), inclusive: true })),
     );
+
+    // Typing right after an inline mark must not inherit the mark: the caret is visually
+    // outside the span. IME composition is committed through the DOM observer and used the
+    // marks at the resolved boundary position, so a full-width colon typed outside **bold**
+    // was inserted inside it (hand-test 2026-11-01). When composition starts while the DOM
+    // caret is outside every inline mark but ProseMirror resolved the boundary to a marked
+    // position, clear the stored marks so the composed text is plain.
+    crepe.editor.use($prose(() => new Plugin({
+        props: {
+            handleDOMEvents: {
+                compositionstart: (view) => {
+                    const sel = window.getSelection();
+                    const anchor = sel?.anchorNode;
+                    if (!anchor) { return false; }
+                    const element = (anchor.nodeType === 3 ? anchor.parentElement : anchor) as Element | null;
+                    if (!element) { return false; }
+                    const markElement = element.closest("strong, em, s, del, a, code");
+                    // The caret can be outside the mark (clicked past it) or at the very end
+                    // of the mark's text. Both are visually outside the span; the composed
+                    // colon must not keep the mark. Inside the span (not at its end) keeps it.
+                    const atEndOfMark = markElement !== null && anchor.nodeType === 3 &&
+                        sel.anchorOffset === (anchor as Text).data.length;
+                    const outsideMark = markElement === null;
+                    if (!atEndOfMark && !outsideMark) { return false; }
+                    const selection = view.state.selection as { $from?: { marks(): readonly unknown[] } };
+                    if (!selection.$from || selection.$from.marks().length === 0) { return false; }
+                    view.dispatch(view.state.tr.setStoredMarks(Mark.none));
+                    return false;
+                },
+            },
+        },
+    })));
 
     // Self-register cursor + default virtual cursor: Crepe's variant skips inline-code
     // warnings, hiding the boundary indicator and trapping arrow keys with inclusive:true.
