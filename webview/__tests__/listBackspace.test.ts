@@ -43,6 +43,10 @@ type Editor = Awaited<ReturnType<typeof makeEditor>>;
 const getView = (editor: Editor): EditorView => editor.action((ctx) => ctx.get(editorViewCtx));
 const serialize = (editor: Editor): string => editor.action(getMarkdown());
 
+/** The plugin-only harness uses Crepe's default `*` list marker; normalize for assertions. */
+const serializeNormalized = (editor: Editor): string =>
+    serialize(editor).trim().replace(/^(\s*)\* /gm, "$1- ");
+
 function pressBackspace(view: EditorView): boolean {
     let handled = false;
     const event = {
@@ -153,6 +157,57 @@ describe("列表项行首 Backspace：断开列表变成普通行", () => {
 
         expect(topLevelOutline(view)).toEqual(["ul[•a+<bullet_list>, •, •c]"]);
         expect(cursorInTextblock(view)).toBe(true);
+    });
+
+    it("嵌套任务列表第一项退格 应该 只提升本项，后面的子项留在原父项下", async () => {
+        // 手测反馈 2026-11-01：中间项退格后「下面的层级乱了」——ProseMirror liftListItem 会把
+        // 被提升项**后面的兄弟**塞进被提升项里当子项。这里必须只提升被按的那一项。
+        const editor = await makeEditor("- [ ] 第一项\n- [ ] 第二项\n  - [ ] 子项 A\n  - [ ] 子项 B\n- [ ] 第三项\n");
+        const view = getView(editor);
+        setCursor(view, itemPositions(view)[2] + 1);
+        expect(pressBackspace(view)).toBe(true);
+
+        const expected = "- [ ] 第一项\n- [ ] 第二项\n  - [ ] 子项 B\n- [ ] 子项 A\n- [ ] 第三项";
+        expect(serializeNormalized(editor)).toBe(expected);
+        const reopened = await makeEditor(serialize(editor));
+        expect(serializeNormalized(reopened)).toBe(expected);
+    });
+
+    it("嵌套任务列表中间项退格 应该 保留父项里前后兄弟的层级", async () => {
+        const editor = await makeEditor("- [ ] 一\n- [ ] 二\n  - [ ] 2.1\n  - [ ] 2.2\n  - [ ] 2.3\n- [ ] 三\n");
+        const view = getView(editor);
+        setCursor(view, itemPositions(view)[3] + 1);
+        expect(pressBackspace(view)).toBe(true);
+
+        const expected = "- [ ] 一\n- [ ] 二\n  - [ ] 2.1\n  - [ ] 2.3\n- [ ] 2.2\n- [ ] 三";
+        expect(serializeNormalized(editor)).toBe(expected);
+        const reopened = await makeEditor(serialize(editor));
+        expect(serializeNormalized(reopened)).toBe(expected);
+    });
+
+    it("深层嵌套任务项退格 应该 保留自己的子项、不吞掉下面的兄弟", async () => {
+        const editor = await makeEditor("- [ ] 一\n- [ ] 二\n  - [ ] 2.1\n    - [ ] 2.1.1\n  - [ ] 2.2\n- [ ] 三\n");
+        const view = getView(editor);
+        setCursor(view, itemPositions(view)[2] + 1);
+        expect(pressBackspace(view)).toBe(true);
+
+        const expected = "- [ ] 一\n- [ ] 二\n  - [ ] 2.2\n- [ ] 2.1\n  - [ ] 2.1.1\n- [ ] 三";
+        expect(serializeNormalized(editor)).toBe(expected);
+        const reopened = await makeEditor(serialize(editor));
+        expect(serializeNormalized(reopened)).toBe(expected);
+    });
+
+    it("顶层任务项退格 应该 把其子项与后面的列表合成一个列表（重开结构不变）", async () => {
+        const editor = await makeEditor("- [ ] 第一项\n- [ ] 第二项\n  - [ ] 子项 A\n  - [ ] 子项 B\n- [ ] 第三项\n");
+        const view = getView(editor);
+        setCursor(view, itemPositions(view)[1] + 1);
+        expect(pressBackspace(view)).toBe(true);
+
+        const saved = serializeNormalized(editor);
+        const reopened = await makeEditor(saved + "\n");
+        const reopenedView = getView(reopened);
+        expect(topLevelOutline(reopenedView)).toEqual(["ul[•第一项]", "p:第二项", "ul[•子项 A, •子项 B, •第三项]"]);
+        expect(serializeNormalized(reopened)).toBe(saved);
     });
 
     it("非行首退格 不应该 改变列表结构（字符删除由浏览器原生处理）", async () => {
