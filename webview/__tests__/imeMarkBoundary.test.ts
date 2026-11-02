@@ -117,4 +117,23 @@ describe("行内格式边界输入（2026-11-01 手测）", () => {
         expect(inside!.text).toContain("粗");
         expect(text).toBe("粗体文字");
     });
+
+    it("IME 组合结束后光标多跳一个字 应该 拉回到组合文本末尾", async () => {
+        // Chrome 在带格式边界做 IME 组合时可能把选区报后一位；录屏里冒号后光标落在
+        // 下一个字「斯」后面。组合事务的 ReplaceStep 能给出真实插入终点。
+        await openEditor("**粗体**斯\n");
+        const { to } = strongRange();
+        const view = getEditorView();
+        if (!view) { throw new Error("view missing"); }
+
+        const tr = view.state.tr
+            .setMeta("composition", 1)
+            .insertText("：", to);
+        tr.setSelection(TextSelection.create(tr.doc, to + 2));
+        view.dispatch(tr);
+
+        expect(view.state.selection.empty).toBe(true);
+        expect(view.state.selection.from).toBe(to + 1);
+        expect(view.state.doc.textContent).toContain("：斯");
+    });
 });
