@@ -288,18 +288,18 @@ export async function createEditor(
         });
     }));
 
-    // Chrome can also report the post-composition selection one character past the composed
-    // text without exposing a usable replace step. Snapshot the caret before composition and
-    // the composed text; on compositionend put the caret back to start + text length if it is
-    // exactly one past that point.
+    // Chrome can report the post-composition selection one character past the composed text
+    // (the caret visibly sits after the following character). Snapshot the composed text and,
+    // on compositionend, if the caret is exactly after one extra character following that
+    // text in the same paragraph, move it back to the end of the composed text. This is more
+    // robust than relying on the composition transaction's replace step, which real Chrome
+    // does not always expose in a usable shape.
     crepe.editor.use($prose(() => {
-        let startPos: number | null = null;
         let compositionText = "";
         return new Plugin({
             props: {
                 handleDOMEvents: {
-                    compositionstart: (view) => {
-                        startPos = view.state.selection.empty ? view.state.selection.from : null;
+                    compositionstart: () => {
                         compositionText = "";
                         return false;
                     },
@@ -308,20 +308,28 @@ export async function createEditor(
                         return false;
                     },
                     compositionend: (view, event) => {
-                        const start = startPos;
                         const text = event.data ?? compositionText;
-                        startPos = null;
                         compositionText = "";
-                        if (start === null || !text) { return false; }
-                        const expected = start + text.length;
-                        setTimeout(() => {
+                        if (!text) { return false; }
+                        const fix = (): void => {
                             if (view.isDestroyed || !view.state.selection.empty) { return; }
-                            if (view.state.selection.from !== expected + 1) { return; }
+                            const $from = view.state.selection.$from;
+                            const before = $from.parent.textContent.slice(0, $from.parentOffset);
+                            const index = before.lastIndexOf(text);
+                            if (index < 0 || index + text.length !== before.length - 1) { return; }
                             try {
                                 view.dispatch(
-                                    view.state.tr.setSelection(TextSelection.create(view.state.doc, expected)),
+                                    view.state.tr.setSelection(
+                                        TextSelection.create(view.state.doc, view.state.selection.from - 1),
+                                    ),
                                 );
                             } catch { /* position vanished */ }
+                        };
+                        // Run after the DOM observer flush that commits the composition; a second
+                        // rAF pass covers Chrome reporting its final selection a frame later.
+                        setTimeout(() => {
+                            fix();
+                            if (typeof requestAnimationFrame === "function") { requestAnimationFrame(fix); }
                         }, 0);
                         return false;
                     },
