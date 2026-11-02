@@ -7,7 +7,15 @@ import path from "node:path";
 
 const PORT = Number(process.env.SMOKE_PORT ?? 0);
 const REPO_ROOT = path.resolve(import.meta.dirname, "../..");
+const DIST_ROOT = path.resolve(REPO_ROOT, "dist");
 const HARNESS = path.join(import.meta.dirname, "harness.html");
+
+/** Resolve a /dist/ URL below DIST_ROOT, or null when it would escape the folder. */
+function resolveDistPath(urlPath) {
+    const resolved = path.resolve(DIST_ROOT, urlPath.slice("/dist/".length));
+    if (resolved !== DIST_ROOT && !resolved.startsWith(DIST_ROOT + path.sep)) { return null; }
+    return resolved;
+}
 
 const MIME = {
     ".html": "text/html; charset=utf-8",
@@ -24,15 +32,21 @@ const MIME = {
 };
 
 const server = http.createServer((req, res) => {
-    const urlPath = decodeURIComponent((req.url ?? "/").split("?")[0]);
+    let urlPath;
+    try {
+        urlPath = decodeURIComponent((req.url ?? "/").split("?")[0]);
+    } catch {
+        res.writeHead(400); res.end("bad request"); return;
+    }
+    if (urlPath.includes("\0")) {
+        res.writeHead(400); res.end("bad request"); return;
+    }
     let filePath;
     if (urlPath === "/" || urlPath === "/harness.html") {
         filePath = HARNESS;
     } else if (urlPath.startsWith("/dist/")) {
-        filePath = path.join(REPO_ROOT, urlPath.replace(/^\//, ""));
-        if (!filePath.startsWith(path.join(REPO_ROOT, "dist"))) {
-            res.writeHead(403); res.end("forbidden"); return;
-        }
+        filePath = resolveDistPath(urlPath);
+        if (filePath === null) { res.writeHead(403); res.end("forbidden"); return; }
     } else {
         res.writeHead(404); res.end("not found"); return;
     }

@@ -5,7 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 English | [简体中文](CHANGELOG.zh-CN.md)
 
-## [1.3.0] - 2026-11-02
+## [1.3.0] - 2026-11-03
 
 ### New features
 
