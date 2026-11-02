@@ -19,9 +19,23 @@ import {
 import { buildWebviewHtml } from "../utils/webviewHtml";
 import { normalizeTableWrapMode, resolveTableWrapVars } from "../../shared/tableWrap";
 
-/** Append a build stamp to a webview resource URL (the mock returns a plain string). */
+/** Append a cache-busting query. The unit-test webview mock returns a plain string. */
 function appendCacheStamp(uri: string, stamp: string): string {
     return `${uri}${uri.includes("?") ? "&" : "?"}v=${stamp}`;
+}
+
+/**
+ * Cache stamp for the webview bundle. A same-version reinstall keeps the same resource URL,
+ * so use the bundle mtime to force the webview to fetch the new build after reinstall.
+ */
+function webviewBuildStamp(extensionUri: vscode.Uri): string {
+    try {
+        return Math.trunc(
+            statSync(vscode.Uri.joinPath(extensionUri, "dist", "webview.js").fsPath).mtimeMs,
+        ).toString(36);
+    } catch {
+        return Date.now().toString(36);
+    }
 }
 
 export function buildEditorWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri): string {
@@ -38,19 +52,7 @@ export function buildEditorWebviewHtml(webview: vscode.Webview, extensionUri: vs
     );
     // Normalize at the boundary: a config value can be any JSON scalar.
     const tableWrapVars = resolveTableWrapVars(normalizeTableWrapMode(cfg.get("tableWrapMode")));
-    // Webview resources are cached by URL. A reinstall with the same extension version
-    // keeps the same dist path, so without a build stamp a Reload Window could keep running
-    // the previous dist/webview.js (observed while iterating on 1.3.0 fixes). The mtime
-    // changes on every install/build and busts the cache; fall back to a unique value when
-    // the file cannot be stat-ed (tests, unusual packaging).
-    let buildStamp: string;
-    try {
-        buildStamp = Math.trunc(
-            statSync(vscode.Uri.joinPath(extensionUri, "dist", "webview.js").fsPath).mtimeMs,
-        ).toString(36);
-    } catch {
-        buildStamp = Date.now().toString(36);
-    }
+    const buildStamp = webviewBuildStamp(extensionUri);
     const scriptUri = appendCacheStamp(
         webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, "dist", "webview.js")).toString(),
         buildStamp,

@@ -7,27 +7,13 @@ import { canJoin } from "@milkdown/kit/prose/transform";
 import { liftListItem } from "@milkdown/kit/prose/schema-list";
 
 /**
- * Backspace at the start of a list item: break the list and turn the item into a plain
- * line, rather than merging it into the previous item.
+ * Backspace at the start of a list item.
  *
- * Regression: the list_item schema allows multiple blocks per item, so ProseMirror's
- * joinBackward merged an empty item into the previous one as a second (empty)
- * paragraph and the caret landed there. A top-level item is lifted to a paragraph
- * (splitting the list); a nested one is moved up one level.
- *
- * Nested items are handled here instead of `liftListItem` on purpose. `liftListItem`
- * moves the *following* siblings of the lifted item into it as children ("siblings after
- * the lifted items must become children of the last item"), which visibly changed the
- * level of every item below the cursor in a nested task list (hand-test feedback
- * 2026-11-01). A user lifts one item, not the whole tail: the item moves up, its own
- * children stay with it, and its following siblings stay in the original parent list.
- *
- * Lifting a top-level item with a nested list produces two adjacent lists; Markdown
- * round-trips the blank line between them as one loose list, so the structure changed on
- * reopen. Those adjacent lists are merged in the same transaction.
- *
- * The lifted tail still needs its start number: splitting an ordered list otherwise
- * restarts numbering ("1. a / b / 1. c").
+ * Top-level items become plain paragraphs; nested items move up one level. Nested items are
+ * handled manually because ProseMirror's `liftListItem` pulls the following siblings into
+ * the lifted item, which changes the level of every item below it. Empty nested items are
+ * removed instead of being promoted; adjacent top-level lists are merged so the Markdown
+ * round-trip keeps the same structure, and ordered-list continuations keep their number.
  */
 
 /** Depth of the enclosing list_item, or -1. */
@@ -44,9 +30,8 @@ function isNestedList($from: ResolvedPos, listDepth: number, listItem: NodeType)
 }
 
 /**
- * After lifting a top-level item, if the following sibling is an ordered list created by
- * the split, set its start number. Position is read from the lifted paragraph's next
- * sibling, so no position mapping is involved.
+ * After lifting a top-level item, set the continuation ordered list's start number if the
+ * split created one. Position is read from the lifted paragraph's next sibling.
  */
 function withContinuationOrder(tr: Transaction, order: number): Transaction {
     const { $from } = tr.selection;
@@ -61,12 +46,9 @@ function withContinuationOrder(tr: Transaction, order: number): Transaction {
 }
 
 /**
- * Merge adjacent top-level lists of the same type (created when lifting a top-level item
- * that has a nested list, or when the item after it starts another list).
- *
- * Without this the document holds `… ul(A,B) ul(C) …`; the Markdown serializer writes a
- * blank line between the two lists, and reopening parses that as one loose list — the
- * exact "reopen after Backspace has a different structure" regression.
+ * Merge adjacent top-level lists of the same type. Lifting a top-level item with a nested
+ * list can leave two lists next to each other; the serializer separates them with a blank
+ * line, which Markdown reopens as one loose list.
  */
 function mergeAdjacentTopLevelLists(tr: Transaction): void {
     const positions: number[] = [];
@@ -89,12 +71,9 @@ function mergeAdjacentTopLevelLists(tr: Transaction): void {
 }
 
 /**
- * Delete an empty nested item instead of promoting it one level.
- *
- * If the user deleted the last character of a nested item and presses Backspace again, the
- * item is empty. Lifting it on every Backspace walked it up to the top level and left an
- * empty item there (hand-test 2026-11-01, recorded). An empty item with no children has no
- * content worth keeping; remove it (and its now-empty parent list when it was the only child).
+ * Delete an empty nested item instead of promoting it one level. An item with no content
+ * and no children has nothing to lift; repeated Backspace would otherwise walk it up to the
+ * top level. The parent list is removed too when this was its only child.
  */
 function deleteEmptyNestedItem(
     state: EditorState,

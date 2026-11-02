@@ -18,8 +18,7 @@ import { strikethroughSchema } from "@milkdown/kit/preset/gfm";
 import type { EditorView } from "@milkdown/kit/prose/view";
 import type { Node as ProseNode } from "@milkdown/kit/prose/model";
 import { closeHistory } from "@milkdown/kit/prose/history";
-import { Plugin, TextSelection } from "@milkdown/kit/prose/state";
-import { ReplaceStep } from "@milkdown/kit/prose/transform";
+import { Plugin } from "@milkdown/kit/prose/state";
 import { $prose, $remark } from "@milkdown/kit/utils";
 import { CrepeBuilder } from "@milkdown/crepe";
 import { linkTooltip } from "@milkdown/crepe/feature/link-tooltip";
@@ -38,6 +37,7 @@ import { languages as allCodeLanguages } from "@codemirror/language-data";
 import { onThemeChange, isDarkTheme } from "./editor/themeBus";
 import { changeRangeInFinalDoc, normalizeListSpread } from "./markdown/listSpread";
 import { listBackspacePlugin } from "./markdown/listBackspace";
+import { imeCaretGuardPlugin } from "./editor/plugins/imeCaretGuardPlugin";
 import { taskListItemEnterPlugin } from "./markdown/taskListItemEnter";
 import { listMarkerPlugin } from "./editor/plugins/listMarkerPlugin";
 import { formatKeymapPlugin } from "./editor/plugins/formatKeymapPlugin";
@@ -255,10 +255,8 @@ export async function createEditor(
         inlineCodeSchema.extendSchema((prev) => (ctx) => ({ ...prev(ctx), inclusive: true })),
     );
 
-    // Typing right after an inline mark must not inherit the mark: the caret is visually
-    // outside the span. Upstream marks are inclusive:true, so an IME-composed full-width
-    // colon typed after **bold** landed inside the strong mark (hand-test 2026-11-01).
-    // The marks stay active while the caret is inside the text run; only the boundary exits.
+    // A caret at the end of a formatted span is visually outside it. Upstream marks are
+    // inclusive by default, which makes new input inherit the mark at that boundary.
     crepe.editor.use(
         strongSchema.extendSchema((prev) => (ctx) => ({ ...prev(ctx), inclusive: false })),
     );
@@ -289,75 +287,7 @@ export async function createEditor(
         });
     }));
 
-    // Chrome can report the post-composition selection one character past the composed text
-    // (the caret visibly sits after the following character). Snapshot the composed text and,
-    // on compositionend, if the caret is exactly after one extra character following that
-    // text in the same paragraph, move it back to the end of the composed text. This is more
-    // robust than relying on the composition transaction's replace step, which real Chrome
-    // does not always expose in a usable shape.
-    crepe.editor.use($prose(() => {
-        let compositionText = "";
-        return new Plugin({
-            props: {
-                handleDOMEvents: {
-                    compositionstart: () => {
-                        compositionText = "";
-                        return false;
-                    },
-                    compositionupdate: (_view, event) => {
-                        compositionText = event.data ?? compositionText;
-                        return false;
-                    },
-                    compositionend: (view, event) => {
-                        const text = event.data ?? compositionText;
-                        compositionText = "";
-                        if (!text) { return false; }
-                        const fix = (): void => {
-                            if (view.isDestroyed || !view.state.selection.empty) { return; }
-                            const $from = view.state.selection.$from;
-                            const before = $from.parent.textContent.slice(0, $from.parentOffset);
-                            const index = before.lastIndexOf(text);
-                            if (index < 0 || index + text.length !== before.length - 1) { return; }
-                            try {
-                                view.dispatch(
-                                    view.state.tr.setSelection(
-                                        TextSelection.create(view.state.doc, view.state.selection.from - 1),
-                                    ),
-                                );
-                            } catch { /* position vanished */ }
-                        };
-                        // Run after the DOM observer flush that commits the composition; a second
-                        // rAF pass covers Chrome reporting its final selection a frame later.
-                        setTimeout(() => {
-                            fix();
-                            if (typeof requestAnimationFrame === "function") { requestAnimationFrame(fix); }
-                        }, 0);
-                        return false;
-                    },
-                },
-            },
-        });
-    }));
-
-    // Last line of defence for the reported "caret one character past the colon": regardless
-    // of how the input reached ProseMirror (IME composition, direct insertText, browser DOM
-    // observer), a transaction that inserts exactly a full-width colon sets the caret to
-    // colon-end + 1 in some Chrome paths. Snap it back to colon-end.
-    crepe.editor.use($prose(() => new Plugin({
-        appendTransaction(transactions, _oldState, newState) {
-            if (!newState.selection.empty) { return null; }
-            for (const tr of transactions) {
-                for (const step of tr.steps) {
-                    if (!(step instanceof ReplaceStep) || step.slice.size !== 1) { continue; }
-                    if (step.slice.content.textBetween(0, step.slice.size, "\n", "\n") !== "：") { continue; }
-                    const expected = step.from + step.slice.size;
-                    if (newState.selection.from !== expected + 1) { continue; }
-                    return newState.tr.setSelection(TextSelection.create(newState.doc, expected));
-                }
-            }
-            return null;
-        },
-    })));
+    crepe.editor.use(imeCaretGuardPlugin);
 
     crepe.editor
         .config((ctx) => {
