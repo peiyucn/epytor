@@ -5,7 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 English | [简体中文](CHANGELOG.zh-CN.md)
 
-## [1.3.0] - 2026-10-31
+## [1.3.0] - 2026-11-02
 
 ### New features
 
@@ -16,7 +16,8 @@ English | [简体中文](CHANGELOG.zh-CN.md)
 - **The editor no longer loses focus while you type** — after an automatic save, a late file-change notification from the disk (most visible in OneDrive folders) used to be mistaken for someone else editing the file; the editor was then rebuilt from scratch and lost both the keyboard focus and the characters typed since that save. Such notifications are now compared by content, so the editor only reloads when the file on disk really differs, and focus, caret and scroll position are restored afterwards
 - **The caret no longer jumps back to line 1, column 1** — when the editor was rebuilt in the background (an external change while you were looking at another tab), or when its panel was reloaded, the caret silently went back to the very beginning of the document. The last caret position and the scroll offset are now remembered and restored, without stealing focus from whatever you were doing
 - **Typing Chinese no longer cancels the composition** — a rebuild that arrived while the input method was composing could make the candidate window vanish; the rebuild now waits until the composition finishes
-- **Backspacing an item in a nested to-do list no longer scrambles the levels below it** — two separate causes were fixed. First, a level change that you had just made could be silently written back to the old level when saving, because the "keep untouched lines exactly as written" logic compared indentation levels in a way that broke down when a blank line separated the parent item from its sub-list. Second, the list looseness flag was recomputed on every edit, which could add blank lines between all items of a tight list, or remove the blank lines the author had written
+- **Backspacing an item in a nested to-do list no longer changes the levels below it** — only the item you press is lifted to the level above; the items below keep their level, and pressing Backspace on an empty nested item removes it instead of leaving an empty row at the top level
+- **A full-width colon typed after formatted text no longer lands inside the mark or moves the caret past the next character** — typing `：` at the end of **bold**, *italic* or ~~strikethrough~~ text keeps it outside the formatted span, with the caret immediately after it
 - **Horizontal rules are back to a hairline** — a `---` divider was being drawn as a thick grey band roughly 13 pixels tall instead of a 1-pixel line. The upstream theme paints the rule with a background colour squeezed into a one-pixel-tall content box; an override of ours reset that padding, so the colour filled the whole 13-pixel box
 - **The outline sidebar's resize handle now keeps up with the panel** — when the outline opened or closed, the grab handle at its edge lagged behind the panel, and the toolbar snapped into place in a single frame while everything else glided. The handle and the panel were being animated on different rendering paths (`left` versus `transform`), and the toolbar's transition was declared on a property nothing ever changes; all three now animate together
 - **A stale save can no longer roll the file back** — when a save was triggered by an old "modified" flag (for example while a panel was being deactivated) and there was nothing new to write, the unchanged buffer could overwrite a change another tool had just made on disk. Such a save is now skipped and the disk copy is left alone
@@ -30,6 +31,8 @@ English | [简体中文](CHANGELOG.zh-CN.md)
 
 ### Changed
 
+- **Typing at the end of an inline mark no longer continues the format** — a caret at the end of bold/italic/strikethrough text is treated as outside the span; continued typing, including full-width punctuation, uses plain text, while typing inside the marked text keeps the format
+- **Security-related development tooling updates** — the bundled extension and user-facing behavior are unchanged
 - **Blank lines *between* list items are no longer added or removed automatically** — they are now treated as the author's own formatting and preserved exactly. Blank lines inside a single list item (between two of its paragraphs) are still managed automatically
 - **`@/` in files that are not part of any workspace folder now always resolves next to the document** — this covers standalone files opened while another workspace is active (images, file links and path completion now share the same rule). Previously file links fell back to the parent folder while images and path completion used the document folder; they now all use the document folder, and the path-completion dropdown keeps the rest of the path (`@/a/b`) instead of dropping it
 
