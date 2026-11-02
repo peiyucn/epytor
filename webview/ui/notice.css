@@ -1,4 +1,4 @@
-/* ─── 一次性提示条（webview/ui/notice.ts）───────────────────────── */
+/* One-shot notice bar (webview/ui/notice.ts). */
 .epytor-notice {
     position: fixed;
     left: 50%;

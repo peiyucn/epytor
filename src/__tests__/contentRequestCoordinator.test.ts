@@ -96,4 +96,35 @@ describe("ContentRequestCoordinator 拉取协调", () => {
         await vi.advanceTimersByTimeAsync(3000);
         expect(onTimeout).not.toHaveBeenCalled();
     });
+
+    describe("回包来源（回归：兜底内容被当成「用户没有未保存编辑」）", () => {
+        it("webview 真回包 应该 authoritative=true", async () => {
+            const coord = new ContentRequestCoordinator(vi.fn(), 3000);
+            const p = coord.requestDetailed("doc", "fallback");
+            coord.resolve("doc", "fresh");
+            await expect(p).resolves.toEqual({ content: "fresh", authoritative: true });
+        });
+
+        it("超时兜底 应该 authoritative=false（内容不可作为编辑状态判据）", async () => {
+            vi.useFakeTimers();
+            const coord = new ContentRequestCoordinator(vi.fn(), 1000);
+            const p = coord.requestDetailed("doc", "fallback");
+            await vi.advanceTimersByTimeAsync(1001);
+            await expect(p).resolves.toEqual({ content: "fallback", authoritative: false });
+        });
+
+        it("面板销毁兜底 应该 authoritative=false", async () => {
+            const coord = new ContentRequestCoordinator(vi.fn(), 3000);
+            const p = coord.requestDetailed("doc", "fallback");
+            coord.settleAll("doc");
+            await expect(p).resolves.toEqual({ content: "fallback", authoritative: false });
+        });
+
+        it("request() 仍然只返回内容字符串（调用方无需改）", async () => {
+            const coord = new ContentRequestCoordinator(vi.fn(), 3000);
+            const p = coord.request("doc", "fallback");
+            coord.resolve("doc", "fresh");
+            await expect(p).resolves.toBe("fresh");
+        });
+    });
 });

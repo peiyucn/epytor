@@ -2,8 +2,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { CrepeBuilder } from "@milkdown/crepe";
 import { editorViewCtx } from "@milkdown/kit/core";
 import type { EditorView } from "@milkdown/kit/prose/view";
-import { findHeadingFoldRange, getHeadingLevel, isHeadingNode, computeAllHeadingFoldRanges, buildHeadingIndex, computeAllHeadingSignature, computeHeadingSignature } from "../utils/headingFold";
-import { normalizeFoldPositions } from "../headingFoldPlugin";
+import { findHeadingFoldRange, getHeadingLevel, isHeadingNode, computeAllHeadingFoldRanges, buildHeadingIndex, computeAllHeadingSignature, computeHeadingSignature } from "../outline/headingFold";
+import { normalizeFoldPositions } from "../editor/plugins/headingFoldPlugin";
 
 if (typeof (window as unknown as Record<string, unknown>).ResizeObserver === "undefined") {
     (window as unknown as Record<string, unknown>).ResizeObserver = class {

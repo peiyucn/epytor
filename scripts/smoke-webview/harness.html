@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>epytor webview smoke harness</title>
+<link rel="stylesheet" href="/dist/webview.css">
+<style>
+:root {
+    --vscode-editor-background: #1e1e1e;
+    --vscode-editor-foreground: #d4d4d4;
+    --vscode-editor-font-family: "Consolas", monospace;
+    --vscode-editor-font-size: 14px;
+    --vscode-sideBar-background: #252526;
+    --vscode-panel-border: #3c3c3c;
+    --vscode-button-background: #0e639c;
+    --vscode-button-foreground: #ffffff;
+    --vscode-input-background: #3c3c3c;
+    --vscode-input-foreground: #cccccc;
+    --vscode-list-hoverBackground: #2a2d2e;
+    --vscode-list-activeSelectionBackground: #094771;
+    --vscode-focusBorder: #007fd4;
+    --vscode-descriptionForeground: #9d9d9d;
+    --vscode-errorForeground: #f14c4c;
+    --vscode-textLink-foreground: #3794ff;
+    --vscode-editorLineNumber-foreground: #858585;
+    --vscode-scrollbarSlider-background: #79797966;
+}
+html, body { margin: 0; padding: 0; }
+</style>
+<script>
+// VS Code webview host mock. Must exist before the module bundle loads.
+window.__posted = [];
+window.__webviewState = null;
+window.__i18n = {
+    translations: {},
+    isMac: false,
+    serializationMode: "clean",
+};
+window.acquireVsCodeApi = function () {
+    return {
+        postMessage: function (message) { window.__posted.push(message); },
+        getState: function () { return window.__webviewState; },
+        setState: function (state) { window.__webviewState = state; },
+    };
+};
+</script>
+</head>
+<body>
+<div id="editor"></div>
+<script type="module" src="/dist/webview.js"></script>
+</body>
+</html>

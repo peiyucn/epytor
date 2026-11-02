@@ -1,19 +1,27 @@
 /**
- * 拉取式保存的 in-flight 内容请求协调器（纯逻辑，无 VSCode 依赖，可单测）。
+ * Single-flight content pulls for pull-based saving (pure logic, no vscode dependency).
+ * Concurrent pulls for one document must share one `send` and one reply, and every promise has
+ * to settle — a promise that never settles means a save that silently never happens.
  *
- * 背景（回归）：旧实现用「每文档单槽」Map 保存等待者，并发拉取（Cmd+S / files.autoSave /
- * watcher 回退 / frontmatter 更新 / 切文本编辑器）时后到者覆盖前者的 resolver，被覆盖的
- * 保存承诺永不 resolve（保存悬挂、内容未写盘且零提示）；超时兜底还会按 key 误删后到者
- * 的槽位，使其永远等不到回包。
- *
- * 语义：同一 uriKey 的并发请求单飞——只发一次 send，所有等待者共享同一回包；
- * 超时 / 面板销毁时以首个请求者携带的兜底内容结算全部等待者，保证每个 Promise 终局。
+ * Regression: one pending slot per document let a later pull overwrite the earlier resolver, and
+ * the timeout path then deleted the later slot too.
  */
 
 interface PendingRequest {
-    resolvers: Array<(content: string) => void>;
+    resolvers: Array<(result: ContentReply) => void>;
     fallbackContent: string;
     timer: ReturnType<typeof setTimeout>;
+}
+
+/** Reply plus where it came from: the live webview, or the timeout/dispose fallback. */
+export interface ContentReply {
+    content: string;
+    /**
+     * True only when the webview actually answered. Fallback content can be up to the push
+     * debounce older than what the user sees, so decisions about "are there unsaved edits"
+     * must not trust it (regression: a revert then rolled the editor back to older text).
+     */
+    authoritative: boolean;
 }
 
 export class ContentRequestCoordinator {
@@ -22,17 +30,22 @@ export class ContentRequestCoordinator {
     constructor(
         private readonly send: (uriKey: string) => void,
         private readonly timeoutMs: number,
-        /** 超时兜底触发时的回调（保存仍以兜底内容完成，回调用于用户可见警告） */
+        /** Fired after a timeout settles with fallback content, so the host can warn the user. */
         private readonly onTimeout?: (uriKey: string) => void,
     ) {}
 
-    /** 是否有 in-flight 请求（回包到达时先查，避免无谓的内容预处理） */
+    /** Cheap pre-check, so the caller can skip content preprocessing. */
     has(uriKey: string): boolean {
         return this._pending.has(uriKey);
     }
 
-    /** 请求最新内容：已有 in-flight 请求时排队复用（单飞），兜底内容取首个请求者 */
+    /** Joins an in-flight request when there is one; the first requester's fallback wins. */
     request(uriKey: string, fallbackContent: string): Promise<string> {
+        return this.requestDetailed(uriKey, fallbackContent).then((reply) => reply.content);
+    }
+
+    /** Same as `request`, but reports whether the content really came from the webview. */
+    requestDetailed(uriKey: string, fallbackContent: string): Promise<ContentReply> {
         const pending = this._pending.get(uriKey);
         if (pending) {
             return new Promise((resolve) => pending.resolvers.push(resolve));
@@ -42,7 +55,7 @@ export class ContentRequestCoordinator {
                 resolvers: [resolve],
                 fallbackContent,
                 timer: setTimeout(() => {
-                    this._settle(uriKey, entry.fallbackContent);
+                    this._settle(uriKey, { content: entry.fallbackContent, authoritative: false });
                     this.onTimeout?.(uriKey);
                 }, this.timeoutMs),
             };
@@ -51,23 +64,23 @@ export class ContentRequestCoordinator {
         });
     }
 
-    /** 收到回包：结算该 uriKey 的全部等待者 */
+    /** Reply from the webview: settles every waiter for this key. */
     resolve(uriKey: string, content: string): void {
-        this._settle(uriKey, content);
+        this._settle(uriKey, { content, authoritative: true });
     }
 
-    /** 面板销毁兜底：以兜底内容结算，防止保存承诺悬挂 */
+    /** Panel disposal: settle with fallback content so no save promise is left hanging. */
     settleAll(uriKey: string): void {
         const entry = this._pending.get(uriKey);
         if (!entry) return;
-        this._settle(uriKey, entry.fallbackContent);
+        this._settle(uriKey, { content: entry.fallbackContent, authoritative: false });
     }
 
-    private _settle(uriKey: string, content: string): void {
+    private _settle(uriKey: string, reply: ContentReply): void {
         const entry = this._pending.get(uriKey);
         if (!entry) return;
         this._pending.delete(uriKey);
         clearTimeout(entry.timer);
-        for (const resolver of entry.resolvers) resolver(content);
+        for (const resolver of entry.resolvers) resolver(reply);
     }
 }

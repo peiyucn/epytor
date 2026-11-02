@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { HOST_COLLAPSED_ATTRIBUTE } from "../utils/viewportLedger";
+import { HOST_COLLAPSED_ATTRIBUTE } from "../scroll/viewportLedger";
 
 const styleCss = readFileSync(
     path.resolve(process.cwd(), "webview/style.css"),
@@ -9,6 +9,14 @@ const styleCss = readFileSync(
 );
 const topBarOverflowCss = readFileSync(
     path.resolve(process.cwd(), "webview/components/topBarOverflow/topBarOverflow.css"),
+    "utf-8",
+);
+const topBarCss = readFileSync(
+    path.resolve(process.cwd(), "webview/components/topBar/topBar.css"),
+    "utf-8",
+);
+const codeBlockEnhanceCss = readFileSync(
+    path.resolve(process.cwd(), "webview/components/codeBlockEnhance/codeBlockEnhance.css"),
     "utf-8",
 );
 const headingCss = readFileSync(
@@ -21,11 +29,26 @@ function stripComments(css: string): string {
     return css.replace(/\/\*[\s\S]*?\*\//g, "");
 }
 
-/** 折叠期几何守卫那一段 CSS（从注释标题到 Milkdown 根容器之前） */
-function foldBlockCss(): string {
-    const start = styleCss.indexOf("折叠期几何守卫");
-    expect(start).toBeGreaterThanOrEqual(0);
-    return styleCss.slice(start, styleCss.indexOf("/* Milkdown 根容器 */", start));
+interface CssRule {
+    selectors: string[];
+    body: string;
+}
+
+/** 解析出全部规则（选择器集合 + 声明体），供按结构断言使用 */
+function allRules(): CssRule[] {
+    const rules: CssRule[] = [];
+    for (const m of stripComments(styleCss).matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+        rules.push({
+            selectors: m[1].split(",").map((s) => s.trim().replace(/\s+/g, " ")),
+            body: m[2],
+        });
+    }
+    return rules;
+}
+
+/** 选择器集合里任何一个以指定选择器开头的规则 */
+function rulesUnderSelector(prefix: string): CssRule[] {
+    return allRules().filter((rule) => rule.selectors.some((s) => s.startsWith(prefix)));
 }
 
 /**
@@ -33,12 +56,11 @@ function foldBlockCss(): string {
  * 让断言看行为（覆盖了哪些元素、声明了什么），而不是在整段 CSS 里找字符串。
  * `bodyIncludes` 用于在多个同选择器规则中挑出目标那条（例如钉宽度 vs 隐藏）。
  */
-function findRule(selector: string, bodyIncludes?: string): { selectors: string[]; body: string } | null {
-    for (const m of stripComments(styleCss).matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
-        const selectors = m[1].split(",").map((s) => s.trim().replace(/\s+/g, " "));
-        if (!selectors.includes(selector)) { continue; }
-        if (bodyIncludes && !m[2].includes(bodyIncludes)) { continue; }
-        return { selectors, body: m[2] };
+function findRule(selector: string, bodyIncludes?: string): CssRule | null {
+    for (const rule of allRules()) {
+        if (!rule.selectors.includes(selector)) { continue; }
+        if (bodyIncludes && !rule.body.includes(bodyIncludes)) { continue; }
+        return rule;
     }
     return null;
 }
@@ -46,7 +68,7 @@ function findRule(selector: string, bodyIncludes?: string): { selectors: string[
 describe("WebView 样式", () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        document.head.innerHTML = `<style>${styleCss}</style><style>${topBarOverflowCss}</style><style>${headingCss}</style>`;
+        document.head.innerHTML = `<style>${styleCss}</style><style>${topBarCss}</style><style>${topBarOverflowCss}</style><style>${headingCss}</style>`;
         document.body.innerHTML = "";
     });
 
@@ -125,7 +147,8 @@ describe("WebView 样式", () => {
     });
 
     it("codeBlockMaxHeight 注入的 CSS 变量 应该 有消费规则（回归：零消费方=死配置）", () => {
-        expect(styleCss).toContain("var(--code-block-max-height)");
+        // The consuming rule moved with the code-block styles into the component sheet.
+        expect(codeBlockEnhanceCss).toContain("var(--code-block-max-height)");
     });
 
     it("折叠期守卫 应该 由 JS 记账属性驱动，而不是精确尺寸媒体查询（回归：窗口缩放让媒体查询失效）", () => {
@@ -139,15 +162,21 @@ describe("WebView 样式", () => {
     });
 
     it("折叠期 应该 关闭顶栏/目录/浮动工具栏模糊（回归：合成器重建图层推迟首帧，小画面偶发可见）", () => {
-        const foldBlock = foldBlockCss();
-        expect(foldBlock).toContain("backdrop-filter: none !important");
+        // Structural, not string-in-a-slice: every collapsed-state rule that owns a
+        // backdrop-filter must turn it off.
+        const withBlur = rulesUnderSelector(`html[${HOST_COLLAPSED_ATTRIBUTE}]`)
+            .filter((rule) => /backdrop-filter:/.test(rule.body));
+        expect(withBlur.length).toBeGreaterThan(0);
+        for (const rule of withBlur) {
+            expect(rule.body).toContain("backdrop-filter: none !important");
+        }
     });
 
     it("折叠期正文版式 应该 钉住上次真实宽度（回归：折叠期按 300px 重排，切回那一帧整篇重新折行）", () => {
-        const foldBlock = foldBlockCss();
-        expect(foldBlock).toContain(`html[${HOST_COLLAPSED_ATTRIBUTE}] body {`);
-        expect(foldBlock).toContain("width: var(--epytor-last-body-width, 100%)");
-        expect(foldBlock).toContain("overflow-x: clip");
+        const rule = findRule(`html[${HOST_COLLAPSED_ATTRIBUTE}] body`);
+        expect(rule).not.toBeNull();
+        expect(rule!.body).toContain("width: var(--epytor-last-body-width, 100%)");
+        expect(rule!.body).toContain("overflow-x: clip");
     });
 
     /**
@@ -202,6 +231,36 @@ describe("WebView 样式", () => {
         ]) {
             expect(rule!.selectors).toContain(sel);
         }
+    });
+
+    /**
+     * 分割线粗细（回归 2026-10-26，owner：「分割线好像特别粗」）。
+     *
+     * 上游 reset.css 用 `height: 13px` + `padding: 6px 0` + `background-color` +
+     * `background-clip: content-box` 画线：靠 border-box 下 13-6×2 = 1px 的内容盒
+     * 露出那 1px 色块。我们只覆盖了 border 并把 padding 归零，内容盒随即撑满 13px，
+     * 背景色铺满 → 渲染成一根 13px 粗的灰条（真实产物实测 rect.height = 13）。
+     */
+    it("分割线 应该 只有 1px 粗：不沿用上游「背景色 + 内容盒」画线机制", () => {
+        const rule = findRule(".milkdown .ProseMirror hr", "border-top: 1px solid");
+        expect(rule).not.toBeNull();
+        // 上游那套靠内容盒露出的机制必须被清掉，否则高度会撑到 13px
+        expect(rule!.body).toContain("background: none");
+        expect(rule!.body).toContain("height: 0");
+        expect(rule!.body).toContain("padding: 0");
+        // 不能残留任何会加粗的声明
+        expect(rule!.body).not.toMatch(/padding:\s*[1-9]/);
+        expect(rule!.body).not.toMatch(/height:\s*[1-9]\d*px/);
+    });
+
+    it("选中分割线时 应该 不铺背景（回归：上游 ::before 是 13px 高的绝对定位色块）", () => {
+        const own = findRule(".milkdown .ProseMirror hr.ProseMirror-selectednode");
+        expect(own).not.toBeNull();
+        expect(own!.body).toContain("background: none");
+        const before = findRule(".milkdown .ProseMirror hr.ProseMirror-selectednode::before");
+        expect(before).not.toBeNull();
+        expect(before!.body).toContain("content: none");
+        expect(before!.body).toContain("background: none");
     });
 
     it("行距 应该 单一口径：正文、列表项、标记盒取同一个行高（回归：body 1.6 与上游给 p 的 1.5 各管一段）", () => {

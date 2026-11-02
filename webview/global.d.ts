@@ -1,2 +1,2 @@
-// CSS 模块全局声明：允许在 TypeScript 中 import 任意 .css 文件（副作用导入）
+// CSS module declaration: allow importing any .css file from TypeScript (side-effect import).
 declare module '*.css' {}

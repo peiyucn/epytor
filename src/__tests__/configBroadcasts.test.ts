@@ -56,4 +56,17 @@ describe("CONFIG_BROADCASTS 配置变更广播表", () => {
         expect(broadcastFor("epytor.tableWrapMode").message("nowrap"))
             .toEqual({ type: "tableWrapModeChanged", mode: "nowrap" });
     });
+
+    it("tableWrapMode 广播 应该 把任意取值收窄为枚举（不再直通字符串）", () => {
+        expect(broadcastFor("epytor.tableWrapMode").message("none"))
+            .toEqual({ type: "tableWrapModeChanged", mode: "nowrap" });
+        expect(broadcastFor("epytor.tableWrapMode").message("weird"))
+            .toEqual({ type: "tableWrapModeChanged", mode: "wrap" });
+        expect(broadcastFor("epytor.tableWrapMode").message(42))
+            .toEqual({ type: "tableWrapModeChanged", mode: "wrap" });
+        expect(broadcastFor("epytor.tableWrapMode").message(undefined))
+            .toEqual({ type: "tableWrapModeChanged", mode: "wrap" });
+        expect(broadcastFor("epytor.tableWrapMode").message("wrap"))
+            .toEqual({ type: "tableWrapModeChanged", mode: "wrap" });
+    });
 });

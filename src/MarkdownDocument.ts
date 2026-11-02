@@ -2,7 +2,6 @@ import * as vscode from "vscode";
 
 export class MarkdownDocument implements vscode.CustomDocument {
     private _content: string;
-    private _isDirty = false;
 
     private constructor(
         public readonly uri: vscode.Uri,
@@ -23,7 +22,6 @@ export class MarkdownDocument implements vscode.CustomDocument {
 
     update(newContent: string): void {
         this._content = newContent;
-        this._isDirty = true;
     }
 
     async save(cancellation: vscode.CancellationToken): Promise<void> {
@@ -34,7 +32,6 @@ export class MarkdownDocument implements vscode.CustomDocument {
             this.uri,
             Buffer.from(this._content, "utf-8"),
         );
-        this._isDirty = false;
     }
 
     async saveAs(
@@ -53,7 +50,6 @@ export class MarkdownDocument implements vscode.CustomDocument {
     async revert(_cancellation: vscode.CancellationToken): Promise<void> {
         const bytes = await vscode.workspace.fs.readFile(this.uri);
         this._content = Buffer.from(bytes).toString("utf-8");
-        this._isDirty = false;
     }
 
     async backup(
@@ -67,13 +63,13 @@ export class MarkdownDocument implements vscode.CustomDocument {
                 try {
                     await vscode.workspace.fs.delete(destination);
                 } catch {
-                    // 备份文件不存在时忽略
+                    // The backup file may already be gone.
                 }
             },
         };
     }
 
     dispose(): void {
-        // 清理资源（当前无需额外操作）
+        // No resources to release; `_content` is garbage-collected with the document.
     }
 }

@@ -8,7 +8,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { CrepeBuilder } from "@milkdown/crepe";
 import { editorViewCtx } from "@milkdown/kit/core";
-import { TextSelection } from "@milkdown/kit/prose/state";
 import type { EditorView } from "@milkdown/kit/prose/view";
 
 // jsdom 缺这些 API，Crepe feature 可能用到

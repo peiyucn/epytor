@@ -10,8 +10,8 @@ import { editorViewCtx, remarkStringifyOptionsCtx } from "@milkdown/kit/core";
 import { getMarkdown } from "@milkdown/kit/utils";
 import { TextSelection } from "@milkdown/kit/prose/state";
 import type { EditorView } from "@milkdown/kit/prose/view";
-import { softBreakKeymap } from "../softBreakKeymap";
-import { withTableBreakHandler } from "../utils/markdownSerializer";
+import { softBreakKeymap } from "../editor/plugins/softBreakKeymap";
+import { withTableBreakHandler } from "../markdown/markdownSerializer";
 
 if (typeof (window as unknown as Record<string, unknown>).ResizeObserver === "undefined") {
     (window as unknown as Record<string, unknown>).ResizeObserver = class {

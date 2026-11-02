@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { PendingRequestRegistry } from "../utils/pendingRequest";
+import { PendingRequestRegistry } from "../app/pendingRequest";
 
 describe("PendingRequestRegistry 请求-响应注册表", () => {
     afterEach(() => {

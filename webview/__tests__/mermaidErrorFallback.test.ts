@@ -7,9 +7,8 @@
  * 由 editor.ts 的 catch 在**代码块自己的预览区**显示一行简洁错误。
  */
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import mermaid from "mermaid";
+import { mermaidInitConfig } from "../editor/mermaid";
 
 describe("mermaid 错误渲染策略", () => {
     it("默认配置 应该 会把错误画成炸弹图（这是我们要规避的上游行为）", () => {
@@ -18,17 +17,19 @@ describe("mermaid 错误渲染策略", () => {
         expect(cfg.suppressErrorRendering).toBe(false);
     });
 
-    it("editor.ts 的 initialize 配置 应该 开启 suppressErrorRendering", () => {
-        const src = readFileSync(
-            path.resolve(process.cwd(), "webview/editor.ts"),
-            "utf-8",
-        );
-        // 两个 initialize 调用点（首次加载 / 主题切换）都必须走统一配置函数
-        const initCallCount = (src.match(/\.initialize\(/g) ?? []).length;
-        expect(initCallCount).toBe(2);
-        expect(src).toContain("suppressErrorRendering: true");
-        // 不允许再有绕过统一配置的内联 initialize({ startOnLoad ... })
-        expect(src).not.toMatch(/initialize\(\{\s*startOnLoad/);
+    it("统一配置函数 应该 开启 suppressErrorRendering（两个 initialize 调用点共用它）", () => {
+        // Import the value the editor actually passes instead of scraping editor.ts: the old
+        // assertion broke on any refactor while only proving the text existed somewhere.
+        expect(mermaidInitConfig(false)).toEqual({
+            startOnLoad: false,
+            theme: "default",
+            suppressErrorRendering: true,
+        });
+        expect(mermaidInitConfig(true)).toEqual({
+            startOnLoad: false,
+            theme: "dark",
+            suppressErrorRendering: true,
+        });
     });
 
     it("开启后 应该 抛错而不是画图，且不在 body 里留下错误 SVG", async () => {

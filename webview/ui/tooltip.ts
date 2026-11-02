@@ -1,4 +1,3 @@
-// ─── 常量 ────────────────────────────────────────────────────
 const TOOLTIP_SPACING_PX = 6;
 const TOOLTIP_VIEWPORT_MARGIN_PX = 4;
 
@@ -14,16 +13,16 @@ function getTooltip(): HTMLElement {
 }
 
 interface TooltipOptions {
-    /** 显示位置：'below'（默认，工具栏用）或 'above' */
+    /** 'below' (default, used by the top bar) or 'above'. */
     placement?: "above" | "below";
-    /** 仅在文本被截断（出现 ...）时才显示 */
+    /** Only show when the text is truncated (an ellipsis is rendered). */
     truncatedOnly?: boolean;
 }
 
 interface TooltipHandle {
-    /** 动态更新 tooltip 文案（不影响显示状态） */
+    /** Update the text without touching visibility. */
     setText(t: string): void;
-    /** 主动显示 tooltip（用于点击后反馈等场景） */
+    /** Show right away (e.g. click feedback). */
     show(): void;
 }
 
@@ -33,9 +32,10 @@ export interface TooltipHorizontalPos {
 }
 
 /**
- * 横向定位纯函数（可单测）：
- * - 右半屏按钮 → 右缘对齐按钮右缘（确定性不超视口右缘，回归：findBar 末位按钮 tooltip 超屏被裁剪）
- * - 左半屏按钮 → 左缘对齐按钮左缘（向右伸展，受 CSS max-width 限制）
+ * Horizontal placement (pure, unit-tested): a button on the right half aligns the tooltip's
+ * right edge to the button's, which can never overflow the viewport (regression: the findBar's
+ * last button's tooltip was clipped off-screen); a button on the left half aligns left edges
+ * and grows rightwards, bounded by CSS max-width.
  */
 export function computeTooltipHorizontal(
     el: { left: number; right: number },
@@ -79,7 +79,7 @@ function position(
         y = elRect.top - tipRect.height - TOOLTIP_SPACING_PX;
         if (y < TOOLTIP_VIEWPORT_MARGIN_PX) {
             y = elRect.bottom + TOOLTIP_SPACING_PX;
-        } // 上方不够则降到下方
+        } // Not enough room above: drop below.
     } else {
         y = elRect.bottom + TOOLTIP_SPACING_PX;
         if (y + tipRect.height > window.innerHeight - TOOLTIP_VIEWPORT_MARGIN_PX) {
@@ -88,7 +88,7 @@ function position(
     }
     tip.style.top = `${y}px`;
 
-    // 读回校验兜底：任何测量/CSS 层误差导致仍超出视口时，改由 right/left 锚定贴边
+    // Read-back guard: if measurement or CSS error still overflows the viewport, pin to an edge.
     const finalRect = tip.getBoundingClientRect();
     if (finalRect.width > 0 && finalRect.right > window.innerWidth - TOOLTIP_VIEWPORT_MARGIN_PX) {
         tip.style.left = "auto";
@@ -101,14 +101,14 @@ function position(
     tip.style.visibility = "visible";
 }
 
-/** 立即隐藏当前显示的 tooltip（用于点击交互后主动清除） */
+/** Hide the visible tooltip immediately (used to clear it after a click interaction). */
 export function hideTooltip(): void {
     if (tooltipEl) {
         tooltipEl.style.display = "none";
     }
 }
 
-/** 命令式：立即在指定元素旁显示 tooltip，无需事件绑定 */
+/** Imperative show next to an element, with no event binding. */
 export function showTooltipAt(
     el: Element,
     text: string,
@@ -119,7 +119,7 @@ export function showTooltipAt(
     position(tip, el as HTMLElement, placement);
 }
 
-/** 替换原生 title，改用 VSCode 风格的自定义 tooltip */
+/** Replace the native `title` attribute with a VS Code-style custom tooltip. */
 export function applyTooltip(
     el: HTMLElement,
     text: string,

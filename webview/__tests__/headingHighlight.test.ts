@@ -12,7 +12,7 @@
  * 解法：点击即**钉住**被点项，用户再次交互解除。
  */
 import { describe, expect, it } from "vitest";
-import { pinHeadingHighlight, resolveHighlight } from "../utils/headingHighlight";
+import { pinHeadingHighlight, resolveHighlight } from "../outline/headingHighlight";
 
 describe("resolveHighlight（点击钉住优先，用户再动即解除）", () => {
     it("没有钉住时 应该 跟随滚动几何", () => {

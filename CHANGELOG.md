@@ -5,6 +5,37 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 English | [简体中文](CHANGELOG.zh-CN.md)
 
+## [1.3.0] - 2026-11-02
+
+### New features
+
+- **The status bar now shows the file size** — the existing line/word/character readout gains a `Size:` segment showing how large the file is **on disk** (e.g. `12.3 KB`, `2.4 MB`), refreshed after saving and after an external tool rewrites the file. This is the number you also see in the Explorer, which makes it easy to gauge what an AI tool is about to read or has just written
+
+### Bug fixes
+
+- **The editor no longer loses focus while you type** — after an automatic save, a late file-change notification from the disk (most visible in OneDrive folders) used to be mistaken for someone else editing the file; the editor was then rebuilt from scratch and lost both the keyboard focus and the characters typed since that save. Such notifications are now compared by content, so the editor only reloads when the file on disk really differs, and focus, caret and scroll position are restored afterwards
+- **The caret no longer jumps back to line 1, column 1** — when the editor was rebuilt in the background (an external change while you were looking at another tab), or when its panel was reloaded, the caret silently went back to the very beginning of the document. The last caret position and the scroll offset are now remembered and restored, without stealing focus from whatever you were doing
+- **Typing Chinese no longer cancels the composition** — a rebuild that arrived while the input method was composing could make the candidate window vanish; the rebuild now waits until the composition finishes
+- **Backspacing an item in a nested to-do list no longer changes the levels below it** — only the item you press is lifted to the level above; the items below keep their level, and pressing Backspace on an empty nested item removes it instead of leaving an empty row at the top level
+- **A full-width colon typed after formatted text no longer lands inside the mark or moves the caret past the next character** — typing `：` at the end of **bold**, *italic* or ~~strikethrough~~ text keeps it outside the formatted span, with the caret immediately after it
+- **Horizontal rules are back to a hairline** — a `---` divider was being drawn as a thick grey band roughly 13 pixels tall instead of a 1-pixel line. The upstream theme paints the rule with a background colour squeezed into a one-pixel-tall content box; an override of ours reset that padding, so the colour filled the whole 13-pixel box
+- **The outline sidebar's resize handle now keeps up with the panel** — when the outline opened or closed, the grab handle at its edge lagged behind the panel, and the toolbar snapped into place in a single frame while everything else glided. The handle and the panel were being animated on different rendering paths (`left` versus `transform`), and the toolbar's transition was declared on a property nothing ever changes; all three now animate together
+- **A stale save can no longer roll the file back** — when a save was triggered by an old "modified" flag (for example while a panel was being deactivated) and there was nothing new to write, the unchanged buffer could overwrite a change another tool had just made on disk. Such a save is now skipped and the disk copy is left alone
+- **Concurrent external edits are announced instead of silently reverted** — if another tool changes the file while you have unsaved edits, the editor keeps your content and shows a one-time warning (saving will overwrite the disk copy; use "Revert File" to load it) instead of losing your text or overwriting the other writer without notice
+- **An image folder outside the workspace is reported** — when a workspace-level `epytor.imageLocalPath` points outside the workspace the image is still saved next to the document, but a notice now says so instead of the fallback happening silently
+- **Images referenced with the `@/` workspace alias can be renamed again** — the rename path was resolved against the document folder, so `![x](@/assets/a.png)` failed with "Image not found"; the alias is now resolved first, like image display and path completion already did
+- **Switching to the source editor no longer writes a stale buffer back** — the flush before switching now compares against the file on disk; when there is nothing new to write and the file changed externally, the write is skipped
+- **A deferred external change is no longer applied before it is decided** — the editor used to load the disk copy first and decide afterwards, so a rebuild during a deferred check could still show the pre-edit text; the document model is now updated only when the change is actually adopted
+- **An unreadable image folder produces a notice** — when the project image gallery cannot read the folder, the panel now says so instead of showing "no images"
+- **The outline highlight no longer survives an editor rebuild** — after a rebuild (revert / external change) the outline could keep highlighting a heading position from the previous document; it now clears and waits for the new document
+
+### Changed
+
+- **Typing at the end of an inline mark no longer continues the format** — a caret at the end of bold/italic/strikethrough text is treated as outside the span; continued typing, including full-width punctuation, uses plain text, while typing inside the marked text keeps the format
+- **Security-related development tooling updates** — the bundled extension and user-facing behavior are unchanged
+- **Blank lines *between* list items are no longer added or removed automatically** — they are now treated as the author's own formatting and preserved exactly. Blank lines inside a single list item (between two of its paragraphs) are still managed automatically
+- **`@/` in files that are not part of any workspace folder now always resolves next to the document** — this covers standalone files opened while another workspace is active (images, file links and path completion now share the same rule). Previously file links fell back to the parent folder while images and path completion used the document folder; they now all use the document folder, and the path-completion dropdown keeps the rest of the path (`@/a/b`) instead of dropping it
+
 ## [1.2.7] - 2026-10-22
 
 ### Changed

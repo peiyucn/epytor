@@ -1,36 +1,131 @@
 /**
- * 路径补全下拉核心（渲染 + 键盘导航 + 点击选择），供 pathComplete / imgPathComplete
- * 两处复用。回归：两份实现曾几乎逐行镜像（ul/li 构建、mouseover 抑制、Escape/方向键/
- * Enter/Tab 导航），修键盘行为需改两处且已产生不对称。
+ * Path-completion dropdown core (render + keyboard nav + click select), shared by
+ * pathComplete and imgPathComplete.
+ *
+ * Regression: the two implementations were near line-for-line mirrors (ul/li building,
+ * mouseover suppression, Escape/arrow/Enter/Tab navigation), so every keyboard fix had to be
+ * made twice — and they had already drifted apart.
  */
 import {
     closeDropdown as closeDropdownState,
     updateActiveItem,
     type DropdownState,
 } from "@/ui/dropdownComplete";
+import type { PathSuggestionItem } from "../../shared/messages";
+import { PATH_COMPLETE_RETRIGGER_DELAY_MS } from "../../shared/constants";
 
 export interface PathDropdownOptions<T> {
     listClass: string;
     itemClass: string;
     activeClass: string;
-    /** 条目内部 HTML（图标/缩略图 + 标签，由调用方拼装） */
+    /** Inner HTML for an item (icon/thumbnail + label), assembled by the caller. */
     renderItem: (item: T) => string;
     getTitle: (item: T) => string;
-    /** 条目选中（mousedown / Enter / Tab） */
+    /** Item chosen (mousedown / Enter / Tab). */
     onSelect: (item: T) => void;
-    /** 关闭时附加清理（如保存的选区范围复位） */
+    /** Extra cleanup on close (e.g. restore the saved selection range). */
     onClose?: () => void;
 }
 
 export interface PathDropdown<T> {
     isOpen(): boolean;
-    /** 下拉是否包含该节点（外部点击关闭判定） */
+    /** Whether the dropdown contains this node (outside-click dismissal). */
     contains(node: Node): boolean;
-    /** 在绝对坐标处渲染下拉（调用方计算 anchor，如输入框底部 + 滚动偏移） */
+    /** Render at absolute coordinates; the caller computes the anchor (input bottom + scroll offset). */
     show(anchor: { left: number; top: number }, items: T[], listMinWidth?: string): void;
     close(): void;
-    /** 键盘导航（capture 阶段注册于 document）：Escape 关闭，方向键循环，Enter/Tab 选中 */
+    /** Keyboard nav (registered on document in capture phase): Escape closes, arrows wrap, Enter/Tab select. */
     handleKeydown(e: KeyboardEvent): void;
+}
+
+/** Basename of a suggestion path (trailing slash stripped, last segment kept). */
+export function pathLastSegment(path: string): string {
+    return path.replace(/\/$/, "").split("/").pop() ?? path;
+}
+
+/** Minimal HTML escape: item labels/URIs are assembled as innerHTML strings. */
+function escapeHtml(text: string): string {
+    return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+}
+
+export interface PathSuggestionRenderOptions {
+    /** SVG markup for the file/dir icon (each caller keeps its own icon source). */
+    iconHtml: string;
+    iconClass: string;
+    labelClass: string;
+    /** Image completion only: render a thumbnail instead of the icon. */
+    thumbnail?: { className: string; webviewUri: string };
+}
+
+/**
+ * One suggestion row: either a thumbnail + label (image completion, host-resolved URI) or an
+ * icon + label. The two completion flows had assembled this row with different class names but
+ * identical structure and escape rules.
+ */
+export function renderPathSuggestionItem(
+    item: PathSuggestionItem,
+    opts: PathSuggestionRenderOptions,
+): string {
+    const label = escapeHtml(pathLastSegment(item.path));
+    if (opts.thumbnail) {
+        const src = escapeHtml(opts.thumbnail.webviewUri);
+        return `<img class="${opts.thumbnail.className}" src="${src}" alt=""><span class="${opts.labelClass}">${label}</span>`;
+    }
+    return `<span class="${opts.iconClass}">${opts.iconHtml}</span><span class="${opts.labelClass}">${label}</span>`;
+}
+
+/**
+ * After picking a directory the value ends with `/`, so the debounced "type-to-complete" flow
+ * will not fire on its own: close the list and re-trigger completion once the new value is in.
+ */
+export function retriggerCompletionAfterDirectoryPick(
+    dropdown: { close(): void },
+    retrigger: () => void,
+    delayMs: number = PATH_COMPLETE_RETRIGGER_DELAY_MS,
+): void {
+    dropdown.close();
+    setTimeout(retrigger, delayMs);
+}
+
+export interface CompletionTeardownOptions {
+    /** Cancel the debounce timer (and any other in-flight timer). */
+    clearTimer: () => void;
+    closeDropdown: () => void;
+    /** Remove the listeners the caller registered. */
+    removeListeners: () => void;
+}
+
+export interface CompletionTeardown {
+    /** True once dispose() ran: async responses must never render after this. */
+    readonly disposed: boolean;
+    dispose(): void;
+}
+
+/**
+ * Shared teardown envelope for a completion session: mark destroyed first (async guards read
+ * `disposed`), then drop timers, close the dropdown and remove listeners — in that order and
+ * exactly once. Both completions must survive a second dispose (destroy after confirm).
+ */
+export function createCompletionTeardown(options: CompletionTeardownOptions): CompletionTeardown {
+    let disposed = false;
+    return {
+        get disposed() {
+            return disposed;
+        },
+        dispose() {
+            if (disposed) {
+                return;
+            }
+            disposed = true;
+            options.clearTimer();
+            options.closeDropdown();
+            options.removeListeners();
+        },
+    };
 }
 
 export function createPathDropdown<T>(opts: PathDropdownOptions<T>): PathDropdown<T> {

@@ -1,32 +1,31 @@
 import './toc.css';
 import type { EditorView } from "@milkdown/kit/prose/view";
-import { DEFAULT_TOPBAR_HEIGHT } from "../../../shared/constants";
-import { hideStickyUntilNextInteraction, onActiveHeadingChange, getActiveHeadingPos } from "../../headingStickyPlugin";
+import { topbarHeight } from "../../ui/topbarMetrics";
+import { hideStickyUntilNextInteraction, onActiveHeadingChange, getActiveHeadingPos } from "../../editor/plugins/headingStickyPlugin";
 import { applyTooltip } from "@/ui/tooltip";
 import { t } from "@/i18n";
 import { IconChevronRight, IconChevronDown } from "@/ui/icons";
 import { getWebviewState, setWebviewState } from "@/messaging";
-import { buildHeadingIndex } from "../../utils/headingFold";
-import { headingScrollTop } from "../../utils/headingScroll";
-import { pinHeadingHighlight, resolveHighlight, type HeadingHighlightPin } from "../../utils/headingHighlight";
-import { getUserInteractionEpoch, USER_INTERACTION_EVENT_TYPES } from "../../utils/userInteraction";
-import { shouldSkipViewportWork } from "../../utils/viewportLedger";
+import { buildHeadingIndex } from "../../outline/headingFold";
+import { headingScrollTop } from "../../outline/headingScroll";
+import { pinHeadingHighlight, resolveHighlight, type HeadingHighlightPin } from "../../outline/headingHighlight";
+import { getUserInteractionEpoch, USER_INTERACTION_EVENT_TYPES } from "../../shell/userInteraction";
+import { shouldSkipViewportWork } from "../../scroll/viewportLedger";
 
 interface HeadingEntry {
     level: number;
     text: string;
     pos: number;
-    /** 折叠状态的稳定键（level:text#序号，与文档位置无关——pos 会随编辑漂移） */
+    /** Stable fold key (`level:text#nth`); `pos` drifts on every edit. */
     key: string;
 }
 
-/** 折叠键：同名同级标题按「第几次出现」区分（回归 P6：此前 level:text 让同一文档
- * 两个「## 安装」共用一个折叠开关；文档身份维度不需要——每个文档独立 webview 状态） */
+/** Regression: `level:text` alone merged same-name headings; pos keys broke on edit drift. */
 export function headingFoldKey(level: number, text: string, nth: number): string {
     return `${level}:${text}#${nth}`;
 }
 
-/** 为标题序列分配折叠键（纯函数，供测试；输入只需 level/text） */
+/** Assign fold keys by occurrence order (pure; test seam). */
 export function assignFoldKeys<T extends { level: number; text: string }>(headings: T[]): (T & { key: string })[] {
     const seen = new Map<string, number>();
     return headings.map((h) => {
@@ -40,36 +39,31 @@ export function assignFoldKeys<T extends { level: number; text: string }>(headin
 const TOC_WIDTH = 200;
 const TOC_MIN_WIDTH = 200;
 const TOC_MAX_WIDTH = 500;
+const DEFAULT_EDITOR_MAX_WIDTH = 900;
+const TAB_DRAG_THRESHOLD_PX = 3;
+const ITEM_INDENT_STEP_PX = 12;
+const ITEM_INDENT_BASE_PX = 8;
 
 /**
- * 自动展开阈值 = 用户设置的编辑页宽度 + 这个余量（默认 900 + 100 = 1000px）。
+ * Auto-show needs the editor column plus this margin (default 900 + 100px).
  *
- * 为什么是「编辑页宽度 + 余量」：TOC 是给正文让位的侧栏，窗口得先装得下正文列、
- * 再多出一点才值得自动出现（owner 定的口径 2026-09-12）。
- *
- * 为什么量窗口宽而不是量"正文左侧空白"：打开态是推正文的，量空白会把面板自身的影响
- * 算进去（面板一开、正文一窄、"空白"同步缩水 → 立刻判定放不下 → 反馈回路，实测表现为
- * 「自动关闭的阈值偏大」）。窗口宽天然不受面板影响。
+ * Measured against the viewport, never against the free space beside the column: opening the
+ * panel shrinks that space and would immediately close it again (feedback loop).
  */
 export const TOC_AUTO_SHOW_EXTRA_PX = 100;
 
-/** 纯判据（可直测）：窗口宽是否够自动展开 */
+/** Pure predicate: is the viewport wide enough to auto-open? */
 export function shouldAutoShowToc(viewportWidth: number, editorMaxWidth: number): boolean {
     return viewportWidth >= editorMaxWidth + TOC_AUTO_SHOW_EXTRA_PX;
 }
 
-/**
- * 打开状态的唯一裁决（纯函数，可直测）——优先级按 owner 在 DSH 左边栏上逐条实测的结论：
- *
- * - **用户点过关闭**（`dismissed`）= 最高优先级：无论窗口怎么变都不再自动打开；
- * - 用户点开 = 解除该偏好，此后是否保持**由宽度决定**（手动打开不压过宽度规则）。
- */
+/** Dismissed wins over width; a manual open clears that preference but keeps the width rule. */
 export function resolveTocOpen(dismissed: boolean, viewportWidth: number, editorMaxWidth: number): boolean {
     if (dismissed) { return false; }
     return shouldAutoShowToc(viewportWidth, editorMaxWidth);
 }
 
-/** 从 EditorView 提取所有 heading 节点（共享索引，口径与折叠/吸顶一致；TOC 列出全部深度） */
+/** Every heading level, indexed like folding/sticky does (TOC lists all levels). */
 function getHeadings(view: EditorView): HeadingEntry[] {
     return assignFoldKeys(
         buildHeadingIndex(view.state.doc).map((entry) => ({
@@ -80,7 +74,7 @@ function getHeadings(view: EditorView): HeadingEntry[] {
     );
 }
 
-/** 根据 heading 在文档中的位置找到对应的标题 DOM 元素 */
+/** `nodeDOM` is exact; fall back to `domAtPos` + ancestor walk when the node owns no DOM. */
 function findHeadingElement(view: EditorView, pos: number): HTMLElement | null {
     const dom = view.nodeDOM(pos) as HTMLElement | null;
     if (dom?.matches("h1,h2,h3,h4,h5,h6")) return dom;
@@ -107,10 +101,9 @@ function isHeadingVisible(headings: HeadingEntry[], index: number, collapsed: Se
     return true;
 }
 
-/** 编辑页宽度（px）——由 initToc 的调用方在配置变化时写入 */
-let _editorMaxWidth = 900;
+/** Editor page width in px, written by initToc's owner on config changes. */
+let _editorMaxWidth = DEFAULT_EDITOR_MAX_WIDTH;
 
-/** 更新自动展开阈值所用的编辑页宽度（`epytor.editorMaxWidth`） */
 export function setTocEditorMaxWidth(width: number): void {
     if (Number.isFinite(width) && width > 0) { _editorMaxWidth = width; }
 }
@@ -120,57 +113,45 @@ export function initToc(getEditorView: () => EditorView | null): {
     toggle: () => void;
     refresh: () => void;
     show: () => void;
+    /** Detach this instance's listeners (idempotent). */
+    dispose: () => void;
 } {
     const panel = document.createElement("div");
     panel.className = "toc-panel";
 
-    /** TOC 列表项 → 对应标题 DOM 元素（refresh 时填充，点击跳转用；P9） */
+    /** List item → heading DOM element (filled on refresh; used by click-to-jump). */
     const headingEls = new WeakMap<HTMLElement, HTMLElement>();
 
-    /** 标题位置 → 列表项（高亮跟随用；refresh 时重绑） */
+    /** Heading pos → list item (active highlight follows these). */
     const itemByPos = new Map<number, HTMLElement>();
 
     /**
-     * 列表项 → 标题位置的**当前**值（点击钉住用）。
-     * 与 itemByPos 同源、每次重绑一起更新；点击时 O(1) 取到「这一项现在对应哪个 pos」，
-     * 不必按 DOM 元素反查（`posAtDOM` 是「节点起始 + 1」，与判据口径差 1，历史上已因此
-     * 出过两次回归——见 utils/headingFold.ts 的 pos 口径说明）。
+     * List item → its *current* heading pos, rebound together with `itemByPos`; clicking reads
+     * it in O(1). Not `posAtDOM`: that is "node start + 1" and has caused two off-by-one bugs.
      */
     const posByItem = new Map<HTMLElement, number>();
 
     /**
-     * 已渲染列表项的**渲染签名**（可见项的「身份键 + 折叠态」序列，不含文档位置）与
-     * 对应的 DOM 项。`refresh()` 据此决定「要不要重建 DOM」：签名不变 = 标题结构没变
-     * （正文输入只会让标题位置平移），此时只重绑位置，列表 DOM 一个节点都不动。
-     *
-     * 回归（owner 手测 2026-09-17「输入文字的时候，TOC 里的内容总一下一下闪」）：此前
-     * refresh 无条件 `list.innerHTML = ""` 全量重建，而刷新判据带文档位置——正文里每敲
-     * 一个字，其后所有标题的 pos 都平移、判据必变，于是每个输入停顿都重建一次：目录项
-     * 重画、列表滚动位置归零、hover 与点击目标被打断，观感就是「一下一下闪」。
-     *
-     * 初值用 `null` 而非 `""`：空文档的渲染签名恰好也是 `""`（空序列），用 `""` 当哨兵会
-     * 让「从来没有标题」的文档永远走「无变化」分支、连「No headings」占位都不画。
+     * Rendered signature (visible identity + fold state, no positions) and its DOM items.
+     * Typing only shifts positions, so an unchanged signature means no rebuild — the regression
+     * was `innerHTML = ""` on every typing pause, which made the list flicker.
+     * Initial `null`, not `""`: an empty document also has an empty signature and must still
+     * render the "No headings" placeholder.
      */
     let renderedSignature: string | null = null;
     let renderedItems: HTMLElement[] = [];
 
     /**
-     * 高亮当前章节并把它滚进可视区（跟随吸顶条的「我们现在在哪」）。
-     *
-     * 只动列表自身的 scrollTop（不用 scrollIntoView：那会连带滚动窗口，把正文顶跑）。
+     * Highlight the active section and scroll it into view.
+     * Only the list's own scrollTop moves; `scrollIntoView` would also scroll the page.
      */
     function applyActiveHeading(pos: number | null): void {
-        // 位置漂移兜底（回归：输入时高亮「灭一下再亮」——正文里敲字会让标题 pos 整体平移，
-        // 吸顶插件随即按**新**位置发布，而这里的绑定还是旧的，查不到就把高亮全清了，直到
-        // 800ms 防抖刷新才恢复）。查不到就按当前文档重绑一次，高亮不中断。
-        //
-        // 不必担心这里变成滚动热路径：订阅上游 publishActiveHeading 只在「当前章节真的
-        // 变了」时回调一次，不是每帧。位置确实不在列表里时（该标题被目录折叠隐藏）
-        // rebindFromDocument 会因签名一致而重绑到同样的集合，行为是收敛的。
+        // Positions drift on input while the sticky plugin publishes the *new* pos; rebind
+        // instead of clearing the highlight. Not a hot path: it only publishes real changes.
         if (pos !== null && !itemByPos.has(pos)) { rebindFromDocument(); }
 
-        // 点击钉住优先（短文档滚不动，纯几何无法表达「用户点的是第几项」，见
-        // utils/headingHighlight.ts）；用户再次交互即解除，交回滚动跟随。
+        // The click pin outranks geometry (short documents cannot express "which item was
+        // clicked"); any further user interaction releases it. See outline/headingHighlight.ts.
         const resolved = resolveHighlight(pinnedHighlight, pos, getUserInteractionEpoch());
         pinnedHighlight = resolved.pin;
         const effective = resolved.pos;
@@ -187,22 +168,14 @@ export function initToc(getEditorView: () => EditorView | null): {
         list.scrollTop += itemRect.top - listRect.top - (listRect.height - itemRect.height) / 2;
     }
 
-    /**
-     * 点击目录项后的高亮钉住状态（null = 跟随滚动）。
-     * 用户再次交互（滚动 / 键盘 / 拖滚动条）后由 resolveHighlight 自动解除。
-     */
+    /** Click pin (null = follow scrolling); released by `resolveHighlight` on interaction. */
     let pinnedHighlight: HeadingHighlightPin | null = null;
 
     /**
-     * 用户再次交互 → 解除钉住并交回滚动跟随。
-     *
-     * 为什么不能只依赖 applyActiveHeading 里的惰性解除：那条路径由 publication 驱动，
-     * 而上游 `publishActiveHeading` **只在当前章节真的变化时**才通知。短文档里几何值恒为
-     * 最后一项（用户怎么滚都不变）→ 通知永不触发 → 钉住就永远解不掉了。这里显式挂一次
-     * 交互监听，保证「用户一动就解除」。
-     *
-     * 用冒泡阶段（非 capture）：点击目录项自身也会递增纪元，但本函数在 label 的处理器
-     * **之后**才执行，此时钉住已带着新纪元建立、判定为相符，不会自我解除。
+     * Release the pin when the user interacts again. The lazy release inside
+     * `applyActiveHeading` is not enough: the plugin only publishes a *change*, which never
+     * happens in short documents. Bubble phase: a click on an item bumps the epoch first, so
+     * the pin created with the new epoch still matches and does not release itself.
      */
     function releasePinOnInteraction(): void {
         if (pinnedHighlight === null) { return; }
@@ -211,16 +184,13 @@ export function initToc(getEditorView: () => EditorView | null): {
         applyActiveHeading(getActiveHeadingPos());
     }
 
-    /** 按当前文档重新计算「目录项 ↔ 标题位置」绑定（DOM 不动；仅用于位置漂移兜底） */
+    /** Recompute item ↔ pos bindings from the current document (DOM untouched; drift fallback). */
     function rebindFromDocument(): void {
         const view = getEditorView();
         if (!view) return;
         const headings = getHeadings(view);
-        const visible: number[] = [];
-        for (let idx = 0; idx < headings.length; idx++) {
-            if (isHeadingVisible(headings, idx, collapsedHeadings)) { visible.push(idx); }
-        }
-        // 结构已经变了（渲染签名不同）说明 refresh 尚未落地，此时重绑会错配——交给 refresh
+        const visible = visibleHeadingIndices(headings);
+        // Structure differs ⇒ refresh has not landed yet; rebinding now would mismatch.
         if (renderSignature(headings, visible) !== renderedSignature) { return; }
         bindPositions(view, headings, visible);
     }
@@ -230,10 +200,8 @@ export function initToc(getEditorView: () => EditorView | null): {
 
     const headerTitle = document.createElement("span");
     headerTitle.className = "toc-header-title";
-    // 标题短一点（手测反馈：Table of Contents 太长）——英文显示 Contents，中文词典给「目录」
+    // Short label: the panel is narrow, so "Contents" (localized) fits.
     headerTitle.textContent = t("Contents");
-    // 说明：本组件**不再**有「整体收起/展开」与「钉住」两个按钮——
-    // 每个节点自己能收展（前者多余）；打开即常驻（后者的语义被"打开"吸收）。
     header.appendChild(headerTitle);
 
     const list = document.createElement("div");
@@ -242,22 +210,21 @@ export function initToc(getEditorView: () => EditorView | null): {
     panel.appendChild(header);
     panel.appendChild(list);
 
-    // ── 右侧 Tab（独立 fixed 元素，JS 同步 left 对齐 panel 右边缘）──
+    // Fixed tab outside the panel; JS keeps it on the panel's right edge.
     const tabEl = document.createElement("button");
     tabEl.className = "toc-toggle-tab";
     tabEl.tabIndex = -1;
     document.body.appendChild(tabEl);
 
     /**
-     * 只有两个状态：打开 / 关闭。`dismissedByUser` 承载「用户点过关闭」这个**最高优先级**
-     * 偏好（持久化）——它成立时无论窗口怎么变都不自动打开；用户点开即解除。
-     * 见 docs/specs/2026-09-12-toc-two-state.md。
+     * Two states only. `dismissedByUser` is the persisted "user closed it" preference and
+     * outranks width; opening clears it. See docs/specs/2026-09-12-toc-two-state.md.
      */
     let isOpen = false;
     let dismissedByUser = false;
     let panelWidth = TOC_WIDTH;
 
-    // 从 webview 状态恢复：关闭偏好 + 面板宽度（`tocPinned` 已废弃，不再读取）
+    // Restore close preference and width (`tocPinned` is retired and no longer read).
     const savedState = getWebviewState();
     if (savedState?.tocDismissed === true) { dismissedByUser = true; }
     if (savedState?.tocWidth && typeof savedState.tocWidth === "number") {
@@ -265,14 +232,13 @@ export function initToc(getEditorView: () => EditorView | null): {
     }
     panel.style.width = `${panelWidth}px`;
 
-    // ── 折叠状态（稳定键：level:text#序号；回归——曾以文档 pos 为键，跨文档恢复时
-    // 新文档标题被旧 pos 集合错误折叠，且编辑漂移后折叠指示错位；再回归 P6——仅
-    // level:text 时同名同级标题共用一个开关） ────────────────────────────────
+    // Fold keys are stable identities (level:text#nth). Pos keys misfolded across documents
+    // and drifted on edit; level:text alone made duplicate headings share one toggle.
     const collapsedHeadings = new Set<string>();
     if (Array.isArray(savedState?.tocCollapsed)) {
         for (const key of savedState.tocCollapsed) {
-            // 仅接受当前格式的字符串键；旧版本持久化的数字 pos 与 level:text 键
-            // 一律丢弃（一次性迁移：老键不会匹配新键，留着只会被反复持久化）
+            // Accept current string keys only; legacy numeric/level:text keys are dropped once
+            // (they can never match again and would be re-persisted forever).
             if (typeof key === "string" && key.includes("#")) collapsedHeadings.add(key);
         }
     }
@@ -286,29 +252,32 @@ export function initToc(getEditorView: () => EditorView | null): {
         });
     }
 
-    /** 列表项的折叠态标记（进渲染签名：翻转箭头要跟着变） */
+    /** Fold marker; part of the render signature so arrow flips trigger a rebuild. */
     function foldStateOf(headings: HeadingEntry[], idx: number): string {
         if (!hasChildren(headings, idx)) { return "-"; }
         return collapsedHeadings.has(headings[idx].key) ? "closed" : "open";
     }
 
-    /**
-     * 渲染签名：可见项的「稳定身份键 + 折叠态」序列。
-     *
-     * 关键是**不含文档位置**：正文输入只让标题 pos 平移，身份与形状都没变 —— 此时列表
-     * DOM 不需要动（这正是本次「目录一下一下闪」回归的修复点）。位置变化由
-     * `bindPositions()` 单独重绑。
-     */
+    /** Visible identity + fold state, deliberately position-free. */
     function renderSignature(headings: HeadingEntry[], visible: number[]): string {
         return visible.map((idx) => `${headings[idx].key}|${foldStateOf(headings, idx)}`).join("\n");
     }
 
-    /** 新建一个目录项（仅结构变化时调用） */
-    function createItem(view: EditorView, headings: HeadingEntry[], idx: number): HTMLElement {
+    /** Indexes of headings currently visible under the collapsed set. */
+    function visibleHeadingIndices(headings: HeadingEntry[]): number[] {
+        const visible: number[] = [];
+        for (let idx = 0; idx < headings.length; idx++) {
+            if (isHeadingVisible(headings, idx, collapsedHeadings)) { visible.push(idx); }
+        }
+        return visible;
+    }
+
+    /** Build one item; only called on structural changes. */
+    function createItem(headings: HeadingEntry[], idx: number): HTMLElement {
         const h = headings[idx];
         const item = document.createElement("div");
         item.className = `toc-item toc-item--h${h.level}`;
-        item.style.paddingLeft = `${(h.level - 1) * 12 + 8}px`;
+        item.style.paddingLeft = `${(h.level - 1) * ITEM_INDENT_STEP_PX + ITEM_INDENT_BASE_PX}px`;
 
         const hasKids = hasChildren(headings, idx);
         const isCollapsed = collapsedHeadings.has(h.key);
@@ -328,8 +297,7 @@ export function initToc(getEditorView: () => EditorView | null): {
                 refresh();
             });
         } else {
-            // 无子标题的占位横杠：不再是「不可点」的指示（整行都跳转，见下方 item 的
-            // mousedown），所以不写 cursor: default —— 那会与整行 pointer 的预期打架
+            // Leaf placeholder dash: the row itself jumps, so no "disabled" cursor.
             toggle.textContent = "–";
         }
         item.appendChild(toggle);
@@ -341,51 +309,44 @@ export function initToc(getEditorView: () => EditorView | null): {
 
         item.appendChild(label);
 
-        // 点击跳转绑在**整行**（item）而不是文字 span 上（回归：手测反馈「整行高亮可点，
-        // 但只有文字那一截有反应」）。此前绑在 label 上，而 label 是 flex:1 的文字高度
-        // （18px）、行高 24px——行的上下 padding 与文字右侧的空白都不属于 label，
-        // 点上去没有任何反应，与 hover 高亮给出的「整行可点」预期不符。
-        // 折叠箭头有自己的 mousedown 且 stopPropagation，因此不会与这里重复触发。
+        // Bind the jump to the whole row: the label is only the text box, so clicks on the
+        // padding were dead even though hover highlighted the full row. The arrow stops
+        // propagation itself, so it never doubles up here.
         item.addEventListener("mousedown", (e) => {
             e.preventDefault();
             e.stopPropagation();
             const v = getEditorView();
             if (!v) return;
             try {
-                // 点击时用 refresh 时记录的标题 DOM 元素反查当前位置（回归 P9：
-                // 此前按「level+文本」全文档 descendants 反查——每次点击 O(n)，
-                // 且两个同文同级标题永远命中第一个；元素引用随 ProseMirror DOM
-                // 复用稳定，posAtDOM 即得当前位置）
+                // Pos comes from the element recorded at refresh time: O(1), and correct for
+                // duplicate titles (the former level+text lookup always hit the first one).
                 const el = headingEls.get(item);
                 if (!el || !v.dom.contains(el)) return;
                 const targetPos = posByItem.get(item);
                 if (targetPos === undefined) return;
-                const topbar = document.querySelector(".milkdown-top-bar") as HTMLElement | null;
-                const topbarH = topbar?.getBoundingClientRect().height ?? DEFAULT_TOPBAR_HEIGHT;
-                // 跳转后隐藏吸顶条直到用户下一次交互：目标章节正常显示在顶栏下方，
-                // 不再残留上一个章节的吸顶条（用户反馈：应该正常显示到对应章节、没有吸顶标题）
+                const topbarH = topbarHeight();
+                // Hide the sticky bar until the next interaction so the target shows normally.
                 hideStickyUntilNextInteraction();
-                // 落点必须**越过**「当前章节」阅读线，否则高亮会停在被点项的前一项
-                // （回归：点击目录切换正常、但高亮乱跑/点第一项无高亮）
+                // Land below the reading line, otherwise the highlight stays on the previous item.
                 const top = headingScrollTop(
                     el.getBoundingClientRect().top + window.scrollY,
                     topbarH,
                 );
-                // 钉住被点项：短文档滚不动（可滚动量 < 尾部区间），纯几何取到的永远是最后
-                // 一项，必须靠这次点击意图才能精准高亮（见 utils/headingHighlight.ts）。
-                // 纪元**在点击之后**取：这次 mousedown 已计入纪元，用旧值会立刻自我解除。
+                // Pin the clicked item: short documents cannot scroll, so geometry alone always
+                // reports the last item. Epoch read after the click, else it releases itself.
                 pinnedHighlight = pinHeadingHighlight(targetPos, getUserInteractionEpoch());
                 applyActiveHeading(targetPos);
                 window.scrollTo({ top, behavior: "smooth" });
-            } catch { /* heading 元素已不在 DOM 中，忽略此次跳转 */ }
+            } catch { /* heading element already detached; skip this jump */ }
         });
 
         return item;
     }
 
     /**
-     * 把「目录项 ↔ 标题位置」的绑定更新到当前文档（DOM 不动）。
-     * 位置一律从当前文档重新取：正文输入会让所有标题 pos 平移，旧绑定会指向错误章节。
+     * Rebind item ↔ pos from the current document without touching the DOM.
+     * Positions are always re-read: typing shifts every heading, stale bindings point at the
+     * wrong section.
      */
     function bindPositions(view: EditorView, headings: HeadingEntry[], visible: number[]): void {
         itemByPos.clear();
@@ -405,26 +366,22 @@ export function initToc(getEditorView: () => EditorView | null): {
         const view = getEditorView();
         if (!view) return;
         const headings = getHeadings(view);
-
-        const visible: number[] = [];
-        for (let idx = 0; idx < headings.length; idx++) {
-            if (isHeadingVisible(headings, idx, collapsedHeadings)) { visible.push(idx); }
-        }
+        const visible = visibleHeadingIndices(headings);
         const signature = renderSignature(headings, visible);
 
-        // 结构未变（正文打字的常态：标题身份与折叠态都一样，只有位置平移）——
-        // 一个 DOM 节点都不动，只重绑位置。列表滚动位置、hover 与 tooltip 因此不被打断。
+        // Same structure (typing): leave the DOM alone and only rebind positions, so list
+        // scroll, hover and tooltips are not interrupted.
         if (signature === renderedSignature) {
             bindPositions(view, headings, visible);
             applyActiveHeading(getActiveHeadingPos());
             return;
         }
 
-        // 结构变了（改名 / 增删标题 / 层级变化 / 折叠切换）：整体重建
+        // Structure changed (rename / add / remove / level / fold): rebuild the list.
         renderedSignature = signature;
         list.innerHTML = "";
         renderedItems = [];
-        // headingEls 为 WeakMap：被丢弃的旧项自动可回收，无需清空
+        // headingEls is a WeakMap: dropped items become collectable without clearing.
         if (visible.length === 0) {
             const empty = document.createElement("div");
             empty.className = "toc-empty";
@@ -434,7 +391,7 @@ export function initToc(getEditorView: () => EditorView | null): {
             return;
         }
         for (const idx of visible) {
-            const item = createItem(view, headings, idx);
+            const item = createItem(headings, idx);
             list.appendChild(item);
             renderedItems.push(item);
         }
@@ -445,7 +402,7 @@ export function initToc(getEditorView: () => EditorView | null): {
     function syncBodyPadding(): void {
         document.body.classList.toggle("toc-open", isOpen);
         const topbar = document.querySelector<HTMLElement>(".milkdown-top-bar");
-        // 打开态一律推正文（没有悬浮态）：面板不遮字，窗口窄也由用户自己关
+        // The panel always pushes the body (no overlay mode); narrow windows are the user's call.
         if (isOpen) {
             document.body.style.paddingLeft = `${panelWidth}px`;
             if (topbar) topbar.style.paddingLeft = `${panelWidth}px`;
@@ -455,15 +412,18 @@ export function initToc(getEditorView: () => EditorView | null): {
         }
     }
 
+    /**
+     * Keep the tab on the panel's right edge. `transform`, not `left`: the panel opens with a
+     * compositor-only transform, so a layout-property tab visibly lags behind it.
+     */
     function updateTabPos(): void {
-        tabEl.style.left = isOpen ? `${panelWidth}px` : '0px';
-        // 把手方向随状态翻转（用户明确点开就在那儿放着的视觉预期）
+        tabEl.style.transform = isOpen ? `translateX(${panelWidth}px)` : 'translateX(0px)';
         tabEl.textContent = isOpen ? "‹" : "›";
         tabEl.dataset.tocState = isOpen ? "open" : "closed";
         applyTooltip(tabEl, isOpen ? t("Collapse") : t("Expand"), { placement: "above" });
     }
 
-    /** 关闭；`byUser` 表示这是用户点击关闭 —— 记成最高优先级偏好并持久化 */
+    /** Close; `byUser` records the "user closed it" preference (persisted, outranks width). */
     function close(byUser: boolean): void {
         isOpen = false;
         panel.classList.remove("toc-panel--open");
@@ -475,7 +435,7 @@ export function initToc(getEditorView: () => EditorView | null): {
         syncBodyPadding();
     }
 
-    /** 打开；用户点击打开会**解除**关闭偏好（此后是否保持由宽度决定） */
+    /** Open; a user open clears the close preference (width then decides whether it stays). */
     function open(byUser: boolean): void {
         isOpen = true;
         if (byUser && dismissedByUser) {
@@ -496,14 +456,13 @@ export function initToc(getEditorView: () => EditorView | null): {
         }
     }
 
-    // Tab：关闭时点按=toggle，展开时点按=toggle / 拖拽=调整宽度
+    // Closed: click toggles. Open: click toggles, drag resizes.
     let tabDragStart = 0;
     let tabDragWidth = 0;
     let tabDragging = false;
     tabEl.addEventListener("mousedown", (e) => {
         e.preventDefault();
         e.stopPropagation();
-        // 关闭状态：不进入拖拽，直接 toggle
         if (!isOpen) { toggle(); return; }
         tabDragStart = e.clientX;
         tabDragWidth = panelWidth;
@@ -512,7 +471,7 @@ export function initToc(getEditorView: () => EditorView | null): {
 
         function onMove(ev: MouseEvent) {
             const delta = ev.clientX - tabDragStart;
-            if (!tabDragging && Math.abs(delta) < 3) return;
+            if (!tabDragging && Math.abs(delta) < TAB_DRAG_THRESHOLD_PX) return;
             tabDragging = true;
             const newWidth = Math.min(TOC_MAX_WIDTH, Math.max(TOC_MIN_WIDTH, tabDragWidth + delta));
             if (newWidth !== panelWidth) {
@@ -533,10 +492,8 @@ export function initToc(getEditorView: () => EditorView | null): {
         document.addEventListener("mouseup", onUp);
     });
 
-    // ── 宽度自适应（只在没有关闭偏好时起作用）──────────────────
     function checkAutoShow(): void {
-        // 宿主折叠态（切到非 webview 标签）视口是假的 300×150：此刻判定会把目录误收起，
-        // 切回来再展开——用户看到左侧闪动
+        // Collapsed host viewport is a fake 300×150; measuring there flashes the panel on return.
         if (shouldSkipViewportWork()) return;
         const shouldOpen = resolveTocOpen(dismissedByUser, document.documentElement.clientWidth, _editorMaxWidth);
         if (shouldOpen && !isOpen) {
@@ -548,25 +505,21 @@ export function initToc(getEditorView: () => EditorView | null): {
         }
     }
 
-    // 面板位置（top/height）由 toc.css 静态声明（与 topbar 高度 36px 对齐）——
-    // 回归：此前 updatePanelPosition() 每次调用都写入与 CSS 相同的定值，且被
-    // rAF 初始化与 resize 重复调用、永不产生不同结果（死重函数，已删除）
+    // Panel geometry (top/height) is declared statically in toc.css, aligned with the top bar.
 
     updateTabPos();
     requestAnimationFrame(() => {
         checkAutoShow();
-        // 首帧同步一次当前章节（订阅只覆盖"变化"）
+        // First frame: sync the current section (the subscription only covers changes).
         applyActiveHeading(getActiveHeadingPos());
     });
 
     window.addEventListener("resize", checkAutoShow);
-    // 当前章节跟随（判定与吸顶条同源：吸顶条最内层那一行）
-    onActiveHeadingChange(applyActiveHeading);
+    // Follow the active heading (same source as the sticky bar's innermost line).
+    const unsubscribeActiveHeading = onActiveHeadingChange(applyActiveHeading);
 
-    // 点击钉住的解除：用户再滚动/敲键/点别处即交回滚动跟随。
-    // 事件集直接复用 userInteraction 的表（唯一真源，见该模块头注释的回归 F4）。
-    // 冒泡阶段：点击目录项自身也会递增纪元，但 label 的处理器先跑、钉住已带新纪元建立，
-    // 到这里判定为相符，不会自我解除。
+    // Release the click pin on the next interaction; the event set is the single source of
+    // truth in userInteraction (regression F4).
     window.addEventListener("scroll", releasePinOnInteraction, { passive: true });
     for (const type of USER_INTERACTION_EVENT_TYPES) {
         window.addEventListener(type, releasePinOnInteraction, { passive: true });
@@ -577,5 +530,26 @@ export function initToc(getEditorView: () => EditorView | null): {
         tabEl.style.visibility = 'visible';
     }
 
-    return { panel, toggle, refresh, show };
+    /**
+     * Detach every listener this instance registered.
+     *
+     * The webview normally lives as long as the page, so this is not a leak fix — it exists so a
+     * second instance (tests, or a future per-document remount) starts clean instead of stacking
+     * listeners on top of the previous one (regression: tocRefresh had to work around it).
+     */
+    let disposed = false;
+    function dispose(): void {
+        if (disposed) { return; }
+        disposed = true;
+        window.removeEventListener("resize", checkAutoShow);
+        window.removeEventListener("scroll", releasePinOnInteraction);
+        for (const type of USER_INTERACTION_EVENT_TYPES) {
+            window.removeEventListener(type, releasePinOnInteraction);
+        }
+        unsubscribeActiveHeading();
+        panel.remove();
+        tabEl.remove();
+    }
+
+    return { panel, toggle, refresh, show, dispose };
 }

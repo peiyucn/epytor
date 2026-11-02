@@ -1,32 +1,42 @@
 /**
- * 表格网格选择器：顶栏「插入表格」按钮弹出 8×8 网格，hover 预览、点击插入。
- * 纯逻辑见 utils/tableGrid.ts。
+ * Table grid picker: the top-bar "insert table" button opens an 8×8 grid; hover previews,
+ * click inserts. Pure math lives in `webview/table/tableGrid.ts`.
+ *
+ * The panel is an anchored overlay: dismissal (Escape / outside mousedown / scroll) and the
+ * viewport clamp come from `ui/anchoredOverlay` instead of a local listener bag.
  */
 import "./tableGridPicker.css";
-import { TABLE_GRID_SIZE, gridIndexToCell, isCellHighlighted } from "@/utils/tableGrid";
+import { TABLE_GRID_SIZE, gridIndexToCell, isCellHighlighted } from "@/table/tableGrid";
 import { t } from "@/i18n";
+import { openAnchoredOverlay, type AnchoredOverlay } from "@/ui/anchoredOverlay";
 
-let _activePanel: HTMLElement | null = null;
-let _onKey: ((e: KeyboardEvent) => void) | null = null;
-let _onDocMousedown: ((e: MouseEvent) => void) | null = null;
-let _onScroll: (() => void) | null = null;
+/** Mirrors tableGridPicker.css: 8 cells of 18px, 2px gaps, panel padding 16 / 40. */
+const CELL_SIZE_PX = 18;
+const CELL_GAP_PX = 2;
+const PANEL_PADDING_X_PX = 16;
+const PANEL_PADDING_Y_PX = 40;
+const PANEL_WIDTH_PX = TABLE_GRID_SIZE * CELL_SIZE_PX + (TABLE_GRID_SIZE - 1) * CELL_GAP_PX + PANEL_PADDING_X_PX;
+const PANEL_HEIGHT_PX = TABLE_GRID_SIZE * CELL_SIZE_PX + (TABLE_GRID_SIZE - 1) * CELL_GAP_PX + PANEL_PADDING_Y_PX;
+const VIEWPORT_MARGIN_PX = 8;
+const GAP_PX = 6;
+
+let _activePanel: AnchoredOverlay | null = null;
+
+/** Close the picker if it is open (rebuild path: its listeners target the old document/window). */
+export function closeTableGridPicker(): void {
+    closeActivePanel();
+}
 
 function closeActivePanel(): void {
-    _activePanel?.remove();
+    _activePanel?.dispose();
     _activePanel = null;
-    if (_onKey) document.removeEventListener("keydown", _onKey);
-    if (_onDocMousedown) document.removeEventListener("mousedown", _onDocMousedown, true);
-    if (_onScroll) window.removeEventListener("scroll", _onScroll, true);
-    _onKey = null;
-    _onDocMousedown = null;
-    _onScroll = null;
 }
 
 export function openTableGridPicker(
     anchor: HTMLElement,
     onPick: (rows: number, cols: number) => void,
 ): void {
-    // 幂等：重复打开先关闭旧面板
+    // Idempotent: opening again closes the previous panel first.
     closeActivePanel();
 
     const panel = document.createElement("div");
@@ -53,21 +63,6 @@ export function openTableGridPicker(
     }
 
     panel.append(label, grid);
-    document.body.appendChild(panel);
-
-    // 定位：anchor 下方，贴边时收进视口
-    const CELL_SIZE = 18;
-    const GAP = 2;
-    const panelWidth = TABLE_GRID_SIZE * CELL_SIZE + (TABLE_GRID_SIZE - 1) * GAP + 16;
-    const panelHeight = TABLE_GRID_SIZE * CELL_SIZE + (TABLE_GRID_SIZE - 1) * GAP + 40;
-    const rect = anchor.getBoundingClientRect();
-    let left = rect.left;
-    if (left + panelWidth > window.innerWidth - 8) left = window.innerWidth - panelWidth - 8;
-    if (left < 8) left = 8;
-    let top = rect.bottom + 6;
-    if (top + panelHeight > window.innerHeight - 8) top = Math.max(8, rect.top - panelHeight - 6);
-    panel.style.left = `${left}px`;
-    panel.style.top = `${top}px`;
 
     const updateHover = (hoverIdx: number) => {
         const { row, col } = gridIndexToCell(hoverIdx);
@@ -93,15 +88,16 @@ export function openTableGridPicker(
         onPick(row, col);
     });
 
-    _activePanel = panel;
-    _onKey = (e) => {
-        if (e.key === "Escape") closeActivePanel();
-    };
-    _onDocMousedown = (e) => {
-        if (!panel.contains(e.target as Node)) closeActivePanel();
-    };
-    _onScroll = () => closeActivePanel();
-    document.addEventListener("keydown", _onKey);
-    document.addEventListener("mousedown", _onDocMousedown, true);
-    window.addEventListener("scroll", _onScroll, true);
+    _activePanel = openAnchoredOverlay({
+        el: panel,
+        anchor,
+        align: "left",
+        gap: GAP_PX,
+        viewportMargin: VIEWPORT_MARGIN_PX,
+        viewportRightMargin: VIEWPORT_MARGIN_PX,
+        // The grid historically clamped against window.innerWidth (scrollbar included),
+        // not the scaffold's default layout viewport; keep the exact old numbers.
+        viewportWidth: () => window.innerWidth,
+        size: { width: PANEL_WIDTH_PX, height: PANEL_HEIGHT_PX },
+    });
 }

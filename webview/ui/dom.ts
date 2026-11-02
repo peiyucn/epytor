@@ -1,8 +1,8 @@
 import { applyTooltip } from '@/ui/tooltip';
 
 /**
- * 通用按钮工厂。
- * onClick 自动包装 e.preventDefault() + e.stopPropagation()。
+ * Generic button factory.
+ * onClick is wrapped with e.preventDefault() + e.stopPropagation().
  */
 export function createButton(options: {
     className: string;
@@ -37,8 +37,8 @@ export function createButton(options: {
 }
 
 /**
- * 通用分隔线工厂。
- * 取代各组件的 sep() / sSep() / makeSep()。
+ * Generic separator factory.
+ * Replaces the per-component `sep()` / `sSep()` / `makeSep()` copies.
  */
 export function createSeparator(className: string, tag: 'div' | 'span' = 'div'): HTMLElement {
     const el = document.createElement(tag);
@@ -47,8 +47,8 @@ export function createSeparator(className: string, tag: 'div' | 'span' = 'div'):
 }
 
 /**
- * 为输入框绑定 Enter/Escape 键盘处理。
- * 自动处理 isComposing、stopPropagation、preventDefault。
+ * Bind Enter/Escape handling to an input.
+ * Takes care of isComposing, stopPropagation and preventDefault.
  */
 export function setupInputKeyboard(
     input: HTMLInputElement,

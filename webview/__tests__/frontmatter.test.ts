@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseFrontmatter, serializeFrontmatter, type FrontmatterEntry } from "../utils/frontmatter";
+import { parseFrontmatter, serializeFrontmatter, type FrontmatterEntry } from "../markdown/frontmatter";
 
 const kv = (key: string, value: string): FrontmatterEntry => ({ type: "kv", key, value });
 const raw = (text: string): FrontmatterEntry => ({ type: "raw", text });

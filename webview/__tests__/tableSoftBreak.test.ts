@@ -1,6 +1,6 @@
 /**
  * 表格软换行回归测试：单元格内 Shift+Enter 应插入 hardbreak（序列化为 <br>）。
- * 实现路径：webview/softBreakKeymap.ts 始终插入 hardbreak（不采用上游命令的
+ * 实现路径：webview/editor/plugins/softBreakKeymap.ts 始终插入 hardbreak（不采用上游命令的
  * 「行尾已有 hardbreak 时转段落」行为——表格单元格内反直觉，用户实测反馈）。
  * 历史：更早版本官方 tableKeymap 曾把 Shift+Enter 绑定 goToNextCell（7.22.1 已移除）。
  */
@@ -10,8 +10,8 @@ import { editorViewCtx, remarkStringifyOptionsCtx } from "@milkdown/kit/core";
 import { getMarkdown } from "@milkdown/kit/utils";
 import { TextSelection } from "@milkdown/kit/prose/state";
 import type { EditorView } from "@milkdown/kit/prose/view";
-import { softBreakKeymap } from "../softBreakKeymap";
-import { withTableBreakHandler } from "../utils/markdownSerializer";
+import { softBreakKeymap } from "../editor/plugins/softBreakKeymap";
+import { withTableBreakHandler } from "../markdown/markdownSerializer";
 
 if (typeof (window as unknown as Record<string, unknown>).ResizeObserver === "undefined") {
     (window as unknown as Record<string, unknown>).ResizeObserver = class {

@@ -5,12 +5,11 @@ import {
     detectListMarkerStyle,
     dropRedundantAmpersandEscapes,
     preserveTableBreakStyle,
-    serializeCleanMarkdown,
     stripListItemBreakPlaceholder,
     toLf,
     withLineEnding,
     withTableBreakHandler,
-} from "../utils/markdownSerializer";
+} from "../markdown/markdownSerializer";
 
 const unsafePatterns = [
     { character: "_" },
@@ -136,7 +135,7 @@ describe("Clean Markdown serializer", () => {
         });
 
         it("Clean 处理应该继承源文件 br 风格", () => {
-            expect(serializeCleanMarkdown(
+            expect(preserveTableBreakStyle(
                 "| A |\n|---|\n| a<br> |",
                 "| A |\n|---|\n| a<br /> |",
             )).toBe("| A |\n|---|\n| a<br> |");

@@ -1,4 +1,4 @@
-/* Mermaid 预览缩放（全部使用 --vscode-* 变量） */
+/* Mermaid preview zoom (theme variables only). */
 .epytor-mermaid-zoom-container {
     position: relative;
     overflow-x: auto;

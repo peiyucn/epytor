@@ -7,7 +7,7 @@ import {
     endClick,
     markDragged,
     type CellClickState,
-} from "../utils/cellClickState";
+} from "../table/cellClickState";
 
 /** 走一遍 mousedown → mouseup（默认不移动） */
 function clickAt(state: CellClickState, pos: number, x = 0, y = 0): void {

@@ -1,14 +1,15 @@
 /**
- * Frontmatter 可编辑面板组件。
- * 职责：渲染 key/value 输入行 + 增删行，编辑防抖后回调 onChange(序列化 YAML 头)。
- * 面板重建（revert/init）时宿主应先 dispose 旧实例，避免旧防抖 timer 竞态写回旧值。
+ * Editable frontmatter panel: one row per kv entry plus add/delete, debounced onChange with the
+ * serialized YAML header. The host disposes the old instance on rebuild so a stale timer cannot
+ * write back old values.
  */
-import { parseFrontmatter, serializeFrontmatter, type FrontmatterEntry, type FrontmatterRow } from "@/utils/frontmatter";
+import "./frontmatterPanel.css";
+import { parseFrontmatter, serializeFrontmatter, type FrontmatterEntry, type FrontmatterRow } from "@/markdown/frontmatter";
 import { t } from "@/i18n";
 
 export interface FrontmatterPanelHandle {
     panel: HTMLElement;
-    /** 面板已从文档移除（无 frontmatter 时不创建，handle 为 null） */
+    /** The panel was removed from the document (null handle when there is no frontmatter). */
     dispose(): void;
 }
 
@@ -22,9 +23,8 @@ export function createFrontmatterPanel(
     if (!parsed.some((entry) => entry.type === "kv")) return null;
 
     /**
-     * 条目数组（源真相）：kv 行对应一个可编辑 DOM 行；raw 行不渲染、只随序列化
-     * 原位放回。删除 kv 行时置 null 保序（DOM 行以 dataset.fmIndex 关联条目下标，
-     * splice 会错位后续行）。
+     * Source of truth. `null` marks a deleted kv row (index order must survive so `dataset.fmIndex`
+     * keeps pointing at the right entry); raw rows are not rendered and are re-emitted in place.
      */
     const entries: (FrontmatterEntry | null)[] = [...parsed];
 
@@ -47,7 +47,7 @@ export function createFrontmatterPanel(
         }
     };
 
-    /** 按 DOM 顺序收集 kv 行并回写源条目（raw 行不在 DOM 中，位置天然保留） */
+    /** Read kv rows in DOM order back into the entries (raw rows keep their positions). */
     const collectRows = (): FrontmatterRow[] => {
         const rows: FrontmatterRow[] = [];
         tbody.querySelectorAll<HTMLTableRowElement>("tr.fm-row").forEach((tr) => {
@@ -70,8 +70,9 @@ export function createFrontmatterPanel(
     };
 
     /**
-     * 校验并标记错误行：value 已填但 key 为空的行写盘时会被过滤（用户感知为
-     * 「加行无效」）；返回 false 表示存在待补 key 的行，该行 key 框红框高亮并聚焦。
+     * Validate and mark bad rows: a value without a key is dropped on write (users read that as
+     * "adding a row did nothing"). Returns false while a row still needs a key; that key input
+     * gets the error style and focus.
      */
     const validateRows = (rows: FrontmatterRow[]): boolean => {
         let valid = true;
@@ -102,7 +103,7 @@ export function createFrontmatterPanel(
         }, SAVE_DEBOUNCE_MS);
     };
 
-    /** 立即提交（输入框失焦 / 删除行 / 切换模式前）：防抖窗口内切走不丢改动 */
+    /** Commit now (blur / delete / mode switch) so nothing is lost inside the debounce window. */
     const flushSave = () => {
         if (disposed) return;
         clearTimer();
@@ -138,7 +139,7 @@ export function createFrontmatterPanel(
         delBtn.setAttribute("aria-label", t("Delete"));
         delBtn.addEventListener("click", () => {
             const index = Number(tr.dataset.fmIndex ?? -1);
-            if (index >= 0) entries[index] = null; // 置空保序，raw 行位置不受影响
+            if (index >= 0) entries[index] = null; // null keeps raw-row positions intact
             tr.remove();
             flushSave();
         });
@@ -163,7 +164,7 @@ export function createFrontmatterPanel(
         });
     };
 
-    /** 追加一行新的可编辑 kv 条目（用户主动新增，接在 raw 行之后） */
+    /** Append a new kv row after the raw rows. */
     const appendRow = (): void => {
         entries.push({ type: "kv", key: "", value: "" });
         addRow("", "", entries.length - 1);
@@ -178,8 +179,8 @@ export function createFrontmatterPanel(
     addBtn.className = "fm-add-btn";
     addBtn.textContent = "+";
     addBtn.setAttribute("aria-label", t("Add"));
-    // 阻止按钮在 mousedown 时夺取焦点并阻断冒泡（防 document 级监听抢焦点，
-    // click 内显式转移焦点到新行）
+    // Stop mousedown from stealing focus and bubbling to document-level listeners; the click
+    // handler moves focus to the new row explicitly.
     addBtn.addEventListener("mousedown", (event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -187,9 +188,8 @@ export function createFrontmatterPanel(
     addBtn.addEventListener("click", () => {
         appendRow();
         const keyInput = tbody.querySelector<HTMLInputElement>("tr:last-child .fm-key-input");
-        // 聚焦新行 key 框：mousedown 的 preventDefault 已消除按钮夺焦的根因，
-        // 同步 focus 即可（回归 P7：此前叠了「同步 + setTimeout(0) + rAF」三层保险，
-        // 但从未定位到具体夺焦者；若实测仍被夺焦，再按定位到的原因补一层）
+        // focus() is enough now that mousedown preventDefault removes the focus theft; the old
+        // setTimeout + rAF layers were removed with the root cause (regression P7).
         keyInput?.focus();
     });
     panel.appendChild(addBtn);

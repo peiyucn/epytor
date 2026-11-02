@@ -1,14 +1,15 @@
 /**
- * 顶栏溢出菜单：窗口收窄时把放不下的按钮收进「⋯」面板。
- * 约束：官方 topBar 为 Vue 组件，禁止 DOM 移动；本组件仅控制显示 class +
- * 渲染 body 级溢出面板（按钮副本），按钮动作由宿主注入的 runItem 回调执行。
+ * Top-bar overflow: hides buttons that no longer fit and mirrors them into a body-level menu.
+ * The official top bar is a Vue component, so buttons are never moved — only hidden by class;
+ * the host supplies `runItem` so a menu copy can execute the original action.
  */
 import "./topBarOverflow.css";
 import type { Ctx } from "@milkdown/kit/ctx";
-import { computeOverflow, type TopBarMeasuredItem } from "@/utils/topBarOverflow";
+import { computeOverflow, type TopBarMeasuredItem } from "@/shell/topBarOverflow";
 import { applyTooltip } from "@/ui/tooltip";
+import { openAnchoredOverlay, type AnchoredOverlay } from "@/ui/anchoredOverlay";
 import { t } from "@/i18n";
-import { isHostCollapsedViewport } from "@/utils/viewportLedger";
+import { isHostCollapsedViewport } from "@/scroll/viewportLedger";
 
 export interface TopBarButtonMeta {
     key: string;
@@ -18,7 +19,7 @@ export interface TopBarButtonMeta {
 
 interface TopBarOverflowHost {
     getTopBarEl: () => HTMLElement | null;
-    /** 执行被收起按钮的原动作（由宿主注入编辑器 ctx） */
+    /** Executes a hidden button's original action (the host injects the editor ctx). */
     runItem: (meta: TopBarButtonMeta) => void;
 }
 
@@ -41,22 +42,27 @@ const ITEM_LABELS: Record<string, string> = {
     "settings": t("Settings"),
 };
 
-/** 优先保留的按钮（heading 下拉与 history 组） */
+/** Buttons that stay in the bar as long as possible (heading dropdown + history). */
 const PINNED_KEYS = new Set(["heading", "undo", "redo"]);
 
 /**
- * 常驻溢出菜单的按钮（用户决策）：非编辑类按钮（如设置）默认不进顶栏，
- * 顶栏只放编辑相关按钮——按钮总数减少、溢出频率降低，
- * 且「⋯」按钮固定右缘不再需要动态跟随间隙（结构性消除重叠）。
+ * Settings always lives in the menu: the bar only carries editing actions. Fewer buttons means
+ * less overflow, and a fixed right-edge "⋯" needs no dynamic gap (no overlap by construction).
  */
 const ALWAYS_IN_MENU_KEYS = new Set(["settings"]);
 
 const MORE_BTN_WIDTH = 34;
 /**
- * 安全边距：固定右缘方案下按钮组实际占位与预算存在系统性偏差
- * （真实引擎实测重叠 7-40px，来自居中 flex 的 item 收缩/间距），预留 96px 兜底。
+ * Safety margin: with a fixed right edge the measured group and the budget differ by 7–40px
+ * (centered flex shrink/gap); 96px covers it.
  */
 const MORE_BTN_SAFETY_GAP_PX = 96;
+const MORE_BTN_HEIGHT_PX = 28;
+const MORE_BTN_RIGHT_MARGIN_PX = 8;
+/** Menu geometry, kept identical to the pre-scaffold values (see anchoredOverlay options). */
+const MENU_VIEWPORT_MARGIN_PX = 8;
+const MENU_RIGHT_EDGE_MARGIN_PX = 12;
+const MENU_GAP_PX = 6;
 const HIDDEN_CLASS = "top-bar-item--overflow-hidden";
 
 let _meta: TopBarButtonMeta[] = [];
@@ -66,18 +72,18 @@ export function setTopBarButtonMeta(meta: TopBarButtonMeta[]): void {
 }
 
 /**
- * 顶栏按钮实际可用宽度 = topBar 宽度 − 左右内边距。
- * 回归：此前直接使用 topBar 全宽作为预算，未扣除 padding-left 85px / padding-right 40px，
- * 预算虚高 125px，收窄窗口时按钮溢出并与「⋯」按钮重叠。
+ * Usable width = top-bar width minus horizontal padding.
+ * Regression: using the full width over-budgeted by 125px (85/40 padding), so buttons
+ * overlapped "⋯" when the window narrowed.
  */
-export function getTopBarUsableWidth(topBar: HTMLElement): number {
+function getTopBarUsableWidth(topBar: HTMLElement): number {
     const style = window.getComputedStyle(topBar);
     const padLeft = Number.parseFloat(style.paddingLeft) || 0;
     const padRight = Number.parseFloat(style.paddingRight) || 0;
     return Math.max(0, topBar.clientWidth - padLeft - padRight);
 }
 
-/** 按 meta 顺序定位指定 key 的顶栏按钮 DOM（heading selector 与普通 item 均计入序列） */
+/** Locate a top-bar button by meta order (heading selector and items both count). */
 export function findTopBarButtonEl(topBar: HTMLElement, key: string): HTMLElement | null {
     const children = Array.from(
         topBar.querySelectorAll<HTMLElement>(".top-bar-item, .top-bar-heading-selector"),
@@ -91,20 +97,12 @@ export function findTopBarButtonEl(topBar: HTMLElement, key: string): HTMLElemen
     return null;
 }
 
-let _activeMenu: HTMLElement | null = null;
-let _onMenuKey: ((e: KeyboardEvent) => void) | null = null;
-let _onMenuDocMousedown: ((e: MouseEvent) => void) | null = null;
-let _onMenuScroll: (() => void) | null = null;
+/** Open overflow menu; the handle owns its dismissal listeners. */
+let _activeMenu: AnchoredOverlay | null = null;
 
 function closeMenu(): void {
-    _activeMenu?.remove();
+    _activeMenu?.dispose();
     _activeMenu = null;
-    if (_onMenuKey) document.removeEventListener("keydown", _onMenuKey);
-    if (_onMenuDocMousedown) document.removeEventListener("mousedown", _onMenuDocMousedown, true);
-    if (_onMenuScroll) window.removeEventListener("scroll", _onMenuScroll, true);
-    _onMenuKey = null;
-    _onMenuDocMousedown = null;
-    _onMenuScroll = null;
 }
 
 function openOverflowMenu(anchor: HTMLElement, hiddenKeys: ReadonlySet<string>, host: TopBarOverflowHost): void {
@@ -133,33 +131,14 @@ function openOverflowMenu(anchor: HTMLElement, hiddenKeys: ReadonlySet<string>, 
         menu.appendChild(item);
     }
 
-    document.body.appendChild(menu);
-    const rect = anchor.getBoundingClientRect();
-    const menuWidth = menu.getBoundingClientRect().width;
-    const menuHeight = menu.getBoundingClientRect().height;
-    let left = rect.right - menuWidth;
-    if (left < 8) left = 8;
-    // 右缘 clamp：more 按钮贴视口右缘时，右对齐展开的菜单右缘可能超出页面被裁；
-    // 用 clientWidth（不含滚动条）对齐可视内容区
-    const viewportW = document.documentElement.clientWidth;
-    const maxLeft = viewportW - menuWidth - 12;
-    if (left > maxLeft) left = maxLeft;
-    let top = rect.bottom + 6;
-    if (top + menuHeight > window.innerHeight - 8) top = Math.max(8, rect.top - menuHeight - 6);
-    menu.style.left = `${left}px`;
-    menu.style.top = `${top}px`;
-
-    _activeMenu = menu;
-    _onMenuKey = (e) => {
-        if (e.key === "Escape") closeMenu();
-    };
-    _onMenuDocMousedown = (e) => {
-        if (!menu.contains(e.target as Node)) closeMenu();
-    };
-    _onMenuScroll = () => closeMenu();
-    document.addEventListener("keydown", _onMenuKey);
-    document.addEventListener("mousedown", _onMenuDocMousedown, true);
-    window.addEventListener("scroll", _onMenuScroll, true);
+    _activeMenu = openAnchoredOverlay({
+        el: menu,
+        anchor,
+        align: "right",
+        gap: MENU_GAP_PX,
+        viewportMargin: MENU_VIEWPORT_MARGIN_PX,
+        viewportRightMargin: MENU_RIGHT_EDGE_MARGIN_PX,
+    });
 }
 
 export function initTopBarOverflow(host: TopBarOverflowHost): { dispose(): void } {
@@ -178,8 +157,8 @@ export function initTopBarOverflow(host: TopBarOverflowHost): { dispose(): void 
 
     const measure = (): void => {
         rafId = null;
-        // 测量期间挂起 observer：measure 自身会移除/重挂 HIDDEN_CLASS，
-        // 若继续观察会把自身 class 变化当成新变化 → schedule → measure 无限循环（每帧重排）
+        // Suspend the observer while measuring: applying HIDDEN_CLASS would otherwise
+        // re-trigger schedule→measure every frame.
         mutObs?.disconnect();
         mutObs = null;
         const topBar = host.getTopBarEl();
@@ -189,7 +168,7 @@ export function initTopBarOverflow(host: TopBarOverflowHost): { dispose(): void 
             return;
         }
 
-        // 先全部显示再测量（常驻菜单的按钮参与布局测量后仍会隐藏）
+        // Show everything first so hidden buttons still take part in the measurement.
         inner.querySelectorAll<HTMLElement>(`.${HIDDEN_CLASS}`).forEach((el) => el.classList.remove(HIDDEN_CLASS));
 
         const containerWidth = getTopBarUsableWidth(topBar);
@@ -209,20 +188,20 @@ export function initTopBarOverflow(host: TopBarOverflowHost): { dispose(): void 
         }
 
         hiddenKeys = computeOverflow({
-            // 常驻菜单按钮（settings）不进顶栏：不占预算
+            // Always-in-menu buttons never enter the bar, so they consume no budget.
             items: items.filter((item) => !ALWAYS_IN_MENU_KEYS.has(item.key)),
             containerWidth,
             moreBtnWidth: MORE_BTN_WIDTH + MORE_BTN_SAFETY_GAP_PX,
             pinnedKeys: PINNED_KEYS,
         });
-        // 常驻菜单按钮永远在溢出集合：more 按钮始终显示、菜单里始终可见
+        // Always-in-menu buttons are always in the overflow set: "⋯" stays visible and the
+        // menu always has at least one entry.
         for (const key of ALWAYS_IN_MENU_KEYS) {
             hiddenKeys.add(key);
         }
 
-        // 应用隐藏 class（DOM 与 meta 顺序一致）；
-        // 分割线双向跟随：左侧按钮被收起（组尾）或右侧按钮被收起（组头）时一并隐藏，
-        // 否则「⋯」紧跟最后一个可见按钮时会压在残留分割线上（回归：more 压水平线按钮右侧分割线）
+        // Apply the hidden class in meta order. Dividers follow both neighbours: hide when the
+        // button before or after is hidden, otherwise "⋯" sits on a leftover divider.
         const children = Array.from(inner.children) as HTMLElement[];
         const hiddenFlags = new Map<HTMLElement, boolean>();
         metaIdx = 0;
@@ -262,20 +241,16 @@ export function initTopBarOverflow(host: TopBarOverflowHost): { dispose(): void 
 
         moreBtn.hidden = hiddenKeys.size === 0;
         const rect = topBar.getBoundingClientRect();
-        moreBtn.style.top = `${Math.max(2, rect.top + (rect.height - 28) / 2)}px`;
-        // 「⋯」固定右缘（用户决策）：settings 等常驻菜单、顶栏只放编辑按钮，
-        // 预算内按钮组不会越过 more 左缘——无需动态跟随间隙，结构性消除重叠。
-        // clientWidth 不含纵向滚动条（innerWidth 含），避免右缘被滚动条/编辑框边缘压住
+        moreBtn.style.top = `${Math.max(2, rect.top + (rect.height - MORE_BTN_HEIGHT_PX) / 2)}px`;
+        // Fixed to the right edge: the visible group never crosses the more button's left edge,
+        // so no dynamic gap is needed. clientWidth excludes the scrollbar, innerWidth does not.
         const viewportW = document.documentElement.clientWidth;
-        moreBtn.style.left = `${viewportW - MORE_BTN_WIDTH - 8}px`;
+        moreBtn.style.left = `${viewportW - MORE_BTN_WIDTH - MORE_BTN_RIGHT_MARGIN_PX}px`;
         moreBtn.style.right = "auto";
 
-        // Vue patch 可能覆盖隐藏 class：测量完成后恢复监听（目标可能被重建）；
-        // 同时确保 topBar 进入 RO 观察（幂等）——fixed left:0 right:0 尺寸随视口，
-        // 直接观察避免 resize 触发缺失导致「⋯」重排滞后（回归：按钮收起时机晚）。
-        // 观测 content-box：目录钉住/拖宽度只改 topBar 的 padding-left（border-box 不变），
-        // 预算宽度（clientWidth - 左右内边距）却变了——默认 border-box 观测收不到，
-        // 「⋯」要等下一次窗口 resize 才重排。
+        // Vue patches can drop the hidden class: re-attach after measuring (the target may be
+        // rebuilt) and observe content-box — pinning/dragging the TOC only changes padding, so
+        // a border-box observation would miss the budget change until the next window resize.
         resizeObserver.observe(topBar, { box: "content-box" });
         mutObs = new MutationObserver(schedule);
         mutObs.observe(topBar, {
@@ -292,31 +267,33 @@ export function initTopBarOverflow(host: TopBarOverflowHost): { dispose(): void 
         rafId = requestAnimationFrame(measure);
     };
 
-    /** 宿主折叠态（切到非 webview 标签）视口是假的 300×150：此刻测量会把按钮
-     *  收进「⋯」，切回来再展开——顶栏可见闪动。折叠期跳过，恢复尺寸的 resize 会重测。
-     *  用户真把编辑区缩到 300×150 时**不**跳过（被摘挂的 webview 收不到输入，收到输入即真实
-     *  小窗口）：那时 300px 是真的，必须重测，否则按钮保持上次真实宽度的排版而溢出（回归 A6）。 */
+    /**
+     * Collapsed host viewport (non-webview tab) is a fake 300×150: measuring there would hide
+     * buttons and flashing them back. A real 300×150 window still measures (regression A6):
+     * a detached webview receives no input, so input means the size is genuine.
+     */
     const scheduleUnlessCollapsed = (): void => {
         if (isHostCollapsedViewport()) return;
         schedule();
     };
 
-    // 窗口尺寸变化（body 尺寸随之变化）；topBar 内部变化由 mutation observer 捕获
     const resizeObserver = new ResizeObserver(scheduleUnlessCollapsed);
     resizeObserver.observe(document.body);
     window.addEventListener("resize", scheduleUnlessCollapsed);
 
     moreBtn.addEventListener("mousedown", (e) => {
-        // 防止「⋯」按钮夺走编辑器焦点（光标还在但输入失效）
+        // Keep focus in the editor (otherwise the caret stays but typing stops).
         e.preventDefault();
     });
     moreBtn.addEventListener("click", () => {
         const el = host.getTopBarEl();
         if (!el) return;
-        if (_activeMenu) {
+        if (_activeMenu?.isOpen()) {
             closeMenu();
             return;
         }
+        // Stale handle: the overlay dismissed itself (Escape / outside click / scroll).
+        _activeMenu = null;
         openOverflowMenu(moreBtn, hiddenKeys, host);
     });
 
@@ -327,8 +304,8 @@ export function initTopBarOverflow(host: TopBarOverflowHost): { dispose(): void 
             mutObs?.disconnect();
             if (rafId !== null) cancelAnimationFrame(rafId);
             resizeObserver.disconnect();
-            // 必须与注册时同一引用（回归：此前移除的是 schedule，而注册的是
-            // scheduleUnlessCollapsed——监听器不释放，编辑器每次重建泄漏一个）
+            // Must be the exact registered reference (regression: removing `schedule` instead
+            // of `scheduleUnlessCollapsed` leaked one listener per editor rebuild).
             window.removeEventListener("resize", scheduleUnlessCollapsed);
             moreBtn.remove();
             closeMenu();

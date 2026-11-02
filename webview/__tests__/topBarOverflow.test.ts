@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { computeOverflow, type TopBarMeasuredItem } from "../utils/topBarOverflow";
-import { initTopBarOverflow } from "../components/topBarOverflow";
-import { IFRAME_DEFAULT_HEIGHT, IFRAME_DEFAULT_WIDTH, TINY_REAL_ATTRIBUTE } from "../utils/viewportLedger";
+import { computeOverflow, type TopBarMeasuredItem } from "../shell/topBarOverflow";
+import { initTopBarOverflow, setTopBarButtonMeta } from "../components/topBarOverflow";
+import { IFRAME_DEFAULT_HEIGHT, IFRAME_DEFAULT_WIDTH, TINY_REAL_ATTRIBUTE } from "../scroll/viewportLedger";
 
 /** 改写 jsdom 视口尺寸（只读属性需 defineProperty） */
 function setViewport(width: number, height: number): void {
@@ -161,5 +161,138 @@ describe("initTopBarOverflow 生命周期", () => {
 
         expect(added).toHaveLength(1);
         expect(removed).toContain(added[0]);
+    });
+});
+
+/**
+ * 溢出菜单本体：收敛到 `ui/anchoredOverlay` 之后，菜单的展开/执行/关闭链路
+ * 从「无测试覆盖」变成必须由行为用例钉住——隐藏按钮的元数据、菜单项回调与
+ * Esc 关闭都经由新的浮层外壳。
+ */
+describe("溢出菜单（anchoredOverlay 接线）", () => {
+    let rafQueue: FrameRequestCallback[];
+
+    class FakeResizeObserver {
+        observe(): void { /* noop */ }
+        unobserve(): void { /* noop */ }
+        disconnect(): void { /* noop */ }
+    }
+
+    const flushRaf = (): void => {
+        const queue = rafQueue;
+        rafQueue = [];
+        for (const cb of queue) { cb(0); }
+    };
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        document.body.innerHTML = "";
+        rafQueue = [];
+        vi.stubGlobal("ResizeObserver", FakeResizeObserver);
+        vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => {
+            rafQueue.push(cb);
+            return rafQueue.length;
+        });
+        vi.stubGlobal("cancelAnimationFrame", vi.fn());
+    });
+
+    afterEach(() => {
+        vi.unstubAllGlobals();
+        vi.restoreAllMocks();
+        document.documentElement.removeAttribute(TINY_REAL_ATTRIBUTE);
+        setViewport(1024, 768);
+        document.body.innerHTML = "";
+    });
+
+    /** 顶栏只有「撑满」行为：jsdom 容器宽 0 → 非 pinned 项全部进菜单。 */
+    function makeTopBar(keys: string[]): HTMLElement {
+        const topBar = document.createElement("div");
+        topBar.className = "milkdown-top-bar";
+        const inner = document.createElement("div");
+        inner.className = "top-bar-inner";
+        for (const key of keys) {
+            const child = document.createElement("div");
+            child.className = key === "heading" ? "top-bar-heading-selector" : "top-bar-item";
+            inner.appendChild(child);
+        }
+        topBar.appendChild(inner);
+        document.body.appendChild(topBar);
+        return topBar;
+    }
+
+    function initWithMenu(): { topBar: HTMLElement; runItem: ReturnType<typeof vi.fn>; dispose: () => void } {
+        setTopBarButtonMeta([
+            { key: "heading", icon: "<svg>h</svg>", onRun: () => undefined },
+            { key: "image", icon: "<svg>i</svg>", onRun: () => undefined },
+            { key: "settings", icon: "<svg>s</svg>", onRun: () => undefined },
+        ]);
+        const topBar = makeTopBar(["heading", "image", "settings"]);
+        const runItem = vi.fn();
+        const ctl = initTopBarOverflow({ getTopBarEl: () => topBar, runItem });
+        flushRaf();
+        return { topBar, runItem, dispose: () => ctl.dispose() };
+    }
+
+    it("容器不足时 应该 隐藏非 pinned 按钮并展开含全部隐藏项的菜单", () => {
+        const { topBar, dispose } = initWithMenu();
+        const moreBtn = document.querySelector<HTMLButtonElement>(".epytor-topbar-more-btn")!;
+        expect(moreBtn.hidden).toBe(false);
+
+        moreBtn.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+        const menu = document.querySelector(".epytor-topbar-overflow-menu");
+        expect(menu).not.toBeNull();
+        const items = Array.from(menu!.querySelectorAll<HTMLElement>(".epytor-topbar-overflow-item"));
+        expect(items.map((item) => item.querySelector(".epytor-topbar-overflow-label")!.textContent))
+            .toEqual(["Heading", "Insert Image", "Settings"]);
+        // 隐藏 class 由测量施加（含 settings：它恒在菜单里）
+        const hidden = Array.from(topBar.querySelectorAll(".top-bar-item--overflow-hidden, .top-bar-heading-selector.top-bar-item--overflow-hidden"));
+        expect(hidden).toHaveLength(3);
+        dispose();
+    });
+
+    it("点击菜单项 应该 先关闭菜单再执行原按钮动作", () => {
+        const { runItem, dispose } = initWithMenu();
+        const moreBtn = document.querySelector<HTMLButtonElement>(".epytor-topbar-more-btn")!;
+        moreBtn.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+        const items = Array.from(document.querySelectorAll<HTMLElement>(".epytor-topbar-overflow-item"));
+        items[1].dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+        expect(runItem).toHaveBeenCalledTimes(1);
+        expect(runItem.mock.calls[0][0]).toMatchObject({ key: "image" });
+        expect(document.querySelector(".epytor-topbar-overflow-menu")).toBeNull();
+        dispose();
+    });
+
+    it("菜单打开时按 Esc 应该 关闭（浮室外壳的关闭契约在真实菜单上生效）", () => {
+        const { dispose } = initWithMenu();
+        const moreBtn = document.querySelector<HTMLButtonElement>(".epytor-topbar-more-btn")!;
+        moreBtn.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+        expect(document.querySelector(".epytor-topbar-overflow-menu")).not.toBeNull();
+
+        document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+        expect(document.querySelector(".epytor-topbar-overflow-menu")).toBeNull();
+        dispose();
+    });
+
+    it("再次点击「⋯」（键盘触发 click，无 mousedown） 应该 关闭菜单", () => {
+        const { dispose } = initWithMenu();
+        const moreBtn = document.querySelector<HTMLButtonElement>(".epytor-topbar-more-btn")!;
+        moreBtn.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+        moreBtn.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+        expect(document.querySelector(".epytor-topbar-overflow-menu")).toBeNull();
+        dispose();
+    });
+
+    it("dispose 应该 连同打开的菜单一起清掉（重建路径不残留浮层）", () => {
+        const { dispose } = initWithMenu();
+        const moreBtn = document.querySelector<HTMLButtonElement>(".epytor-topbar-more-btn")!;
+        moreBtn.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+        expect(document.querySelector(".epytor-topbar-overflow-menu")).not.toBeNull();
+
+        dispose();
+        expect(document.querySelector(".epytor-topbar-overflow-menu")).toBeNull();
     });
 });

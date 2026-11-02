@@ -24,6 +24,7 @@
 * **Frontmatter**：面板内直接编辑 key/value
 * **路径补全**：`@/`、`./`、`../` 触发，分级浏览
 * **工具栏**：顶栏毛玻璃吸顶 + 选中浮动工具栏 + 窄窗口溢出菜单
+* **状态栏**：显示当前文档的行 / 字 / 字符数，以及文件**在磁盘上**的实际大小（`大小: 12.3 KB`）；保存后与外部写入后自动更新
 * **自动保存**：跟随 VS Code 内置 `files.autoSave` 设置（`off` / `afterDelay` / `onFocusChange` / `onWindowChange`）
 * **Clean Markdown 保存**：减少不必要的转义和表格冗余换行
 

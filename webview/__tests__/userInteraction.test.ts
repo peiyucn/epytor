@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getUserInteractionEpoch } from "../utils/userInteraction";
+import { getUserInteractionEpoch } from "../shell/userInteraction";
 
 describe("getUserInteractionEpoch", () => {
     it("未发生交互时 应该 保持不变", () => {

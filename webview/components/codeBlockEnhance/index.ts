@@ -1,33 +1,31 @@
 /**
- * 代码块增强（从 webview/index.ts 提取）：复制按钮 ✔ 反馈、全屏灯箱按钮注入、
- * 语言搜索框键盘导航。全屏/导航依赖 Crepe 代码块 DOM 结构，用 MutationObserver
- * 扫描（tech-debt 已登记的 DOM 刮削反模式，等官方 API 后移除）。
+ * Code-block extras: copy feedback, a fullscreen lightbox button and keyboard navigation for
+ * the language search box. All of it scrapes Crepe's code-block DOM (no official API yet).
  */
+import "./codeBlockEnhance.css";
 import { applyTooltip } from "@/ui/tooltip";
 import { IconMaximize2 } from "@/ui/icons";
+import { createLightboxHost } from "@/ui/lightbox";
 import { t } from "@/i18n";
 
 const COPY_FEEDBACK_RESET_MS = 1500;
+const COPY_FEEDBACK_DELAY_MS = 100;
 
 /**
- * 当前打开的全屏灯箱的关闭函数（null = 没有）。
+ * Page-lifecycle singleton: at most one fullscreen code-block lightbox exists.
  *
- * 回归：灯箱挂在 `document.body` 上，而重建路径（initEditor 的 destroyEditor → 清
- * `#editor` innerHTML）清不掉它——用户在全屏状态下 revert / 切源码再切回 / 外部写盘采纳时，
- * 旧文档的 CodeMirror DOM 会继续全屏遮挡新内容，document 级 Esc 监听也一并残留。
- *
- * **调用方是重建路径**（`webview/index.ts` 的 initEditor 里、清容器之前）——不是本函数的
- * `enhanceCodeBlocks`：后者在模块顶层只跑一次（容器级事件委托，不随重建重入）。
+ * The lightbox lives on `document.body`, so the rebuild path (webview/index.ts, before the
+ * editor container is replaced) must close it explicitly — otherwise a stale CodeMirror DOM
+ * keeps covering the new document after revert/switch/reload.
  */
-let closeOpenLightbox: (() => void) | null = null;
+const fullscreenLightboxHost = createLightboxHost();
 
-/** 关闭仍然打开的全屏灯箱（编辑器重建前调用；无灯箱时为空操作） */
+/** Close a still-open fullscreen lightbox (rebuild path only; no-op when none is open). */
 export function closeCodeBlockLightbox(): void {
-    closeOpenLightbox?.();
+    fullscreenLightboxHost.close();
 }
 
 export function enhanceCodeBlocks(container: HTMLElement): void {
-    // ── 复制按钮：点击后弹 ✔ 提示 ────────────────────────────────────
     container.addEventListener('click', (e) => {
         const btn = (e.target as Element).closest('.copy-button') as HTMLElement | null;
         if (!btn) return;
@@ -35,10 +33,10 @@ export function enhanceCodeBlocks(container: HTMLElement): void {
             const tip = applyTooltip(btn, '✔ ' + t('Copied!'));
             tip.show();
             setTimeout(() => tip.setText(t('Copy Code')), COPY_FEEDBACK_RESET_MS);
-        }, 100);
+        }, COPY_FEEDBACK_DELAY_MS);
     });
 
-    // ── 全屏按钮（我们的自定义功能，不是 Crepe 的，直接创建）─────────────
+    // Our own button (not Crepe's), so it is created directly.
     const addFullscreenBtn = (block: Element): void => {
         const copyBtn = block.querySelector('.copy-button') as HTMLElement | null;
         if (copyBtn && !copyBtn.dataset.tip) { copyBtn.dataset.tip = '1'; applyTooltip(copyBtn, t('Copy Code')); }
@@ -62,53 +60,50 @@ export function enhanceCodeBlocks(container: HTMLElement): void {
             const langBtn = block.querySelector('.language-button');
             const lang = langBtn?.textContent?.trim() || '';
 
-            const lb = document.createElement('div');
-            lb.className = 'epytor-fs-lightbox';
-            const header = document.createElement('div');
-            header.className = 'epytor-fs-header';
-            const langSpan = document.createElement('span');
-            langSpan.className = 'epytor-fs-lang';
-            langSpan.textContent = lang;  // 安全注入，避免 XSS
-            const closeBtn = document.createElement('button');
-            closeBtn.className = 'epytor-fs-close';
-            closeBtn.textContent = '✕';
-            header.appendChild(langSpan);
-            header.appendChild(closeBtn);
-            const body = document.createElement('div');
-            body.className = 'epytor-fs-body';
-            lb.appendChild(header);
-            lb.appendChild(body);
-            document.body.appendChild(lb);
-            body.appendChild(cmEditor);
-            if (previewPanel) body.appendChild(previewPanel);
-
-            const close = () => {
-                if (closeOpenLightbox === close) { closeOpenLightbox = null; }
-                if (cmHost && cmEditor.parentElement !== cmHost) cmHost.appendChild(cmEditor);
-                if (previewPanel && previewPanel.parentElement !== block) block.appendChild(previewPanel);
-                if (document.body.contains(lb)) document.body.removeChild(lb);
-                document.removeEventListener('keydown', onKey);
-            };
-            const onKey = (ke: KeyboardEvent) => {
-                if (ke.key === 'Escape') { ke.preventDefault(); close(); }
-            };
-            closeOpenLightbox = close;
-            document.addEventListener('keydown', onKey);
-            lb.querySelector('.epytor-fs-close')!.addEventListener('mousedown', (me) => { me.preventDefault(); close(); });
-            lb.addEventListener('mousedown', (me) => { if (me.target === lb) close(); });
+            fullscreenLightboxHost.open({
+                className: 'epytor-fs-lightbox',
+                build: (root) => {
+                    const header = document.createElement('div');
+                    header.className = 'epytor-fs-header';
+                    const langSpan = document.createElement('span');
+                    langSpan.className = 'epytor-fs-lang';
+                    langSpan.textContent = lang;  // textContent, never innerHTML: the label is external data.
+                    const closeBtn = document.createElement('button');
+                    closeBtn.className = 'epytor-fs-close';
+                    closeBtn.textContent = '✕';
+                    header.appendChild(langSpan);
+                    header.appendChild(closeBtn);
+                    const body = document.createElement('div');
+                    body.className = 'epytor-fs-body';
+                    root.appendChild(header);
+                    root.appendChild(body);
+                    return { closeButton: closeBtn };
+                },
+                onOpen: (root) => {
+                    // Move the live editor after the overlay is attached: CodeMirror must not be
+                    // detached from the document on the way in.
+                    const body = root.querySelector('.epytor-fs-body');
+                    if (!body) return;
+                    body.appendChild(cmEditor);
+                    if (previewPanel) body.appendChild(previewPanel);
+                },
+                onDispose: () => {
+                    if (cmHost && cmEditor.parentElement !== cmHost) cmHost.appendChild(cmEditor);
+                    if (previewPanel && previewPanel.parentElement !== block) block.appendChild(previewPanel);
+                },
+            });
         });
         btnGroup.appendChild(fsBtn);
     };
 
-    // 初次 + 后续代码块都加上全屏按钮
     const scanBlocks = () => container.querySelectorAll('.milkdown-code-block').forEach(addFullscreenBtn);
     requestAnimationFrame(scanBlocks);
     new MutationObserver(() => requestAnimationFrame(scanBlocks))
         .observe(container, { childList: true, subtree: true });
 
-    // 语言搜索框键盘导航：{activeIndex} 显式状态（WeakMap 按输入框隔离）。
-    // 回归：以 DOM .focused class 为唯一状态源——输入过滤重渲染后高亮丢失、ArrowDown/Up
-    // 从头开始；无 Escape 取消；Enter 无高亮时静默无操作
+    // Keyboard navigation state, one entry per search input. Keyed explicitly because filtering
+    // re-renders the list: a `.focused` class alone loses the index (regression: arrows restarted
+    // from the top, Escape did nothing, Enter silently no-op without a highlight).
     const navStates = new WeakMap<HTMLElement, { activeIndex: number }>();
     container.addEventListener('keydown', (e) => {
         const input = e.target as HTMLElement;
@@ -138,13 +133,13 @@ export function enhanceCodeBlocks(container: HTMLElement): void {
             apply();
         } else if (e.key === 'Enter') {
             e.preventDefault();
-            // 无高亮时选第一项（回归：此前静默无操作）
+            // No highlight: pick the first item (it used to do nothing).
             const target = items[Math.max(state.activeIndex, 0)];
             target?.click();
         } else if (e.key === 'Escape') {
             e.preventDefault();
             state.activeIndex = -1;
-            input.blur(); // 取消搜索
+            input.blur();
         }
     });
 }

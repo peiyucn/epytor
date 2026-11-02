@@ -1,9 +1,9 @@
-/* 全局重置，使用 VSCode 编辑器主题变量 */
+/* Global reset; every colour comes from a --vscode-* variable. */
 * {
     box-sizing: border-box;
 }
 
-/* 视口单位统一走变量：灯箱、图片选择器、目录高度共用一处定义 */
+/* Viewport units in one place: lightbox, image picker and TOC height share them. */
 :root {
     --epytor-vw: 100vw;
     --epytor-vh: 100vh;
@@ -16,8 +16,8 @@ body {
     padding: 0;
     background-color: var(--vscode-editor-background);
     color: var(--vscode-editor-foreground);
-    /* 字体跟随 VS Code 编辑器（口径与下面的 font-size 一致）；--custom-font-family 是
-       留给自定义 CSS 的可选覆盖位，未设置时依次落到编辑器字体、内置字体栈 */
+    /* --custom-font-family is an optional hook for user CSS; unset, it falls back
+     * to the editor font. */
     font-family: var(
         --custom-font-family,
         var(--vscode-editor-font-family),
@@ -33,126 +33,9 @@ body {
     line-height: 1.6;
 }
 
-/* 编辑器容器 */
-/* ─── Frontmatter 面板 ─── */
-.frontmatter-panel {
-    /* 与 #editor 同宽：变量由 Extension 注入（--editor-max-width），始终有值 */
-    max-width: var(--editor-max-width);
-    margin: 0 auto;
-    /* 顶部 36px 让位 fixed 顶栏（否则面板首行被顶栏遮挡） */
-    padding: 44px 48px 0;
-    /* 关闭浏览器滚动锚定：面板内容/高度变化时锚定会把视口推向下方内容
-       （回归：打开文档后视口停在第一个标题、frontmatter 被跳过） */
-    overflow-anchor: none;
-}
-
-.frontmatter-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.85em;
-    border: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.2));
-    border-radius: 4px;
-    overflow: hidden;
-}
-
-.frontmatter-table td {
-    padding: 5px 10px;
-    border-bottom: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.15));
-    vertical-align: top;
-    line-height: 1.5;
-}
-
-.frontmatter-table tr:last-child td {
-    border-bottom: none;
-}
-
-.frontmatter-table .fm-key {
-    white-space: nowrap;
-    color: var(--vscode-symbolIcon-keywordForeground, var(--vscode-descriptionForeground));
-    font-family: var(--vscode-editor-font-family, monospace);
-    font-weight: bold;
-    /* 回归：width:1% 把 key 列压成几个像素，key 输入框不可见，
-       用户只能看到一个输入框、直接填 value，空 key 行保存被过滤 → 「加行无效」 */
-    width: 30%;
-    min-width: 150px;
-    padding-right: 16px;
-}
-
-.frontmatter-table .fm-val {
-    color: var(--vscode-editor-foreground);
-    word-break: break-word;
-}
-
-/* frontmatter 可编辑面板输入框与按钮 */
-.frontmatter-table .fm-key-input,
-.frontmatter-table .fm-val-input {
-    width: 100%;
-    box-sizing: border-box;
-    background: transparent;
-    border: 1px solid transparent;
-    border-radius: 2px;
-    color: inherit;
-    font: inherit;
-    padding: 0 2px;
-    outline: none;
-}
-.frontmatter-table .fm-key-input {
-    font-weight: bold;
-    font-family: var(--vscode-editor-font-family, monospace);
-}
-.frontmatter-table .fm-key-input::placeholder,
-.frontmatter-table .fm-val-input::placeholder {
-    color: var(--vscode-input-placeholderForeground, var(--vscode-descriptionForeground, rgba(128,128,128,0.7)));
-    font-weight: normal;
-}
-.frontmatter-table .fm-key-input:hover,
-.frontmatter-table .fm-val-input:hover {
-    border-color: var(--vscode-input-border, rgba(128, 128, 128, 0.4));
-}
-.frontmatter-table .fm-key-input:focus,
-.frontmatter-table .fm-val-input:focus {
-    border-color: var(--vscode-focusBorder, #007acc);
-    background: var(--vscode-input-background, #3c3c3c);
-}
-/* 校验错误态：value 已填但 key 为空的行（保存前必须补 key，否则该行被过滤） */
-.frontmatter-table .fm-key-input--error,
-.frontmatter-table .fm-key-input--error:focus {
-    border-color: var(--vscode-errorForeground, #f44336) !important;
-    background: color-mix(in srgb, var(--vscode-errorForeground, #f44336) 12%, transparent);
-}
-.frontmatter-table .fm-del {
-    width: 1%;
-}
-.fm-del-btn {
-    border: none;
-    background: transparent;
-    color: var(--vscode-descriptionForeground, #858585);
-    cursor: pointer;
-    padding: 0 4px;
-    border-radius: 3px;
-    line-height: 1.4;
-}
-.fm-del-btn:hover {
-    background: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, 0.31));
-    color: var(--vscode-errorForeground, #f48771);
-}
-.fm-add-btn {
-    margin-top: 4px;
-    border: none;
-    background: transparent;
-    color: var(--vscode-descriptionForeground, #858585);
-    cursor: pointer;
-    border-radius: 3px;
-    padding: 1px 8px;
-}
-.fm-add-btn:hover {
-    background: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, 0.31));
-    color: var(--vscode-editor-foreground, #cccccc);
-}
-
 #editor {
-    /* 内容区最大宽度：--editor-max-width 由 Extension 注入（epytor.editorMaxWidth，
-       默认 900px，改设置经 postMessage 即时生效，见 utils/layoutVars.ts） */
+    /* --editor-max-width is injected from `epytor.editorMaxWidth` (default 900px)
+     * and re-sent on change, see shell/layoutVars.ts. */
     max-width: var(--editor-max-width);
     margin: 0 auto;
     padding: 52px 48px 80px;
@@ -160,35 +43,18 @@ body {
     outline: none;
 }
 
-/* ─── 折叠期几何守卫（见 utils/viewportLedger.ts） ─────────────────────────
-   历史机制：宿主切到非 webview 标签时把 webview 容器摘出布局，iframe 回落到 Chromium
-   默认的 300×150；保活架构下 webview 不重建，所以这个假视口会真实地重排一次正文，
-   切回那几帧就是「正文按 300px 折行的小框」。这里治两件事：正文版式钉在真实宽度
-   （第 4 条）、固定 UI 折叠期不画（第 5 条）。不隐藏正文本身（整块隐藏会让切回瞬间
-   变成一片空白，比小框更刺眼）。
-
-   **真机复测（2026-09-11，VS Code 1.137.0）：本版宿主已经不摘挂 iframe** —— 3 轮
-   切走/切回的记账读数是 resize 事件 0 次、视口最小 1047×712、折叠判定命中 0 次，
-   即本块守卫在该宿主上从不生效，只为仍会摘挂 iframe 的旧宿主（1.136 实测过 300×150）
-   保留。同期还测到：折叠期内层画的东西**根本不上屏**（把折叠期整个视口涂成品红，
-   逐帧回放里一帧都找不到），用户看到的是宿主重新上屏 webview 前的空画面（稳态 1–2 帧），
-   与折叠期画什么无关。证据见 _poc/TEMP/vscode-flash-probe.mjs 与 docs/tech-debt.md。
-
-   判据是 <html> 上的 data-epytor-host-collapsed（JS 记账写入），**不是媒体查询**。
-   注意这不是「按用户设置做特判」——判据读的是 window.innerWidth/innerHeight 恰为
-   300×150，与用户缩放无关；旧写法错在 Chromium 的媒体查询按窗口缩放后的尺寸求值，
-   于是 `@media (width: 300px)` 在 innerWidth=300 时不匹配，整块守卫生效与否取决于
-   用户恰好有没有设 window.zoomLevel——那才是把用户设置耦合进来的写法，已弃用。
-   该属性已排除「用户在 300×150 下真操作过」的情形（isHostCollapsedViewport）。 */
+/* --- Collapsed-host geometry guard (see scroll/viewportLedger.ts) ---
+ * Why: an older host detached the webview to a 300×150 viewport while keep-alive kept the
+ * page alive, so the text really reflowed to 300px and the restore frame showed it. The
+ * predicate is a JS-maintained attribute on <html>, never a media query: a query reads the
+ * zoomed size and silently stops matching. */
 html[data-epytor-host-collapsed] {
-    /* 1. 滚动锚定：视口从真实尺寸缩到 300×150 时，浏览器为了「可见内容不动」会把滚动
-       位置就地修正（实测同一位置 scrollY 1500 → 1773）；宿主放回真实尺寸后内容就停在
-       错位处，用户看到内容跳一下。折叠期禁用锚定，滚动位置保持原值。 */
+    /* 1. Scroll anchoring: shrinking to 300×150 rewrites scrollY, so the content is left
+     * displaced once the host restores the real size. */
     overflow-anchor: none;
 
-    /* 2. 滚动条：折叠期视口只有 300px 宽，内容溢出会让滚动条出现/消失，正文可用宽度
-       跟着变一个滚动条宽；切回真实尺寸再变回来 → 正文横向位移一个滚动条宽。折叠期
-       不画滚动条（Firefox 走 scrollbar-width，Chromium/WebKit 走 ::-webkit-scrollbar）。 */
+    /* 2. Scrollbars: a 300px viewport toggles them and shifts the text by one scrollbar
+     * width. Neither engine paints one while collapsed. */
     scrollbar-width: none;
 }
 html[data-epytor-host-collapsed]::-webkit-scrollbar {
@@ -196,40 +62,25 @@ html[data-epytor-host-collapsed]::-webkit-scrollbar {
     height: 0;
 }
 
-/* 3. 顶栏宽度：顶栏 fixed + left/right:0，宽度跟随视口；折叠期视口只有 300px，按钮会
-   收进「⋯」溢出菜单，切回真实尺寸再展开 → 顶栏闪一下。这里用 JS 记账的真实宽度
-   （--epytor-last-body-width，见 utils/viewportLedger.ts）钉住宽度，按钮数量与位置
-   在折叠期不变。变量缺失时回退 100%，即按当前视口布局。
-   注：第 1、2 条（滚动锚定 / 滚动条）不随「真实小窗口」情形释放——属性本身已排除它。 */
+/* 3. Pin the top bar to the last real width, otherwise its buttons collapse into "⋯"
+ * and pop back. Falls back to 100% (current viewport) when the variable is missing. */
 html[data-epytor-host-collapsed] .milkdown-top-bar {
     width: var(--epytor-last-body-width, 100%);
 }
 
-/* 4. 正文版式：折叠期把 body 宽度钉在上次真实宽度（--epytor-last-body-width），
-   正文不再按 300px 重排。宿主放回真实尺寸时，那一帧里的旧画面与新画面是同一份
-   版式，用户看到的只是右侧被补齐，而不是「正文重新折行」——这就是切标签「闪」
-   的主体现。实测（_poc/TEMP/ime/flash-lab.mjs）：不加这条时折叠期 h1 由 647×46
-   折成 204×156，切回瞬间整屏 14.8% 像素与终稿不同；加后折叠期版式与终稿逐项
-   相同。变量缺失（首次折叠早于任何真实测量）时回退 100%，即按当前视口布局。 */
+/* 4. Pin the body to the last real width so the text does not re-wrap at 300px; on
+ * restore the old and new frame share one layout. Falls back to 100% before the first
+ * measurement. */
 html[data-epytor-host-collapsed] body {
     width: var(--epytor-last-body-width, 100%);
     overflow-x: clip;
 }
 
-/* 5. 折叠期这些固定 UI 既不画、也不用模糊。
-   只在「宿主摘挂 iframe」的旧宿主上才有意义（本版宿主从不进折叠态，见本节开头）：
-   那一版宿主切回时先放回 iframe 尺寸、再把新尺寸传到 webview 渲染进程（实测差 ~65ms），
-   这段窗口里 webview 自己还在按 300×150 渲染，而 iframe 已经占满编辑区。两种极端都试过，
-   都不合适：
-     · 原样显示（含顶栏）：裁切边界正好切在顶栏按钮和标题字形中间，像坏掉的「一个小框」；
-     · 整块隐藏：那 80–160ms 变成一片空白，用户反馈「整个页面闪一次」。
-   取中间：固定 UI 折叠期不画（它们的裁切最像坏掉），正文交给下面那条「内容归背景」在
-   折叠期与失活期一并归空——2026-09-12 真机逐帧复测推翻了「正文照常显示」：留在 300×150
-   画布里的半截正文（含目录面板）本身就是用户看到的「整块变空」。
-   列表含挂到 <body> 的固定浮层（溢出菜单 / 更多按钮 / 查找栏 / 提示条）——它们同为
-   `position: fixed`，折叠期同样会被裁成半块，且顶栏那排按钮正是最像「坏掉的小框」的形态。
-   为什么"不用模糊"：宿主切回要重建合成器图层，backdrop-filter 让首帧推迟约 2 帧
-   （回归 bc528e3 实测），那几帧里旧画面会多停留一会儿。 */
+/* 5. Fixed UI is neither painted nor blurred while collapsed: a cropped toolbar reads as
+ * a broken box, while hiding everything flashes blank, so only these layers go. Covers
+ * the body-level fixed overlays too (overflow menu, find bar, notice) — same cropping.
+ * No backdrop-filter: the host rebuilds compositor layers on restore and blur delays the
+ * first frame by ~2 frames, keeping the stale frame on screen longer. */
 html[data-epytor-host-collapsed] .milkdown-top-bar,
 html[data-epytor-host-collapsed] .milkdown-toolbar,
 html[data-epytor-host-collapsed] .toc-panel,
@@ -243,27 +94,22 @@ html[data-epytor-host-collapsed] .epytor-notice {
     -webkit-backdrop-filter: none !important;
 }
 
-/* ─── 折叠期内容归背景 ────────────────────────────────────────────────
-   真机逐帧实测（2026-09-12）：非 md → md 时屏幕上的序列是
-   「内容（合成器留住的上一帧）→ 空（宿主撤掉尺寸约束、iframe 回落到规范默认 300×150，
-   只剩这一小块画布）→ 内容」，中间那次「整块变空」就是用户看到的那一闪。
-   折叠期我们只能在那 300×150 里画画，编辑区其余部分是宿主底板、涂不到——能做的是
-   把这一小块也画成纯背景，别留下「孤零零一个目录面板」那种像渲染坏了的画面。
-   visibility 而不是 display：不触发重排，恢复时零成本；底色由 <html> 的背景色提供，
-   隐藏 body 不影响画布底色。
-   **同时压 opacity**：`visibility` 会被子元素自己的 `visibility: visible` 翻回来（实测：
-   目录面板就是这么活下来的），而 opacity 是整棵子树的合成结果，子元素翻不回来。 */
+/* While collapsed, paint the body as plain background: whatever survives in that 300×150
+ * (a lone TOC panel) reads as a broken render. visibility keeps the layout and inherits
+ * the colour from <html>. opacity is required on top of it because a descendant's own
+ * visibility: visible flips the subtree back, while opacity composites the whole subtree
+ * once. */
 html[data-epytor-host-collapsed] body {
     visibility: hidden;
     opacity: 0;
 }
 
-/* Milkdown 根容器 */
+/* Milkdown root container */
 .milkdown {
     position: relative;
     outline: none;
 
-    /* 覆盖 Crepe 主题变量 → 联动 VSCode 主题 */
+    /* Map Crepe theme variables onto VS Code colours. */
     --crepe-color-background: var(--vscode-editor-background);
     --crepe-color-on-background: var(--vscode-editor-foreground);
     --crepe-color-surface: var(--vscode-editorWidget-background, var(--vscode-editor-background));
@@ -284,7 +130,7 @@ html[data-epytor-host-collapsed] body {
     --crepe-shadow-1: 0 1px 3px color-mix(in srgb, var(--vscode-editor-foreground) 45%, transparent);
     --crepe-shadow-2: 0 2px 6px color-mix(in srgb, var(--vscode-editor-foreground) 45%, transparent);
 
-    /* 字体：覆盖 Crepe 的 serif/sans，统一用 VSCode 编辑器字体（正文字体链同 html/body） */
+    /* Override Crepe's serif/sans stacks with the editor font (same chain as html/body). */
     --crepe-font-default: var(
         --custom-font-family,
         var(--vscode-editor-font-family),
@@ -298,8 +144,7 @@ html[data-epytor-host-collapsed] body {
     --crepe-font-code: var(--vscode-editor-font-family, monospace);
 }
 
-/* 确保 .milkdown 及子元素继承 VSCode 字体（同特异性下本表在 Crepe 主题之后加载，
-   无需 !important） */
+/* Equal specificity beats the Crepe theme because this sheet loads after it — no !important. */
 .milkdown,
 .milkdown .ProseMirror {
     font-family: var(
@@ -311,17 +156,15 @@ html[data-epytor-host-collapsed] body {
     font-size: var(--vscode-editor-font-size, 14px) !important;
 }
 
-/* 虚拟光标（原版 prosemirror-virtual-cursor）
-   注意：原版 Decoration.widget(0) 把光标渲染在文档开头且无 z-index，
-   引用块/行内代码等带背景色的节点会盖住它 → 光标看不见。
-   修复：z-index 提升 + 原版全部功能（mark 边界方向键、方向指示）保留 */
+/* Vendored virtual cursor. Upstream's Decoration.widget(0) has no z-index, so nodes with
+ * a background (blockquote, inline code) painted over it and the caret vanished. */
 .milkdown .ProseMirror.virtual-cursor-enabled {
     caret-color: transparent;
     --prosemirror-virtual-cursor-color: var(--vscode-editorCursor-foreground, var(--vscode-editor-foreground, #fff));
 }
 .milkdown .ProseMirror .prosemirror-virtual-cursor {
     position: absolute;
-    z-index: 1; /* 关键：盖过带背景色的 blockquote/code 等节点 */
+    z-index: 1; /* key: paints above background-coloured blockquote/code nodes */
     cursor: text;
     pointer-events: none;
     transform: translate(-1px);
@@ -352,7 +195,7 @@ html[data-epytor-host-collapsed] body {
     100% { opacity: 1; }
 }
 
-/* Crepe 按钮/输入框基础重置（原 reset.css 提供，去掉 reset.css 后补上）*/
+/* Crepe button/input reset, inlined after dropping upstream reset.css. */
 .milkdown button,
 .milkdown input {
     border: none;
@@ -371,45 +214,37 @@ html[data-epytor-host-collapsed] body {
     outline: none;
     background: transparent;
     color: inherit;
-    padding: 0 !important; /* #editor 已提供边距，去掉 Crepe 的 60px 120px */
+    padding: 0 !important; /* #editor already provides the padding */
     caret-color: var(--vscode-editorCursor-foreground, #000);
-    white-space: pre-wrap; /* ProseMirror 要求 */
+    white-space: pre-wrap; /* required by ProseMirror */
     word-wrap: break-word;
 }
 
-/* ─── 排版尺度：全文垂直间距的唯一来源 ──────────────────────────────────
-   一个标准，不分元素——**行高一个值、块间距一个值**，其余全部由这两个派生。
-   改造前同一份文档里相邻块的净空实测（真实 dist + Chromium，2026-09-11）：
-   列表项之间 2.8px、引用块之间 4px、表格上下 4px、代码块上下 4px、
-   段落之间 18.2px、分隔线上下 21px——十几种间距没有任何两处相同；标题的上下间距
-   还随标题字号缩放（h1 → 正文 11.2px，h6 → 正文 5.0px）。同一份文档里出现这么多
-   互不相干的数字，就是「列表的行间距、表格的间距、普通行的行间距各是一套」的来源。
-   现在只有两档：块间距（相邻块的唯一净空）与它的 2× 档（标题、分隔线）。
-   单位用 rem（= 编辑器字号）而不是 em：em 在标题里会跟着标题字号变，间距就不再统一。 */
+/* Typography scale: one line height plus one block gap, everything else derives from them.
+ * Both tiers are rem (= editor font size), not em: em inside a heading scales the spacing
+ * with the heading size, which is how a dozen unrelated gaps used to appear in one document. */
 .milkdown {
-    /* 行高：正文 / 列表项 / 表格单元格 / 引用块内的段落同源 */
+    /* body / list item / table cell / blockquote share this line height */
     --epytor-line-height: 1.5;
-    /* 块间距 = 半个行高：文档流里任意两个相邻块之间唯一的净空值 */
+    /* the only gap between adjacent blocks: half a line height */
     --epytor-block-gap: 0.75rem;
-    /* 容器内边距（引用块上下、表格单元格四边）= 块间距 */
+    /* container padding (blockquote, table cell) = block gap */
     --epytor-container-pad: var(--epytor-block-gap);
-    /* 标题与分隔线：同一尺度上的 2× 档 */
+    /* 2× tier: headings and horizontal rules */
     --epytor-section-gap: calc(var(--epytor-block-gap) * 2);
-    /* 列表标记列宽 + 标记与文字的间距（嵌套缩进的步长 = 两者之和） */
+    /* marker column plus its gap from the text; one nesting step is both together */
     --epytor-list-marker-width: 1.5rem;
     --epytor-list-marker-gap: 0.45rem;
 }
 
-/* 行高一处定死：此前 body 给 1.6、上游主题给 p 给 1.5，同一页里两套行距 */
+/* Regression: body 1.6 vs upstream's p 1.5 gave two line heights on one page. */
 .milkdown .ProseMirror {
     line-height: var(--epytor-line-height);
 }
 
-/* 统一垂直节奏：所有块只用 margin-bottom 表达与下一块的间距，margin-top 一律 0。
-   相邻 margin 折叠成较大者，所以标题的 2× 档不会被前一块的 1× 档削掉。
-   段落与列表项的上内边距必须为 0——上游主题给 p 留了隐式的 `padding: 4px 0`，
-   它把每段首行向下顶 4px，于是「容器上下留白」到处不等（引用块 上 12px / 下 22px、
-   单元格 上 12.5px / 下 8.5px、列表标记比同行文字中心高 3.3px）。 */
+/* Only margin-bottom expresses the gap and margin-top stays 0, so collapsing never eats
+ * the 2× tier. p needs padding-top: 0 — upstream's implicit 4px pushed every first line
+ * down, which is why blockquote and cell padding measured unequal. */
 .milkdown .ProseMirror p,
 .milkdown .ProseMirror ul,
 .milkdown .ProseMirror ol,
@@ -426,8 +261,8 @@ html[data-epytor-host-collapsed] body {
     padding: 0;
 }
 
-/* 容器（引用块 / 表格单元格）内的首末块贴边：容器留白只由容器自己的内边距决定，
-   否则首块/末块会把外层节奏又叠一层，上下立刻不等 */
+/* First/last child flush inside containers, otherwise their margins stack on the container
+ * padding and the top/bottom whitespace stops matching. */
 .milkdown .ProseMirror blockquote > *:first-child,
 .milkdown .ProseMirror td > *:first-child,
 .milkdown .ProseMirror th > *:first-child {
@@ -439,9 +274,8 @@ html[data-epytor-host-collapsed] body {
     margin-bottom: 0;
 }
 
-/* 标题：逐级明确尺寸，六级等差递减；上下间距取排版尺度里的 2× / 1× 档
-   （回归：上游把上下间距写成 0.8em/0.4em，em 在标题里按标题自己的字号算，
-   于是 h1 与下文隔 11.2px、h6 只隔 5.0px，同一份文档里标题的呼吸感各不相同） */
+/* 2× tier above, 1× below, in rem so the gap does not scale with the heading size.
+ * Regression: upstream's 0.8em/0.4em gave h1 11.2px and h6 5.0px in the same document. */
 .milkdown .ProseMirror h1,
 .milkdown .ProseMirror h2,
 .milkdown .ProseMirror h3,
@@ -473,7 +307,7 @@ html[data-epytor-host-collapsed] body {
 .milkdown .ProseMirror h5 { font-size: 1em; }
 .milkdown .ProseMirror h6 { font-size: 0.9em; font-weight: 400; color: var(--vscode-descriptionForeground); }
 
-/* 粗体、斜体 */
+/* Bold and italic. */
 .milkdown .ProseMirror strong {
     color: var(--vscode-editor-foreground);
     font-weight: 700;
@@ -483,7 +317,7 @@ html[data-epytor-host-collapsed] body {
     color: var(--vscode-editor-foreground);
 }
 
-/* 行内代码 */
+/* Inline code. */
 .milkdown .ProseMirror code {
     background: var(
         --vscode-textCodeBlock-background,
@@ -501,250 +335,6 @@ html[data-epytor-host-collapsed] body {
     overflow-wrap: break-word;
 }
 
-/* 代码块 */
-/* ─── 代码块（基于 Crepe CodeMirror）─── */
-
-/* 代码块编辑器最大高度（epytor.codeBlockMaxHeight 注入的 CSS 变量消费方；
-   回归：变量被注入但无任何规则消费，该配置项实际无效） */
-.milkdown .milkdown-code-block .cm-editor {
-    max-height: var(--code-block-max-height);
-    overflow: auto;
-}
-
-/* 字体与 VSCode 编辑器一致 */
-.milkdown .milkdown-code-block .cm-editor .cm-content {
-    font-family: var(--vscode-editor-font-family, monospace) !important;
-}
-
-/* active line / selection 用 VSCode 变量 */
-.milkdown .milkdown-code-block .cm-editor .cm-activeLine {
-    background: var(--vscode-editor-lineHighlightBackground, rgba(128,128,128,0.08)) !important;
-}
-.milkdown .milkdown-code-block .cm-editor .cm-selectionBackground,
-.milkdown .milkdown-code-block .cm-editor .cm-selectionBackground *,
-.milkdown .milkdown-code-block .cm-editor ::selection {
-    background: var(--vscode-editor-selectionBackground, rgba(0,122,204,0.3)) !important;
-}
-.milkdown .milkdown-code-block .cm-editor ::selection {
-    color: var(--vscode-editor-selectionForeground, inherit);
-}
-.milkdown .milkdown-code-block {
-    border-radius: 6px;
-    border: 1px solid var(--vscode-panel-border, rgba(128,128,128,0.2));
-    padding: 0 14px 14px !important;
-    /* 与相邻块的间距走排版尺度（上游给的是 4px，与段落、列表各不相同） */
-    margin: 0 0 var(--epytor-block-gap);
-}
-
-/* 标题栏 */
-.milkdown .milkdown-code-block .tools {
-    display: flex;
-    align-items: center;
-    border-bottom: 1px solid var(--vscode-panel-border, rgba(128,128,128,0.15));
-    padding: 6px 0;
-}
-
-/* 按钮常驻 + 风格对齐顶部工具条 */
-.milkdown .milkdown-code-block .tools .language-button,
-.milkdown .milkdown-code-block .tools .tools-button-group > button,
-.milkdown .milkdown-code-block .epytor-fullscreen-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 26px;
-    height: 24px;
-    padding: 0 6px;
-    background: transparent;
-    color: var(--vscode-editor-foreground);
-    border: 1px solid transparent;
-    border-radius: 3px;
-    font-size: 12px;
-    font-family: inherit;
-    cursor: pointer;
-    line-height: 1;
-    opacity: 1;
-    transition: background 0.1s, border-color 0.1s;
-}
-.milkdown .milkdown-code-block .tools .language-button:hover,
-.milkdown .milkdown-code-block .tools .tools-button-group > button:hover,
-.milkdown .milkdown-code-block .epytor-fullscreen-btn:hover {
-    background: var(--vscode-toolbar-hoverBackground, rgba(128, 128, 128, 0.2));
-    border-color: var(--vscode-toolbar-hoverOutline, transparent);
-}
-
-/* 语言按钮增强可见性 */
-.milkdown .milkdown-code-block .tools .language-button {
-    background: var(--vscode-input-background, rgba(128,128,128,0.1));
-    border: 1px solid var(--vscode-input-border, rgba(128,128,128,0.4));
-    border-radius: 3px;
-    padding: 0 8px;
-    font-weight: 500;
-    margin-bottom: 0 !important;
-    text-transform: capitalize;
-}
-.milkdown .milkdown-code-block .tools .language-button:hover {
-    border-color: transparent;
-}
-/* 下拉箭头可见 */
-.milkdown .milkdown-code-block .expand-icon svg {
-    color: var(--vscode-editor-foreground) !important;
-    opacity: 0.6 !important;
-}
-
-/* 语言下拉 — 极简紧凑 */
-.milkdown .milkdown-code-block .language-picker {
-    z-index: 1000;
-    padding-top: 4px;
-}
-.milkdown .milkdown-code-block .list-wrapper {
-    width: auto;
-    padding: 0 !important;
-    border: none;
-    border-radius: 6px;
-    background: var(--vscode-dropdown-background, var(--vscode-editorWidget-background));
-    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-    overflow: hidden;
-}
-/* 搜索区 — 满宽底色分隔 */
-.milkdown .milkdown-code-block .search-box,
-.milkdown .milkdown-code-block .search-box:has(input:focus) {
-    padding: 6px 8px;
-    margin: 0;
-    outline: none !important;
-    background: var(--vscode-input-background, rgba(128,128,128,0.08));
-    border-bottom: 1px solid var(--vscode-panel-border, rgba(128,128,128,0.15));
-}
-/* 打开下拉时语言按钮保持蓝边框 */
-.milkdown .milkdown-code-block .language-button[data-expanded="true"] {
-    border-color: var(--vscode-toolbar-hoverOutline, transparent) !important;
-}
-.milkdown .milkdown-code-block .search-box input {
-    font-size: 12px;
-    border: none !important;
-    outline: none !important;
-    box-shadow: none !important;
-    caret-color: var(--vscode-editor-foreground);
-    color: var(--vscode-input-foreground, var(--vscode-editor-foreground));
-    width: 100%;
-    background: transparent;
-}
-.milkdown .milkdown-code-block .language-list {
-    max-height: 180px;
-    padding: 0 !important;
-    margin: 0 !important;
-}
-.milkdown .milkdown-code-block .language-list-item:last-child {
-    margin-bottom: 0;
-}
-/* 强控列表项边距（覆盖 Vue scoped 样式）*/
-#editor .milkdown .milkdown-code-block .language-list-item {
-    padding: 4px 10px !important;
-    font-size: 12px;
-    font-weight: 400;
-    line-height: 18px;
-}
-#editor .milkdown .milkdown-code-block .language-list {
-    padding: 0 !important;
-}
-.milkdown .milkdown-code-block .language-list-item:hover {
-    background: var(--vscode-list-hoverBackground, rgba(128,128,128,0.12));
-}
-.milkdown .milkdown-code-block .language-list-item.focused {
-    background: var(--vscode-list-hoverBackground, rgba(128,128,128,0.15));
-}
-
-/* 取消 Crepe 的连体按钮风格，改为独立按钮 */
-.milkdown .milkdown-code-block .tools .tools-button-group {
-    gap: 4px;
-}
-/* 按钮固定顺序：预览 → 复制 → 全屏（用 order 声明式控制，不依赖 DOM 顺序） */
-.milkdown .milkdown-code-block .tools .preview-toggle-button { order: 0; }
-.milkdown .milkdown-code-block .tools .copy-button { order: 1; }
-.milkdown .milkdown-code-block .tools .epytor-fullscreen-btn { order: 2; }
-.milkdown .milkdown-code-block .tools .tools-button-group > button:first-child,
-.milkdown .milkdown-code-block .tools .tools-button-group > button:last-child {
-    border-radius: 3px !important;
-}
-.milkdown .milkdown-code-block .expand-icon svg {
-    color: var(--vscode-editor-foreground);
-    opacity: 0.7;
-}
-
-/* 展开箭头 */
-.milkdown .milkdown-code-block .expand-icon svg {
-    color: var(--vscode-editor-foreground);
-    opacity: 0.7;
-}
-
-/* 下拉不裁剪 */
-.milkdown .milkdown-code-block .language-picker {
-    z-index: 1000;
-}
-
-/* 复制反馈 */
-
-/* ── 全屏 lightbox ─────────────────────────────────────── */
-.epytor-fs-lightbox {
-    position: fixed; inset: 0; z-index: 9999;
-    background: var(--vscode-editor-background, #1e1e1e);
-    display: flex; flex-direction: column;
-}
-.epytor-fs-header {
-    display: flex; align-items: center;
-    padding: 8px 16px;
-    border-bottom: 1px solid var(--vscode-panel-border, rgba(128,128,128,0.2));
-    flex-shrink: 0;
-}
-.epytor-fs-lang {
-    font-size: 13px; font-weight: 600;
-    color: var(--vscode-descriptionForeground);
-    text-transform: capitalize;
-}
-.epytor-fs-close {
-    margin-left: auto;
-    display: inline-flex; align-items: center; justify-content: center;
-    min-width: 26px; height: 24px; padding: 0 4px;
-    background: transparent;
-    color: var(--vscode-editor-foreground);
-    border: 1px solid transparent;
-    border-radius: 3px;
-    font-size: 16px; line-height: 1;
-    cursor: pointer;
-    transition: background 0.1s, border-color 0.1s;
-}
-.epytor-fs-close:hover {
-    background: var(--vscode-toolbar-hoverBackground, rgba(128,128,128,0.2));
-    border-color: var(--vscode-toolbar-hoverOutline, transparent);
-}
-.epytor-fs-body {
-    flex: 1; min-height: 0;
-    overflow-y: auto;
-}
-.epytor-fs-body > .cm-editor {
-    max-height: none;
-    border-radius: 0;
-}
-.epytor-fs-body > .cm-editor .cm-scroller {
-    font-family: var(--vscode-editor-font-family, monospace);
-}
-.epytor-fs-body > .preview-panel {
-    padding: 0 32px 24px;
-}
-.epytor-fs-body .preview-panel .preview-divider {
-    height: 1px; opacity: 0.2;
-    background: var(--vscode-editorWidget-border, #454545);
-    margin: 6px 0;
-}
-.epytor-fs-body .preview-panel .preview-label {
-    margin: 6px 0; font-size: 12px;
-    color: var(--vscode-descriptionForeground);
-    font-weight: 600; text-transform: uppercase;
-}
-.epytor-fs-body .preview-panel .preview {
-    text-align: center; overflow-x: auto;
-}
-
-
 .milkdown .ProseMirror pre {
     background: var(
         --vscode-textCodeBlock-background,
@@ -761,11 +351,11 @@ html[data-epytor-host-collapsed] body {
     font-size: 0.9em;
 }
 
-/* ─── 引用块 ──────────────────────────────────────────── */
+/* Blockquote. */
 .milkdown .ProseMirror blockquote {
     background: var(--vscode-editorWidget-background, var(--vscode-editor-background));
     border-radius: 6px;
-    /* 上下内边距 = 块间距（排版尺度），左右留给引号条与呼吸 */
+    /* Vertical padding from the scale; the left side leaves room for the quote bar. */
     padding: var(--epytor-container-pad) 12px var(--epytor-container-pad) 36px !important;
     color: var(--vscode-editor-foreground);
     border: none !important;
@@ -776,51 +366,42 @@ html[data-epytor-host-collapsed] body {
     left: 8px !important;
 }
 
-/* ── 列表（Crepe list-item NodeView，div 结构非原生 ul/ol）──
-   真实 DOM（7.22.1 实测）：ul > div.milkdown-list-item-block > li.list-item
-     > (.label-wrapper > span.milkdown-icon.label) + (.children > .content-dom > p)
-   下面的数值都来自「真实 dist 产物 + Chromium」实测（2026-09-11），三个症状各自的根因：
-   ① 标记与同行文字不对齐：标记盒 1.6em（22.4px）与首行行盒（21px）不等高，段落上内边距
-      又把文字顶下 4px，合计偏 3.3px；
-   ② 行间距过大：列表项段落自带 1em 下内边距 + 4px 上内边距，相邻项之间净空 20.8px
-      （≈ 一整行，与段间距不可区分，整张列表看上去处处是空行）；
-   ③ 缩进过大：标记列 24px + gap 10px = 34px，嵌套再叠 1.5em(21px)，每级步长 55px。 */
+/* Crepe renders list items as divs, not native ul/ol:
+ * ul > div.milkdown-list-item-block > li.list-item > .label-wrapper > .label, plus
+ * .children > .content-dom > p. The values below fix three measured defects: the 1.6em
+ * marker box did not match the 21px first line (3.3px offset), upstream paddings made the
+ * gap between items ≈ a full line, and each nesting level added a 34px column plus 1.5em. */
 .milkdown .milkdown-list-item-block {
     padding-left: 0 !important;
-    /* 列表项就是块：与相邻块的间距取同一个块间距（改造前是 0.2em 叠在段落的 1em 上，
-       相邻项净空 20.8px ≈ 一整行，跟段间距又不一样） */
+    /* A list item is a block: same gap as every other block (was 0.2em on top of 1em). */
     margin: 0 0 var(--epytor-block-gap) !important;
 }
-/* 列表的最后一项不在自己身上再留一份——列表与下文的间距由 ul/ol 的块间距给 */
+/* Last item adds nothing — ul/ol already supply the gap after the list. */
 .milkdown .ProseMirror ul > .milkdown-list-item-block:last-child,
 .milkdown .ProseMirror ol > .milkdown-list-item-block:last-child {
     margin-bottom: 0 !important;
 }
 
-/* ④ 父项与它的子列表之间也留同一个块间距（手测 2026-09-12：「行距至少得统一标准」）——
-   此前父子紧贴（父项文字顶边到子项首行只隔一个行高），而同层相邻项之间隔一个块间距，
-   于是同一张列表里出现 21.5px / 31.5px 两种行距，看上去就是没统一。补上这一条之后
-   任何相邻两行都是「行高 + 块间距」，与全文其余块的关系一致。 */
+/* A child list keeps the same gap from its parent item; without this the same list showed
+ * two different row gaps (21.5px vs 31.5px) depending on nesting. */
 .milkdown .ProseMirror .milkdown-list-item-block .content-dom > ul,
 .milkdown .ProseMirror .milkdown-list-item-block .content-dom > ol {
     margin-top: var(--epytor-block-gap);
 }
-/* 子列表是所在项的最后一块时，不再留自己那份下边距——否则它与上一项的下边距叠加，
-   该处行距变成两个块间距（实测 42px vs 其余 31px） */
+/* A trailing child list adds no margin of its own, or the gap doubles right there. */
 .milkdown .ProseMirror .milkdown-list-item-block .content-dom > ul:last-child,
 .milkdown .ProseMirror .milkdown-list-item-block .content-dom > ol:last-child {
     margin-bottom: 0;
 }
 
-/* ② 列表项内的段落不留段间距——项间距交给列表项自身的外边距（同一个块间距），
-   行高与标记盒同源（容器的首末块贴边由上面的容器规则统一负责） */
+/* Items own the spacing; paragraphs inside them contribute none. */
 .milkdown .ProseMirror .milkdown-list-item-block p {
     margin-bottom: 0;
     padding: 0;
     line-height: var(--epytor-line-height);
 }
 
-/* ③ 标记列收窄；嵌套不再叠加额外 padding-left，每级步长正好一个标记列（55px → 27px） */
+/* Marker column only; nesting adds nothing (step 55px → 27px). */
 .milkdown .milkdown-list-item-block li .label-wrapper {
     width: var(--epytor-list-marker-width);
 }
@@ -831,9 +412,8 @@ html[data-epytor-host-collapsed] body {
     padding-left: 0 !important;
 }
 
-/* ① 标记盒与首行行盒等高：两者都取同一个行高，且 .list-item 是
-   align-items: flex-start（顶对齐）→ 标记中心 = 首行文字中心。
-   回归：官方 .label 固定 32px，直接删掉会让任务项行高塌陷、光标轻微上移 */
+/* Marker box and first line share the line height and .list-item is top-aligned, so their
+ * centres line up. Regression: dropping the fixed 32px height collapsed task-item rows. */
 .milkdown .milkdown-list-item-block > .list-item {
     gap: var(--epytor-list-marker-gap);
 }
@@ -843,7 +423,7 @@ html[data-epytor-host-collapsed] body {
     padding: 0;
 }
 
-/* 复选框颜色 */
+/* Checkbox colours follow the theme. */
 .milkdown .milkdown-list-item-block .label-wrapper {
     color: var(--vscode-editor-foreground) !important;
 }
@@ -851,7 +431,7 @@ html[data-epytor-host-collapsed] body {
     fill: var(--vscode-editor-foreground) !important;
 }
 
-/* 链接 */
+/* Links. */
 .milkdown .ProseMirror a {
     color: var(--vscode-textLink-foreground, #4ea6ea);
     text-decoration: none;
@@ -860,25 +440,38 @@ html[data-epytor-host-collapsed] body {
     text-decoration: underline;
     color: var(--vscode-textLink-activeForeground, #4ea6ea);
 }
-/* 按住 Ctrl/Meta 时链接显示小手（提示可 ctrl+click 打开）*/
+/* Ctrl/Meta held: pointer cursor hints at ctrl+click. */
 body.epytor-modifier-active .milkdown .ProseMirror a:hover {
     cursor: pointer;
 }
 
-/* 水平分割线：上下取排版尺度里的 2× 档（分隔线的作用就是断开段落） */
+/* 1px border instead of upstream's "background + content box" trick (13px height, 6px
+ * padding, background-clip). Regression: the hr rendered as a 13px thick grey bar. */
 .milkdown .ProseMirror hr {
     border: none;
     border-top: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.35));
+    background: none;
+    height: 0;
     padding: 0;
     margin: var(--epytor-section-gap) 0;
 }
 
-/* 删除线 */
+/* Upstream paints a 13px ::before band on the selected node; selection keeps only the
+ * outline. */
+.milkdown .ProseMirror hr.ProseMirror-selectednode {
+    background: none;
+}
+.milkdown .ProseMirror hr.ProseMirror-selectednode::before {
+    content: none;
+    background: none;
+}
+
+/* Strikethrough. */
 .milkdown .ProseMirror del {
     opacity: 0.6;
 }
 
-/* 选中高亮 */
+/* Selection highlight. */
 .milkdown .ProseMirror ::selection {
     background: var(
         --vscode-editor-selectionBackground,
@@ -886,160 +479,10 @@ body.epytor-modifier-active .milkdown .ProseMirror a:hover {
     );
 }
 
-
-/* 旧顶栏容器不再使用（Crepe top-bar 在 .milkdown 内） */
+/* Legacy top bar container, unused — Crepe's top bar lives inside .milkdown. */
 .editor-topbar { display: none; }
 
-/* ─── 工具栏左侧品牌标识（绝对定位，不参与 flex 流） ─── */
-.epytor-brand {
-    position: absolute;
-    left: 12px;
-    top: 0;
-    line-height: 36px;
-    font-size: 13px;
-    font-style: italic;
-    font-weight: 600;
-    color: var(--vscode-editor-foreground);
-    user-select: none;
-    pointer-events: none;
-}
-
-/* ─── Crepe top-bar：position:fixed 吸顶 ─── */
-.milkdown .milkdown-top-bar {
-    position: fixed !important;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 102;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 36px;
-    /* 右侧为溢出「⋯」按钮预留宽度（fixed 定位，不在 topBar 内） */
-    padding: 0 40px 0 85px;
-    background: color-mix(in srgb, color-mix(in srgb, var(--vscode-editor-background) 93%, #808080) 85%, transparent);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: none !important;
-    flex-wrap: nowrap;
-}
-
-.milkdown .milkdown-top-bar .top-bar-inner {
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-wrap: nowrap;
-    overflow: visible;
-}
-
-.milkdown .milkdown-top-bar .top-bar-item {
-    min-width: 26px !important;
-    width: auto !important;
-    height: 24px !important;
-    margin: 0 2px !important;
-    padding: 0 4px !important;
-    background: transparent;
-    border: 1px solid transparent;
-    border-radius: 3px;
-    transition: background 0.1s, border-color 0.1s;
-}
-.milkdown .milkdown-top-bar .top-bar-item:hover {
-    background: var(--vscode-toolbar-hoverBackground, rgba(128,128,128,0.2));
-    border-color: var(--vscode-toolbar-hoverOutline, transparent);
-}
-.milkdown .milkdown-top-bar .top-bar-item.active {
-    background: var(--vscode-toolbar-activeBackground, rgba(128,128,128,0.3));
-}
-
-.milkdown .milkdown-top-bar .top-bar-item svg {
-    color: var(--vscode-editor-foreground) !important;
-    fill: var(--vscode-editor-foreground) !important;
-    width: 18px !important;
-    height: 18px !important;
-}
-.milkdown .milkdown-top-bar .top-bar-item.active svg {
-    color: var(--vscode-focusBorder, #007acc) !important;
-    fill: var(--vscode-focusBorder, #007acc) !important;
-}
-
-.milkdown .milkdown-top-bar .top-bar-divider {
-    width: 1px;
-    height: 18px;
-    margin: 0 4px;
-    background: var(--vscode-panel-border, rgba(128,128,128,0.3));
-    flex-shrink: 0;
-}
-
-.milkdown .milkdown-top-bar .top-bar-heading-selector {
-    position: relative;
-    flex-shrink: 0;
-    padding: 0;
-}
-.milkdown .milkdown-top-bar .top-bar-heading-button {
-    display: flex !important;
-    align-items: center;
-    gap: 2px;
-    height: 24px !important;
-    padding: 0 4px 0 8px !important;
-    background: transparent;
-    color: var(--vscode-editor-foreground) !important;
-    border: 1px solid transparent;
-    border-radius: 3px;
-    font-size: 12px !important;
-    box-sizing: border-box !important;
-    font-family: inherit;
-    cursor: pointer;
-    transition: background 0.1s;
-}
-.milkdown .milkdown-top-bar .top-bar-heading-button:hover {
-    background: var(--vscode-toolbar-hoverBackground, rgba(128,128,128,0.2));
-}
-.milkdown .milkdown-top-bar .top-bar-heading-label {
-    display: inline-block !important;
-    font-size: 12px !important;
-    font-weight: 600 !important;
-    width: 22px !important;
-    min-width: 22px !important;
-    text-align: center;
-    line-height: 20px !important;
-    color: var(--vscode-editor-foreground) !important;
-}
-.milkdown .milkdown-top-bar .top-bar-heading-button .top-bar-chevron {
-    width: 14px;
-    height: 14px;
-}
-.milkdown .milkdown-top-bar .top-bar-heading-button .top-bar-chevron svg {
-    width: 12px !important;
-    height: 12px !important;
-    color: var(--vscode-editor-foreground) !important;
-    fill: var(--vscode-editor-foreground) !important;
-}
-.milkdown .milkdown-top-bar .top-bar-heading-dropdown {
-    margin-top: 4px;
-    min-width: 100% !important;
-    width: auto !important;
-    background: var(--vscode-dropdown-background, var(--vscode-editorWidget-background));
-    border: none;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-    border-radius: 6px;
-    padding: 4px;
-}
-.milkdown .milkdown-top-bar .top-bar-heading-option {
-    font-size: 12px;
-    padding: 4px 10px;
-    color: var(--vscode-editor-foreground);
-    line-height: 18px;
-    border-radius: 4px;
-}
-.milkdown .milkdown-top-bar .top-bar-heading-option:hover {
-    background: var(--vscode-list-hoverBackground);
-}
-.milkdown .milkdown-top-bar .top-bar-heading-option.active {
-    color: var(--vscode-focusBorder, #007acc);
-}
-
-/* ─── 选中浮动工具栏：匹配顶部工具栏样式 ─── */
+/* Floating selection toolbar, matching the top bar. */
 .milkdown .milkdown-toolbar {
     z-index: 103 !important;
     background: color-mix(in srgb, color-mix(in srgb, var(--vscode-editor-background) 93%, #808080) 88%, transparent) !important;
@@ -1086,7 +529,7 @@ body.epytor-modifier-active .milkdown .ProseMirror a:hover {
     background: var(--vscode-panel-border, rgba(128,128,128,0.3)) !important;
 }
 
-/* ─── Crepe link-tooltip：对齐工具栏风格 ──────────────── */
+/* Crepe link tooltip, aligned with the toolbar. */
 .milkdown .milkdown-link-preview > .link-preview,
 .milkdown .milkdown-link-edit > .link-edit {
     height: auto !important;
@@ -1154,25 +597,23 @@ body.epytor-modifier-active .milkdown .ProseMirror a:hover {
     border-color: var(--vscode-focusBorder, #007acc) !important;
 }
 
-/* ─── 表格：换行三档 + 行列工具栏主题 ────────────────────── */
-/* 注意：7.22.1 真实 DOM 中表格本体直接位于 .ProseMirror 下，不存在
-   .milkdown-table-block 包装层（官方 CSS 该前缀规则同样落空）；组件的手柄
-   （cell-handle/line-handle/button-group）由 Vue 渲染在独立容器中，用类名直配 */
+/* Table: two wrap modes plus themed row/column handles. */
+/* In the 7.22.1 DOM <table> sits directly under .ProseMirror; the .milkdown-table-block
+ * wrapper only surrounds the Vue-rendered handles (cell handle, line handle, button group). */
 
-/* 换行两档（epytor.tableWrapMode：wrap / nowrap）：CSS 变量由 Extension 注入；
-   滚动容器 = 含表格的 ProseMirror（nowrap 档横向滚动） */
+/* wrap / nowrap: the CSS variables come from `epytor.tableWrapMode`; the scroller is the
+ * ProseMirror that holds the table. */
 .milkdown .ProseMirror:has(> table) {
     overflow-x: var(--epytor-table-overflow-x, visible);
 }
-/* nowrap 档：table 宽度强制 max-content，nowrap 内容撑开表格触发横向滚动
-   （回归：table 默认收缩宽度时内容溢出单元格而非表格，无滚动条） */
+/* nowrap: force max-content so the table overflows and scrolls, instead of the cells
+ * overflowing the table (which leaves no scrollbar). */
 .milkdown .ProseMirror table {
     width: var(--epytor-table-width, auto);
     min-width: 100%;
 }
-/* 单元格内自动链接（长 URL）：inline 元素上 overflow-wrap:break-word 不强制断行
-   （真实引擎实测表格被 URL 撑到 1602px、页面横向滚动），anywhere 才在任意字符处断；
-   !important 防御任何层叠竞争，word-break:break-word 作 Chromium 补充兜底 */
+/* Long URLs: overflow-wrap on an inline element does not force a break, `anywhere` does.
+ * Regression: one URL stretched the table to 1602px and scrolled the page sideways. */
 .milkdown .ProseMirror table th a,
 .milkdown .ProseMirror table td a {
     overflow-wrap: anywhere !important;
@@ -1184,18 +625,15 @@ body.epytor-modifier-active .milkdown .ProseMirror a:hover {
     white-space: var(--epytor-table-white-space, normal);
     overflow-wrap: break-word;
 }
-/* 单元格内边距：四边都取容器内边距（= 块间距）。官方为 4px 16px（上下与左右差 4 倍），
-   且上游段落自带 4px 上内边距，实测上 12.5px / 下 8.5px。官方样式是运行时注入的
-   <style>，同特异性下后注入者胜 → 用 !important 确保生效 */
+/* Cell padding = block gap on all four sides (upstream: 4px 16px). Its <style> is injected
+ * at runtime after this sheet, so equal specificity loses — hence !important. */
 .milkdown .milkdown-table-block th,
 .milkdown .milkdown-table-block td {
     padding: var(--epytor-container-pad) !important;
 }
 
-/* 行列手柄与整行/整列选中工具栏：对齐编辑器浮层风格。
-   回归：cell-handle 是 Vue 渲染的 overlay，其祖先链含 .milkdown-table-block
-   （官方同前缀规则能命中即是证明）；此前降为裸类导致特异性输给官方，
-   「之前改对过又回去」——恢复与官方同前缀 + 靠后覆盖，关键属性 !important 兜底 */
+/* Row/column handles and the selection toolbar. Regression: a bare .cell-handle selector
+ * lost specificity to upstream's prefixed rules — keep the same prefix and win by order. */
 .milkdown .milkdown-table-block .cell-handle {
     background-color: var(--vscode-editor-background) !important;
     border-radius: 6px !important;
@@ -1211,8 +649,8 @@ body.epytor-modifier-active .milkdown .ProseMirror a:hover {
     border: 1px solid var(--vscode-menu-border, var(--vscode-panel-border, rgba(128,128,128,0.35))) !important;
     border-radius: 5px !important;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.36);
-    /* 官方 top:-52px 太远：鼠标从 handle 移向工具栏要穿过相邻行/列的 hover 区域，
-       触发其它 handle 的高亮/加号干扰点击（回归：行列删除按钮难点到）；缩短距离 */
+    /* Upstream top:-52px is too far: the pointer crosses neighbouring handles on the way.
+     * Regression: row/column delete buttons were hard to hit. */
     top: -30px !important;
 }
 .milkdown .milkdown-table-block .cell-handle .button-group button {
@@ -1233,17 +671,16 @@ body.epytor-modifier-active .milkdown .ProseMirror a:hover {
     background: var(--vscode-toolbar-activeBackground, rgba(128,128,128,0.3));
 }
 
-/* 光标 */
 .milkdown .ProseMirror-focused {
     outline: none;
 }
 
-/* ─── 自定义 Tooltip ─── */
+/* Custom tooltip. */
 .custom-tooltip {
     position: fixed;
     z-index: 10000;
     display: none;
-    /* 视口兜底：超长文本不超出屏幕边界（含 8px 边距），超宽省略号 */
+    /* Keep long text inside the viewport (8px inset) with an ellipsis. */
     box-sizing: border-box;
     max-width: calc(var(--epytor-vw) - 8px);
     overflow: hidden;
@@ -1260,10 +697,9 @@ body.epytor-modifier-active .milkdown .ProseMirror a:hover {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.36);
 }
 
-/* isInline hardbreak（Milkdown 的 remarkLineBreak 把**所有**软换行都转成它，不只是表格）：
-   渲染为换行。`display: block` 会让这个 span 自身占满一个行盒——实测每处软换行都多出一整行
-   空白（两行文字的段落排成 3 个行盒，源码里按行折行的段落看上去隔了一个空行）。
-   高度压成 0 后它只负责断行、不再占位。 */
+/* Inline hardbreak (remarkLineBreak turns every soft wrap into one): display: block gives
+ * the span its own line box, adding a blank line per break; height 0 breaks without
+ * occupying space. */
 .milkdown span[data-type="hardbreak"][data-is-inline="true"] {
     display: block;
     height: 0;

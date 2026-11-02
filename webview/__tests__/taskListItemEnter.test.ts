@@ -4,7 +4,7 @@
  * 现象：`- [x] 已完成` 里回车，新出现的项也是勾选态。
  * 根因：官方 `splitListItem(listItem)`（commonmark preset 把回车绑到它）分裂时原样复制
  * 被分裂节点的 attrs，任务项的 `checked` 因此被带进新项；官方 `splitListItem(itemType, itemAttrs)`
- * 的 `itemAttrs` 只在「光标在项末尾」分支生效。实现见 `webview/utils/taskListItemEnter.ts`。
+ * 的 `itemAttrs` 只在「光标在项末尾」分支生效。实现见 `webview/markdown/taskListItemEnter.ts`。
  *
  * 本文件锁定**修复后语义**：回车新建的项一律未勾选，原项保持原状；未勾选任务项与
  * 普通列表项不受影响。
@@ -15,7 +15,7 @@ import { editorViewCtx } from "@milkdown/kit/core";
 import { getMarkdown } from "@milkdown/kit/utils";
 import { TextSelection } from "@milkdown/kit/prose/state";
 import type { EditorView } from "@milkdown/kit/prose/view";
-import { taskListItemEnterPlugin } from "../utils/taskListItemEnter";
+import { taskListItemEnterPlugin } from "../markdown/taskListItemEnter";
 
 if (typeof (window as unknown as Record<string, unknown>).ResizeObserver === "undefined") {
     (window as unknown as Record<string, unknown>).ResizeObserver = class {

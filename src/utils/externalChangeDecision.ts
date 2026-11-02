@@ -1,30 +1,79 @@
 /**
- * 外部写盘回退决策（纯函数，无 VSCode 依赖，可单测）。
+ * Decide what to do when the file on disk changes while the editor holds a copy.
  *
- * 背景（回归）：旧逻辑比较「webview 最新内容」与「新盘内容」——外部修改发生后二者
- * 几乎必然不同，于是永远走「保留用户内容」分支：外部写盘（AI 工具/其他编辑器）在
- * 面板打开期间永远无法被采纳，且内存被静默置脏（VS Code 不知情），用户下一次保存
- * 会用旧内容覆盖外部写入（数据丢失）。
+ * Comparison is byte-level against `lastSaved` (the serialized text we last wrote),
+ * not against raw disk bytes, so serializer normalization (`~` → `\~`) cannot cause
+ * false positives.
  *
- * 正确判定「用户是否有未落盘编辑」：webview 最新内容 vs「上次已知盘内容」快照
- * （外部写盘前的盘上内容）。快照未播种时（watcher 注册即播种，理论不可达）回退为
- * revert 前内存比较，宁可保守保留用户内容。
+ * Regression (three rounds, all data/keystroke loss — see docs/tech-debt.md):
+ * 1. comparing against the webview's *current* content always yielded "keep user content",
+ *    so external writes were never adopted and the stale copy silently overwrote them;
+ * 2. keying off the debounced dirty flag instead rebuilt the editor mid-typing;
+ * 3. trusting a *fallback* copy of the webview content (inactive panel / timed-out pull) made
+ *    it equal to `lastSaved`, so "no unsaved edits" was concluded while the user was typing and
+ *    the editor visibly jumped back to the pre-edit state.
  */
 
 export interface ExternalChangeContext {
-    /**
-     * webview 是否有未落盘编辑（由 webview 的 markDirty 轻量标记维护，保存/采纳后清零）。
-     * **不要**改用内容比较：webview 交回的是**序列化结果**，会做 Markdown 规范化
-     * （如 `~` → `\~`），与盘上原文不可能逐字节相同。
-     */
+    latest: string;
+    /** Last text we wrote to disk; undefined = snapshot not seeded yet. */
+    lastSaved: string | undefined;
+    /** What `document.revert()` read back from disk. */
+    disk: string;
+    /** Debounced webview dirty flag; fallback only when `lastSaved` is unseeded. */
     webviewDirty: boolean;
+    /**
+     * Whether `latest` really came from the live webview.
+     *
+     * Fallback content (pushed copy or document memory) can be older than what the user sees,
+     * so it cannot be used to conclude "there are no unsaved edits". Defaults to true so callers
+     * that always have fresh content keep the old behaviour.
+     */
+    latestAuthoritative?: boolean;
 }
 
+export type ExternalChangeAction = "ignore" | "keepUserContent" | "adoptDisk" | "defer";
+
 export interface ExternalChangeDecision {
-    /** true = 用户有未落盘编辑，保留 webview 内容并标记 dirty */
-    keepUserContent: boolean;
+    action: ExternalChangeAction;
+    /** Set for `defer`: human-readable reason, for the log. */
+    reason?: string;
 }
 
 export function decideExternalChange(ctx: ExternalChangeContext): ExternalChangeDecision {
-    return { keepUserContent: ctx.webviewDirty };
+    // Identical bytes: our own save, a sync client rewriting them, or an mtime-only touch.
+    if (ctx.disk === ctx.latest) {
+        return { action: "ignore" };
+    }
+    // Everything below either replaces what the user sees or writes fallback text into the
+    // document model, so a second-hand reading of the editor is not good enough for any of it.
+    if (ctx.latestAuthoritative === false) {
+        return { action: "defer", reason: "webview content unavailable" };
+    }
+    const wantsDisk = ctx.lastSaved !== undefined
+        ? ctx.latest === ctx.lastSaved
+        : !ctx.webviewDirty;
+    return { action: wantsDisk ? "adoptDisk" : "keepUserContent" };
+}
+
+/**
+ * Whether a save request carries nothing new and must not rewrite the file.
+ *
+ * Trigger: a flush (panel deactivation, autosave) fires on a stale dirty flag while another
+ * writer already changed the disk copy. Writing our unchanged buffer would roll the file back
+ * to the pre-edit state — the mirror image of the "editor rolled itself back" report.
+ */
+export function shouldSkipSave(input: {
+    /** Content pulled from the webview for this save. */
+    content: string;
+    /** Text of our own last write; undefined before the first save. */
+    lastSaved: string | undefined;
+    /** What the document currently holds (refreshed by an adopted external change). */
+    diskText: string;
+}): boolean {
+    if (input.lastSaved === undefined) { return false; }
+    // We contribute nothing new …
+    if (input.content !== input.lastSaved) { return false; }
+    // … and the document already holds different text, i.e. the disk moved on without us.
+    return input.diskText !== input.content;
 }
