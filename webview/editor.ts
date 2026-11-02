@@ -19,6 +19,7 @@ import type { EditorView } from "@milkdown/kit/prose/view";
 import type { Node as ProseNode } from "@milkdown/kit/prose/model";
 import { closeHistory } from "@milkdown/kit/prose/history";
 import { Plugin, TextSelection } from "@milkdown/kit/prose/state";
+import { ReplaceStep } from "@milkdown/kit/prose/transform";
 import { $prose, $remark } from "@milkdown/kit/utils";
 import { CrepeBuilder } from "@milkdown/crepe";
 import { linkTooltip } from "@milkdown/crepe/feature/link-tooltip";
@@ -337,6 +338,26 @@ export async function createEditor(
             },
         });
     }));
+
+    // Last line of defence for the reported "caret one character past the colon": regardless
+    // of how the input reached ProseMirror (IME composition, direct insertText, browser DOM
+    // observer), a transaction that inserts exactly a full-width colon sets the caret to
+    // colon-end + 1 in some Chrome paths. Snap it back to colon-end.
+    crepe.editor.use($prose(() => new Plugin({
+        appendTransaction(transactions, _oldState, newState) {
+            if (!newState.selection.empty) { return null; }
+            for (const tr of transactions) {
+                for (const step of tr.steps) {
+                    if (!(step instanceof ReplaceStep) || step.slice.size !== 1) { continue; }
+                    if (step.slice.content.textBetween(0, step.slice.size, "\n", "\n") !== "：") { continue; }
+                    const expected = step.from + step.slice.size;
+                    if (newState.selection.from !== expected + 1) { continue; }
+                    return newState.tr.setSelection(TextSelection.create(newState.doc, expected));
+                }
+            }
+            return null;
+        },
+    })));
 
     crepe.editor
         .config((ctx) => {

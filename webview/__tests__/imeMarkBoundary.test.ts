@@ -144,4 +144,15 @@ describe("行内格式边界输入（2026-11-01 手测）", () => {
         expect(view.state.selection.from).toBe(to + 1);
         expect(view.state.doc.textContent).toContain("：斯");
     });
+
+    it("插入全角冒号的事务若把光标放到后一个字后面 应该 按事务步长拉回", async () => {
+        await openEditor("**粗体**斯\n");
+        const { to } = strongRange();
+        const view = getEditorView();
+        if (!view) { throw new Error("view missing"); }
+        const tr = view.state.tr.insertText("：", to);
+        tr.setSelection(TextSelection.create(tr.doc, to + 2));
+        view.dispatch(tr);
+        expect(view.state.selection.from).toBe(to + 1);
+    });
 });
