@@ -120,17 +120,25 @@ describe("行内格式边界输入（2026-11-01 手测）", () => {
 
     it("IME 组合结束后光标多跳一个字 应该 拉回到组合文本末尾", async () => {
         // Chrome 在带格式边界做 IME 组合时可能把选区报后一位；录屏里冒号后光标落在
-        // 下一个字「斯」后面。组合事务的 ReplaceStep 能给出真实插入终点。
+        // 下一个字「斯」后面。compositionend 之后用组合文本长度做兜底修正。
         await openEditor("**粗体**斯\n");
         const { to } = strongRange();
         const view = getEditorView();
         if (!view) { throw new Error("view missing"); }
+        view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, to)));
+        view.dom.dispatchEvent(new Event("compositionstart", { bubbles: true }));
+        const update = new Event("compositionupdate", { bubbles: true });
+        Object.defineProperty(update, "data", { value: "：" });
+        view.dom.dispatchEvent(update);
+        const end = new Event("compositionend", { bubbles: true });
+        Object.defineProperty(end, "data", { value: "：" });
+        view.dom.dispatchEvent(end);
 
-        const tr = view.state.tr
-            .setMeta("composition", 1)
-            .insertText("：", to);
+        // Simulate the browser's post-composition transaction: colon inserted, caret one past.
+        const tr = view.state.tr.insertText("：", to);
         tr.setSelection(TextSelection.create(tr.doc, to + 2));
         view.dispatch(tr);
+        await new Promise((resolve) => setTimeout(resolve, 20));
 
         expect(view.state.selection.empty).toBe(true);
         expect(view.state.selection.from).toBe(to + 1);

@@ -19,7 +19,6 @@ import type { EditorView } from "@milkdown/kit/prose/view";
 import type { Node as ProseNode } from "@milkdown/kit/prose/model";
 import { closeHistory } from "@milkdown/kit/prose/history";
 import { Plugin, TextSelection } from "@milkdown/kit/prose/state";
-import { ReplaceStep } from "@milkdown/kit/prose/transform";
 import { $prose, $remark } from "@milkdown/kit/utils";
 import { CrepeBuilder } from "@milkdown/crepe";
 import { linkTooltip } from "@milkdown/crepe/feature/link-tooltip";
@@ -289,30 +288,47 @@ export async function createEditor(
         });
     }));
 
-    // IME composition may report the DOM selection one character past the composed text
-    // (Chrome + a marked boundary): a full-width colon after **bold** was inserted in the
-    // right place but the caret ended after the following character ("斯") instead of
-    // right after the colon. The composition transaction carries the inserted replace step;
-    // if the final caret is exactly one position past that step's end, put it back at the
-    // end of the composed text. Ordinary non-composition input and multi-step edits are
-    // left untouched.
-    crepe.editor.use($prose(() => new Plugin({
-        appendTransaction(transactions, _oldState, newState) {
-            if (!newState.selection.empty) { return null; }
-            let expected: number | null = null;
-            for (const tr of transactions) {
-                if (tr.getMeta("composition") === undefined) { continue; }
-                for (const step of tr.steps) {
-                    if (step instanceof ReplaceStep && step.slice.size > 0) {
-                        expected = step.from + step.slice.size;
-                    }
-                }
-            }
-            if (expected === null) { return null; }
-            if (newState.selection.from !== expected + 1) { return null; }
-            return newState.tr.setSelection(TextSelection.create(newState.doc, expected));
-        },
-    })));
+    // Chrome can also report the post-composition selection one character past the composed
+    // text without exposing a usable replace step. Snapshot the caret before composition and
+    // the composed text; on compositionend put the caret back to start + text length if it is
+    // exactly one past that point.
+    crepe.editor.use($prose(() => {
+        let startPos: number | null = null;
+        let compositionText = "";
+        return new Plugin({
+            props: {
+                handleDOMEvents: {
+                    compositionstart: (view) => {
+                        startPos = view.state.selection.empty ? view.state.selection.from : null;
+                        compositionText = "";
+                        return false;
+                    },
+                    compositionupdate: (_view, event) => {
+                        compositionText = event.data ?? compositionText;
+                        return false;
+                    },
+                    compositionend: (view, event) => {
+                        const start = startPos;
+                        const text = event.data ?? compositionText;
+                        startPos = null;
+                        compositionText = "";
+                        if (start === null || !text) { return false; }
+                        const expected = start + text.length;
+                        setTimeout(() => {
+                            if (view.isDestroyed || !view.state.selection.empty) { return; }
+                            if (view.state.selection.from !== expected + 1) { return; }
+                            try {
+                                view.dispatch(
+                                    view.state.tr.setSelection(TextSelection.create(view.state.doc, expected)),
+                                );
+                            } catch { /* position vanished */ }
+                        }, 0);
+                        return false;
+                    },
+                },
+            },
+        });
+    }));
 
     crepe.editor
         .config((ctx) => {
