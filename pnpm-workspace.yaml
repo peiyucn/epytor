@@ -70,3 +70,6 @@ overrides:
   # （Dependabot #108，high，2026-10-30）。仅 dev 链（vsce → @azure/identity），不进产物；
   # vsce 3.9.2 声明 ^4.1.0，4.14.1 在其范围内。Node 引擎 >=22，本仓库 CI 与本地均为 24。
   "@azure/identity": ^4.14.1
+  # 11.0.1 修 GHSA-g3hv-75wg-m249（CVE-2026-118764，globparts 放大 DoS）。仅 dev 链
+  # （vsce → glob/minimatch），不进产物；vsce 声明 ^10.2.6，11 仍导出同名 minimatch 函数。
+  minimatch: ^11.0.1
