@@ -2,6 +2,9 @@
  * Mermaid 预览控制器（覆盖 editor/mermaidPreview.ts）。
  * 拆分自 createEditor（audit F2）；用注入的 loader 断言懒加载、data-mermaid-key 所有权、
  * 主题切换只重渲染仍存在的块、错误降级文本，不触发真实的 1.3MB mermaid 动态导入。
+ *
+ * 返回值是组件契约的一部分：Crepe code-block 把 `undefined` 当「异步预览待回填」，
+ * `null` 当「无预览」。非 mermaid 语言必须回 `null`，否则普通代码块会永远停在 Loading。
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createMermaidPreview, type MermaidPreviewOptions } from "../editor/mermaidPreview";
@@ -63,9 +66,10 @@ describe("createMermaidPreview", () => {
         const { apply, host } = mountApply();
 
         expect(loadCount()).toBe(0);
-        preview.renderPreview("mermaid", "graph TD; A-->B", apply);
+        const result = preview.renderPreview("mermaid", "graph TD; A-->B", apply);
 
-        // apply 同步执行，块 id 是 data-mermaid-key 所有权标记。
+        // 异步预览：返回 undefined 让组件保留 Loading 占位，apply 同步挂上块占位。
+        expect(result).toBeUndefined();
         const block = host.querySelector<HTMLElement>("[data-mermaid-key]");
         expect(block).not.toBeNull();
         expect(block!.dataset["mermaidKey"]).toMatch(/^m-\d+$/);
@@ -78,11 +82,11 @@ describe("createMermaidPreview", () => {
         expect(block!.innerHTML).toContain("data-test-svg");
     });
 
-    it("非 mermaid 语言 应该 完全不接管（apply 不调用、不加载模块）", () => {
+    it("非 mermaid 语言 应该 完全不接管并返回 null（组件据此不展示预览）", () => {
         const { load, loadCount } = fakeMermaid();
         const preview = createMermaidPreview(() => false, { loadMermaidModule: asLoader(load) });
         const apply = vi.fn();
-        preview.renderPreview("javascript", "const a = 1;", apply);
+        expect(preview.renderPreview("javascript", "const a = 1;", apply)).toBeNull();
         expect(apply).not.toHaveBeenCalled();
         expect(loadCount()).toBe(0);
     });
