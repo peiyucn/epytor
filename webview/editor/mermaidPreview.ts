@@ -16,11 +16,10 @@ export type PreviewApply = (value: null | string | HTMLElement) => void;
 
 export interface MermaidPreview {
     /**
-     * Code-block preview hook. `null` = this block has no preview (Crepe hides the toggle);
-     * `undefined` = async preview: the placeholder is applied now and the SVG follows.
-     * Crepe treats `undefined` as "pending", so a language we never render must answer `null`.
+     * Async code-block preview: applies the placeholder through `apply` synchronously and
+     * returns `undefined` (Crepe keeps its loading state until the rendered SVG arrives).
      */
-    renderPreview(lang: string, code: string, apply: PreviewApply): null | undefined;
+    renderPreview(code: string, apply: PreviewApply): undefined;
     /** Theme changed: re-initialize and redraw every live block (no-op before the first render). */
     applyTheme(): void;
 }
@@ -79,8 +78,7 @@ export function createMermaidPreview(
         });
     }
 
-    function renderPreview(lang: string, code: string, apply: PreviewApply): null | undefined {
-        if (lang.toLowerCase() !== "mermaid") return null;
+    function renderPreview(code: string, apply: PreviewApply): undefined {
         const key = `m-${++seq}`;
         // Reclaim keys whose node is gone; stale keys made every theme switch query the DOM.
         for (const oldKey of codeMap.keys()) {

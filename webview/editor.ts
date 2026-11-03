@@ -64,6 +64,7 @@ import {
     type EditorContinuity,
 } from "./editor/continuity";
 import { createMermaidPreview } from "./editor/mermaidPreview";
+import { createCodeBlockPreview } from "./editor/codeBlockPreview";
 import { createCmTheme } from "./editor/cmTheme";
 
 // Upstream's task-list tokenizer needs content after the marker; patch the mdast after remark-gfm.
@@ -214,17 +215,12 @@ export async function createEditor(
         cmTheme.reconfigureAll();
     }));
 
-    const renderPreview = (lang: string, code: string, apply: (v: null | string | HTMLElement) => void) => {
-        // Local lazy KaTeX renderer; vendor must not import codeBlockConfig (duplicate SliceType
-        // symbols break cross-context updates under pnpm peer variants).
-        if (lang.toLowerCase() === "latex" && code.length > 0) {
-            renderLatexPreview(code, apply);
-            return null;
-        }
-        // Crepe treats `undefined` as "async preview pending" and `null` as "no preview":
-        // the controller's answer must be propagated, or plain code blocks stay on Loading.
-        return mermaidPreview.renderPreview(lang, code, apply);
-    };
+    // Local lazy KaTeX renderer; the vendored feature must not import codeBlockConfig
+    // (duplicate SliceType symbols break cross-context updates under pnpm peer variants).
+    const renderPreview = createCodeBlockPreview({
+        renderLatex: renderLatexPreview,
+        mermaidPreview,
+    });
 
     crepe
         .addFeature(codeMirror, {
