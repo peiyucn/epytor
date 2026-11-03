@@ -13,6 +13,11 @@ jobs:
     environment: marketplace-publish
     permissions:
       contents: write
+      # E18 gate reads Dependabot (`vulnerability-alerts`) and code scanning
+      # (`security-events`) with GITHUB_TOKEN. Secret scanning is not readable through
+      # GITHUB_TOKEN, so that one query uses the SECURITY_ALERTS_TOKEN PAT.
+      security-events: read
+      vulnerability-alerts: read
 
     steps:
       - uses: actions/checkout@v7
@@ -26,6 +31,18 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      # E18 fail-closed gate: any open Dependabot / code scanning / secret scanning alert, or a
+      # check that cannot be completed, aborts the release. Dependabot and code scanning use
+      # GITHUB_TOKEN; secret scanning needs the read-only SECURITY_ALERTS_TOKEN fine-grained PAT
+      # because GITHUB_TOKEN cannot read those alerts (same wiring as dsh-launcher-panel).
+      - name: Security gate (fail-closed)
+        timeout-minutes: 5
+        run: node scripts/security-gate.mjs
+        env:
+          REPO: ${{ github.repository }}
+          GITHUB_TOKEN_ALERTS: ${{ github.token }}
+          SECRET_SCAN_TOKEN: ${{ secrets.SECURITY_ALERTS_TOKEN }}
 
       - name: Package extension
         run: mkdir -p releases && pnpm run package
