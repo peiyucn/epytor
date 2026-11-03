@@ -321,7 +321,23 @@ async function main() {
         await waitForExpr("document.querySelector('.milkdown-code-block') !== null", 30000, "code block mounted");
         check("fenced code block mounts in the real bundle", true);
 
-        // 8) No uncaught page errors (network favicon noise filtered above).
+        // 8) A plain-language block has no preview: Crepe treats `undefined` as "async preview
+        //    pending", so answering it for languages we never render left a "Loading..." preview
+        //    toggle on every code block (v1.3.0 regression). `null` is the "no preview" answer.
+        const plainBlockState = await evaluate(`(() => {
+            const block = document.querySelector('.milkdown-code-block');
+            return {
+                toggle: block !== null && block.querySelector('.preview-toggle-button') !== null,
+                preview: block === null ? null : (block.querySelector('.preview-panel .preview')?.textContent ?? null),
+            };
+        })()`);
+        check(
+            "plain code block offers no preview",
+            plainBlockState !== null && plainBlockState.toggle === false && plainBlockState.preview === null,
+            JSON.stringify(plainBlockState),
+        );
+
+        // 9) No uncaught page errors (network favicon noise filtered above).
         check("no page errors", pageErrors.length === 0, pageErrors.slice(0, 3).join(" | "));
 
         const screenshot = await cdp.send("Page.captureScreenshot", { format: "png" });

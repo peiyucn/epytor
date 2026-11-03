@@ -221,7 +221,9 @@ export async function createEditor(
             renderLatexPreview(code, apply);
             return null;
         }
-        mermaidPreview.renderPreview(lang, code, apply);
+        // Crepe treats `undefined` as "async preview pending" and `null` as "no preview":
+        // the controller's answer must be propagated, or plain code blocks stay on Loading.
+        return mermaidPreview.renderPreview(lang, code, apply);
     };
 
     crepe
