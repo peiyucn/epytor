@@ -5,6 +5,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 English | [简体中文](CHANGELOG.zh-CN.md)
 
+## [1.3.1] - 2026-11-04
+
+### Bug fixes
+
+- **Plain code blocks no longer show a preview stuck on "Loading..."** — since 1.3.0 every code block without a renderable preview (JavaScript, Python, JSON and other plain languages) showed a preview toggle and a `Loading...` panel below it that never finished; plain code blocks are preview-free again, while Mermaid and LaTeX previews are unchanged
+
 ## [1.3.0] - 2026-11-03
 
 ### New features
