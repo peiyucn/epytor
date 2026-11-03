@@ -11,7 +11,7 @@ VS Code「所见即所得」Markdown 编辑器，基于 Milkdown（Crepe）7.22.
 * `webview/` — WebView 端按**功能域**分目录：
   * `index.ts`（入口：DOM 脚手架 + 消息路由）、`editor.ts`（CrepeBuilder 装配门面）、`messaging.ts`（双端通道）
   * `app/` — 会话与请求生命周期（`scrollSync` 源码行↔视口几何、`scrollTargets` 延迟滚动与折叠恢复、`persistence` 未落盘推送/滚动/选区持久化、`imageRequests` 上传/图库/重命名、`linkBehavior` 链接行为、`pendingRequest`、`rebuildRestore`、`editorStatePersistence`）
-  * `editor/` — 编辑器内核支撑（`editorSession`（编辑器实例 + SavedSnapshot 唯一所有者）、`serialization` 保存归一化纯函数、`continuity` 重建焦点/选区/滚动、`mermaidPreview`、`cmTheme`、`cmThemeObserver`、`compositionGate`、`themeBus`、`bubbleBoundary`、`mermaid`）与 `editor/plugins/`（headingFold / headingSticky / listMarker / softBreakKeymap / cellClickFixPlugin / formatKeymapPlugin）
+  * `editor/` — 编辑器内核支撑（`editorSession`（编辑器实例 + SavedSnapshot 唯一所有者）、`serialization` 保存归一化纯函数、`continuity` 重建焦点/选区/滚动、`codeBlockPreview`（代码块预览语言路由与组件返回值契约）、`mermaidPreview`、`cmTheme`、`cmThemeObserver`、`compositionGate`、`themeBus`、`bubbleBoundary`、`mermaid`）与 `editor/plugins/`（headingFold / headingSticky / listMarker / softBreakKeymap / cellClickFixPlugin / formatKeymapPlugin）
   * `markdown/` — 序列化与保真（`markdownSerializer`、`minimalDiff`、`listSpread`、`listBackspace`、`listMarker`、`frontmatter`、`emptyTaskListItem`、`taskListItemEnter`）
   * `outline/` — 目录与标题（`headingFold`、`headingSticky`、`headingHighlight`、`headingScroll`）
   * `images/`、`table/`、`code/`、`find/`、`scroll/`、`shell/` — 各自领域的支撑逻辑
