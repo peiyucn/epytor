@@ -18,6 +18,18 @@ const DOC_FS_PATH = path.join(os.tmpdir(), "epytor-provider-test-doc.md");
 const DOC_URI = vscode.Uri.file(DOC_FS_PATH);
 const URI_KEY = DOC_URI.toString();
 
+// FileWatcher watches the OS directly; capture the callback so provider tests can simulate an
+// external write without touching the real filesystem (test rules: no real disk writes).
+const fsWatchMock = vi.hoisted(() => ({
+    watch: vi.fn((..._args: unknown[]) => ({ on: vi.fn(), close: vi.fn() })),
+}));
+vi.mock("fs", async (importOriginal) => {
+    const actual = await importOriginal<typeof import("fs")>();
+    return { ...actual, watch: fsWatchMock.watch };
+});
+
+type FsWatchCallback = (event: string, filename: string) => void;
+
 const TOKEN = {
     isCancellationRequested: false,
     onCancellationRequested: vi.fn(),
@@ -461,6 +473,24 @@ describe("MarkdownEditorProvider", () => {
             expect(target.document.getText()).toBe("edited");
         });
 
+        it("回归：新打开即激活的面板（未收到 view-state 事件） 应该 也拉取 webview 内容再保存", async () => {
+            const target = await openHarness("base");
+            // 真实打开路径：面板创建时就是激活的，`onDidChangeViewState` 不会补发。
+            // 这里刻意不调用 activate(true)；旧实现因此把这次保存当成「问不到 webview」，
+            // 直接用落盘备份写盘，刚输入的字符会丢。
+            await target.receive({ type: "ready" });
+
+            const savePromise = target.provider.saveCustomDocument(target.document, TOKEN);
+            await waitForPosted(target.posted, "requestContent");
+            await target.receive({ type: "contentResponse", content: "typed-right-before-save" });
+            await savePromise;
+
+            expect(fsMock.writeFile).toHaveBeenCalledWith(
+                expect.objectContaining({ fsPath: DOC_FS_PATH }),
+                Buffer.from("typed-right-before-save", "utf-8"),
+            );
+        });
+
         it("回归（B2）：切换源码视图时 缓冲无新内容且磁盘已变 应该 跳过写盘", async () => {
             const target = await openHarness("base");
             await readyAndActivate(target);
@@ -555,6 +585,68 @@ describe("MarkdownEditorProvider", () => {
             });
             await new Promise((resolve) => setTimeout(resolve, 0));
             expect(target.statusBarItem.text).toContain("Size: 1.0 KB");
+        });
+    });
+
+    describe("外部变更（面板初始激活态）", () => {
+        /**
+         * Simulate an OS write event: the provider registers its watcher callback through the
+         * mocked `fs.watch`, so tests can drive the real external-change path without a disk.
+         */
+        async function openHarnessWithWatcher(initialContent: string): Promise<{
+            target: Harness;
+            fireExternalWrite: () => Promise<void>;
+        }> {
+            let watchCallback: FsWatchCallback | undefined;
+            fsWatchMock.watch.mockImplementation((...args: unknown[]) => {
+                watchCallback = args[1] as FsWatchCallback;
+                return { on: vi.fn(), close: vi.fn() };
+            });
+            const target = await openHarness(initialContent);
+            return {
+                target,
+                async fireExternalWrite(): Promise<void> {
+                    if (!watchCallback) { throw new Error("file watcher 未注册"); }
+                    watchCallback("change", path.basename(DOC_FS_PATH));
+                    // FileWatcher debounces burst writes by 200ms.
+                    await new Promise((resolve) => setTimeout(resolve, 300));
+                },
+            };
+        }
+
+        it("回归：新打开即激活的面板 收到外部变更 应该 静默采纳，不弹「内容已保留」警告", async () => {
+            const { target, fireExternalWrite } = await openHarnessWithWatcher("base");
+            await target.receive({ type: "ready" });
+
+            // 面板创建时就是激活的（未经过 view-state 事件）；旧实现读不到 webview，
+            // 走 defer 并弹「while you were editing」，即使一个字符都没改。
+            vi.mocked(fsMock.readFile).mockResolvedValue(Buffer.from("external", "utf-8"));
+            await fireExternalWrite();
+
+            await waitForPosted(target.posted, "requestContent");
+            await target.receive({ type: "contentResponse", content: "base" });
+            await waitForPosted(target.posted, "revert");
+
+            expect(target.document.getText()).toBe("external");
+            expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
+        });
+
+        it("回归：ready 前到达的外部变更 应该 在 ready 后立刻结算，不留陈旧内容", async () => {
+            const { target, fireExternalWrite } = await openHarnessWithWatcher("base");
+
+            // webview 还没 ready：决策只能是 defer，但干净编辑器不该弹警告。
+            vi.mocked(fsMock.readFile).mockResolvedValue(Buffer.from("external-before-ready", "utf-8"));
+            await fireExternalWrite();
+            expect(target.document.getText()).toBe("base");
+            expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
+
+            // ready 是「webview 可读了」的唯一时机；初始激活的面板不会再有激活事件。
+            await target.receive({ type: "ready" });
+            await waitForPosted(target.posted, "requestContent");
+            await target.receive({ type: "contentResponse", content: "base" });
+            await waitForPosted(target.posted, "revert");
+
+            expect(target.document.getText()).toBe("external-before-ready");
         });
     });
 });

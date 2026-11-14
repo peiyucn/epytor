@@ -271,6 +271,12 @@ export class MarkdownEditorProvider
 
         const uriKey = document.uri.toString();
         this._webviewPanels.set(uriKey, webviewPanel);
+        // A panel that is created already active never emits `onDidChangeViewState`, so the
+        // activation flag must be seeded here. Without it, content pulls (save, external-change
+        // adoption) stay on the stale fallback path for a freshly opened tab until the user
+        // happens to switch tabs: early Ctrl+S can drop the last ~400ms of typing, and every
+        // external write is misjudged as "defer".
+        this._panelActive.set(uriKey, webviewPanel.active);
         this._lastSavedContent.set(uriKey, document.getText());
         // Opening a panel also proves the audit trail works: if this line never shows up, an
         // absent log later means "instrument broken", not "epytor did not write".
@@ -450,6 +456,13 @@ export class MarkdownEditorProvider
                     ...(scrollToLine !== undefined ? { scrollToLine } : {}),
                 });
                 void this._refreshFileSize(document, uriKey);
+                // A deferred external change was waiting for the webview to become readable.
+                // A panel that opened already active gets no further view-state event, so settle
+                // it here instead of leaving stale content until the user switches tabs.
+                if (this._externalChange.isDeferred(uriKey)) {
+                    this._externalChange.consumeDeferred(uriKey);
+                    void this._handleExternalChange(document, uriKey);
+                }
                 break;
             }
             case "markDirty": {
