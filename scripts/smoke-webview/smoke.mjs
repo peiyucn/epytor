@@ -322,8 +322,8 @@ async function main() {
         check("fenced code block mounts in the real bundle", true);
 
         // 8) A plain-language block has no preview: Crepe treats `undefined` as "async preview
-        //    pending", so answering it for languages we never render left a "Loading..." preview
-        //    toggle on every code block (v1.3.0 regression). `null` is the "no preview" answer.
+        //    pending" and `null` as "no preview", so unhandled languages must answer `null` —
+        //    otherwise every plain code block keeps a stuck "Loading..." preview panel.
         const plainBlockState = await evaluate(`(() => {
             const block = document.querySelector('.milkdown-code-block');
             return {

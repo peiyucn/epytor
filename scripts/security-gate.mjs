@@ -1,25 +1,20 @@
 /**
  * Fail-closed security alert gate for releases (AGENTS E18).
  *
- * Queries every open alert type the release rules require (Dependabot, code scanning, secret
- * scanning) and exits non-zero when anything is still open — or when the check cannot be
- * completed at all. An unverifiable release counts as blocked: this repo's release process
- * allows no alert to be waived, so a 403, timeout or missing credential must fail the publish
- * job rather than silently pass it.
+ * Checks the three alert families the release rules require (Dependabot, code scanning, secret
+ * scanning) and fails the publish job when any is open — or when the check itself cannot be
+ * completed. A broken query must never read as "clean": non-200, timeout, malformed body and
+ * missing credentials all block the release.
  *
- * Credentials follow the sibling dsh-launcher-panel pattern:
- *   - GITHUB_TOKEN_ALERTS: `${{ github.token }}`; reads Dependabot (`vulnerability-alerts:
- *     read`) and code scanning (`security-events: read`).
- *   - SECRET_SCAN_TOKEN:  read-only fine-grained PAT stored as the environment-level secret
- *     `SECURITY_ALERTS_TOKEN`; GitHub's GITHUB_TOKEN cannot read secret scanning alerts
- *     (HTTP 403 "Resource not accessible by integration").
+ * Credentials follow the dsh-launcher-panel split:
+ * - GITHUB_TOKEN_ALERTS: `${{ github.token }}`; reads Dependabot (`vulnerability-alerts: read`)
+ *   and code scanning (`security-events: read`).
+ * - SECRET_SCAN_TOKEN: environment secret `SECURITY_ALERTS_TOKEN`, a read-only fine-grained PAT.
+ *   GITHUB_TOKEN cannot read secret scanning alerts ("Resource not accessible by integration").
  *
- * Usage (publish workflow):
- *   GITHUB_REPOSITORY=owner/repo GITHUB_TOKEN_ALERTS=<token> SECRET_SCAN_TOKEN=<token> \
- *     node scripts/security-gate.mjs
- *
- * Self-test (no network):
- *   node scripts/security-gate.mjs --self-test
+ * Usage: GITHUB_REPOSITORY=owner/repo GITHUB_TOKEN_ALERTS=... SECRET_SCAN_TOKEN=... \
+ *          node scripts/security-gate.mjs
+ * Self-test (no network): node scripts/security-gate.mjs --self-test
  */
 import process from "node:process";
 import { pathToFileURL } from "node:url";
@@ -28,18 +23,15 @@ const API_BASE = "https://api.github.com";
 const PAGE_SIZE = 100;
 const REQUEST_TIMEOUT_MS = 30_000;
 
-/** The three alert families E18 requires to be zero before a release. */
+/** Alert families E18 requires to be zero before a release. */
 const ALERT_TYPES = [
     { name: "Dependabot", path: "dependabot/alerts", tokenKey: "alerts" },
     { name: "Code scanning", path: "code-scanning/alerts", tokenKey: "alerts" },
     { name: "Secret scanning", path: "secret-scanning/alerts", tokenKey: "secretScan" },
 ];
 
-/**
- * Classify one alerts response. Any non-200, malformed body or non-empty list blocks the
- * release; the count is reported so the workflow log names the offending family.
- */
-export function evaluateAlertsResponse(status, body) {
+/** Classify one alerts response; only an empty list on HTTP 200 counts as clean. */
+function evaluateAlertsResponse(status, body) {
     if (status !== 200) {
         return { ok: false, count: null, reason: `HTTP ${status}` };
     }
@@ -49,7 +41,7 @@ export function evaluateAlertsResponse(status, body) {
     if (body.length === 0) {
         return { ok: true, count: 0, reason: "" };
     }
-    // One page is enough: any alert is blocking, so a full page is reported as "at least".
+    // Any alert blocks; a full page only proves "at least" this many.
     return { ok: false, count: body.length, reason: body.length >= PAGE_SIZE ? ">=100 open" : "open" };
 }
 
@@ -73,11 +65,8 @@ async function fetchOpenAlerts(fetchImpl, repository, type, token) {
     return evaluateAlertsResponse(response.status, body);
 }
 
-/**
- * Run the gate and return a structured result; never throws for expected failures so the
- * caller (CLI or test) can render it consistently.
- */
-export async function runGate({ fetchImpl = fetch, repository, alertsToken, secretScanToken }) {
+/** Run the gate; expected failures are returned, not thrown, so the CLI can report them. */
+async function runGate({ fetchImpl = fetch, repository, alertsToken, secretScanToken }) {
     if (!repository) {
         return { pass: false, reason: "GITHUB_REPOSITORY is not set", results: [] };
     }
@@ -110,8 +99,8 @@ export async function runGate({ fetchImpl = fetch, repository, alertsToken, secr
     };
 }
 
-/** Run without touching the network; supports the CLI self-test and unit-style checks. */
-async function selfTest() {
+/** No-network checks; `pnpm run verify` runs this so the gate logic stays covered. */
+async function runSelfTest() {
     const cases = [];
     const expect = (label, actual, wanted) => {
         const ok = actual === wanted;
@@ -148,7 +137,7 @@ async function selfTest() {
 
 async function main() {
     if (process.argv.includes("--self-test")) {
-        const ok = await selfTest();
+        const ok = await runSelfTest();
         process.exit(ok ? 0 : 1);
     }
     const result = await runGate({

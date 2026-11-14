@@ -5,8 +5,8 @@
  * deferred decision, so a change that arrived while the editor could not be read is not lost.
  *
  * The decision itself is pure (`decideExternalChange`); this module is the side-effect half:
- * it owns the deferred/re-check bookkeeping and the user warning, and it mutates the document
- * model only for the actions that are allowed to.
+ * it owns the deferred/re-check bookkeeping, mutates the document model only for the actions
+ * that are allowed to, and logs conflicts instead of interrupting the user with a notification.
  */
 import * as vscode from "vscode";
 import type { MarkdownDocument } from "../MarkdownDocument";
@@ -61,9 +61,6 @@ export class ExternalChangeCoordinator {
     /** Documents that already had one automatic re-check after a defer (prevents a retry loop). */
     private readonly _deferredRetried = new Set<string>();
 
-    /** Documents already warned that the disk changed while they had unsaved edits. */
-    private readonly _warned = new Set<string>();
-
     constructor(private readonly host: ExternalChangeHost) {}
 
     /** Compare the document against the disk and act on a real external change. */
@@ -109,7 +106,6 @@ export class ExternalChangeCoordinator {
             // session edited the same file. If the user really has unsaved edits, the webview's
             // own markDirty already carried them; the re-check on activation settles the rest.
             console.warn(`[epytor] external change deferred: ${decision.reason}`);
-            this._warnKept(uriKey);
             this._deferred.add(uriKey);
             // A panel that is already active will not emit another activation event, so
             // re-check once here; otherwise a stale view could persist indefinitely.
@@ -128,7 +124,9 @@ export class ExternalChangeCoordinator {
         host.clearPushedContent(uriKey);
         if (decision.action === "keepUserContent") {
             // Unsaved user edits: keep them and report dirty to VS Code so closing prompts.
-            this._warnKept(uriKey);
+            // No notification: the owner's workflow has an AI writer on the same files, where a
+            // modal warning per conflict is pure noise. Attribution lives in this log line.
+            console.warn("[epytor] external change kept the editor buffer (unsaved edits)");
             document.update(latest);
             host.setWebviewDirty(uriKey, true);
             host.markDirty(document);
@@ -183,21 +181,5 @@ export class ExternalChangeCoordinator {
     /** Clear the per-document entries; called when the WYSIWYG panel is disposed. */
     dispose(uriKey: string): void {
         this.clearDeferred(uriKey);
-        this._warned.delete(uriKey);
-    }
-
-    /**
-     * Tell the user that the disk copy moved on while their editor kept its own content.
-     *
-     * Silence here is what made a concurrent writer (another tool, an AI session) look like the
-     * editor "rolling itself back": the editor either dropped the user's text or silently kept it
-     * and overwrote the other writer on the next save. Say it out loud, once per document.
-     */
-    private _warnKept(uriKey: string): void {
-        if (this._warned.has(uriKey)) { return; }
-        this._warned.add(uriKey);
-        void vscode.window.showWarningMessage(
-            vscode.l10n.t("The file changed on disk while you were editing. Your editor content was kept: saving will overwrite the disk version, or use \"Revert File\" to load it."),
-        );
     }
 }

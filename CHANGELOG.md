@@ -5,6 +5,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 English | [简体中文](CHANGELOG.zh-CN.md)
 
+## [1.3.2] - 2026-11-14
+
+### Bug fixes
+
+- **External writes no longer trigger a false "file changed on disk" warning** — a freshly opened or background editor tab was treated as unreadable, so every external write to the file raised a warning even when nothing had been edited; a clean editor now follows the file on disk silently, and external changes are applied immediately instead of waiting for a tab switch
+- **Saving right after opening a file no longer drops the last keystrokes** — the live editor content could not be read until the tab had been switched away and back, so a very early save (auto save or Ctrl+S) could write a buffer missing the last ~400ms of typing; the live content is now used from the first save on
+
+### Changed
+
+- **A conflict with an external writer no longer interrupts you with a notification** — if another tool changes the file while you have unsaved edits, the editor still keeps your content and marks the document as unsaved, but the warning is gone (the conflict is only logged); your next save writes the editor content over the external version
+
 ## [1.3.1] - 2026-11-04
 
 ### Bug fixes

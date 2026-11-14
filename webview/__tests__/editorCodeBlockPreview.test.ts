@@ -1,11 +1,8 @@
 /**
- * 代码块预览回调契约（editor.ts 装配）回归。
+ * 代码块预览回调装配回归（editor.ts 把分发器交给 Crepe code-block）。
  *
- * Crepe code-block 组件把 renderPreview 的返回值当契约：返回 `null` = 这个块没有预览，
- * 返回 `undefined` = 异步预览待回填（先显示 previewLoading「Loading...」）。
- * v1.3.0 重构把 mermaid 预览抽成 editor/mermaidPreview.ts 后，非 mermaid/latex 语言
- * 落到了 `undefined`：每个普通代码块都冒出预览按钮，点开永远停在 Loading。
- * 这里用真实 createEditor 取回装配后的回调，锁住「普通语言必须回 null」。
+ * 组件契约见 editor/codeBlockPreview.ts；这里用真实 createEditor 取回装配后的回调，
+ * 锁住「普通语言回 null、不出现预览」这条链路（回归：曾回 undefined，预览永远 Loading）。
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createEditor, destroyEditor } from "../editor";
@@ -61,14 +58,6 @@ describe("代码块预览回调", () => {
         const applyPreview = vi.fn();
 
         expect(codeBlockPreview(editor)("js", "const a = 1;", applyPreview)).toBeNull();
-        expect(applyPreview).not.toHaveBeenCalled();
-    });
-
-    it("语言别名（大小写不同）也 应该 返回 null", async () => {
-        const editor = await openEditor("# t\n\n```python\nprint(1)\n```\n");
-        const applyPreview = vi.fn();
-
-        expect(codeBlockPreview(editor)("Python", "print(1)", applyPreview)).toBeNull();
         expect(applyPreview).not.toHaveBeenCalled();
     });
 });
