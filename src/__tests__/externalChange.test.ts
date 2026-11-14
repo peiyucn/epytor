@@ -63,7 +63,7 @@ describe("ExternalChangeCoordinator 外部变更采纳", () => {
         vi.restoreAllMocks();
     });
 
-    it("回归（B1 defer-before-revert）：无法读取 webview 时 应该 不改文档模型、不推 revert", async () => {
+    it("回归（B1 defer-before-revert）：无法读取 webview 且无未保存编辑时 应该 不改模型、不推 revert、不警告", async () => {
         const document = await makeDocument("C1");
         setDiskContent("C2"); // 磁盘已被外部改成 C2
         const { host, panel } = makeHost({
@@ -78,7 +78,26 @@ describe("ExternalChangeCoordinator 外部变更采纳", () => {
         expect(document.getText()).toBe("C1");
         expect(panel.webview.postMessage).not.toHaveBeenCalled();
         expect(coordinator.isDeferred(URI_KEY)).toBe(true);
-        expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
+        // 没有未保存编辑时「内容已保留」是假告警：激活后复查会静默采纳盘上内容。
+        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
+    });
+
+    it("无法读取 webview 但有未保存编辑时 应该 保持延迟决策，不弹窗", async () => {
+        const document = await makeDocument("C1");
+        setDiskContent("C2");
+        const { host, panel } = makeHost({
+            requestContentDetailed: vi.fn(async () => ({ content: "C1 edited", authoritative: false })),
+            getLastSavedContent: vi.fn(() => "C1"),
+            isWebviewDirty: vi.fn(() => true),
+        });
+        const coordinator = new ExternalChangeCoordinator(host);
+
+        await coordinator.handle(document, URI_KEY);
+
+        expect(document.getText()).toBe("C1");
+        expect(panel.webview.postMessage).not.toHaveBeenCalled();
+        expect(coordinator.isDeferred(URI_KEY)).toBe(true);
+        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
     });
 
     it("采纳盘上内容时 应该 用读到的盘上文本更新模型并推 revert", async () => {
@@ -106,7 +125,7 @@ describe("ExternalChangeCoordinator 外部变更采纳", () => {
         expect(host.refreshFileSize).toHaveBeenCalledWith(document, URI_KEY);
     });
 
-    it("用户有未保存编辑时 应该 保留用户内容并报告 dirty", async () => {
+    it("用户有未保存编辑时 应该 保留用户内容并报告 dirty，不弹窗", async () => {
         const document = await makeDocument("C1");
         setDiskContent("C2");
         const { host, panel } = makeHost({
@@ -121,7 +140,9 @@ describe("ExternalChangeCoordinator 外部变更采纳", () => {
         expect(host.markDirty).toHaveBeenCalledWith(document);
         expect(host.setWebviewDirty).toHaveBeenCalledWith(URI_KEY, true);
         expect(panel.webview.postMessage).not.toHaveBeenCalled();
-        expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
+        // 外部写入方在跟用户抢同一个文件是常态（AI 写作会话），弹窗太吵；冲突只进日志。
+        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
+        expect(console.warn).toHaveBeenCalledWith("[epytor] external change kept the editor buffer (unsaved edits)");
     });
 
     it("盘上内容与 webview 一致时 应该 忽略（不修改模型、不推消息）", async () => {
@@ -205,12 +226,13 @@ describe("ExternalChangeCoordinator 外部变更采纳", () => {
         expect(requestMock).toHaveBeenCalledTimes(2);
     });
 
-    it("dispose 后 defer 记录与「只警告一次」去重 应该 都清掉", async () => {
+    it("dispose 后 defer 记录 应该 清掉（重开文档不继承延迟决策）", async () => {
         const document = await makeDocument("C1");
         setDiskContent("C2");
         const { host } = makeHost({
             requestContentDetailed: vi.fn(async () => ({ content: "C1", authoritative: false })),
             getLastSavedContent: vi.fn(() => "C1"),
+            isWebviewDirty: vi.fn(() => true),
         });
         const coordinator = new ExternalChangeCoordinator(host);
 
@@ -220,7 +242,8 @@ describe("ExternalChangeCoordinator 外部变更采纳", () => {
         expect(coordinator.isDeferred(URI_KEY)).toBe(false);
 
         await coordinator.handle(document, URI_KEY);
-        expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(2);
+        expect(coordinator.isDeferred(URI_KEY)).toBe(true);
+        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
     });
 
     it("保存成功 应该 清掉 defer 与复查标记", async () => {
