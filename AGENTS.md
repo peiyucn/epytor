@@ -83,6 +83,8 @@ push 后立即查询一次未处理的 Dependabot 告警，确认清零才继续
 
 依赖类告警按 E22 处理；代码类告警修复后，须等下一轮扫描确认状态变为已修复再发版。
 
+tag 前须确认 CodeQL default setup 已扫过本轮 main 提交（查 `code-scanning/analyses` 的 `commit_sha`），未扫过则等扫描完成再发；不得用上一次 main 的扫描代替本轮。
+
 ### E14｜发布前审计〔final〕
 
 按 G 段逐条过一遍。
@@ -109,6 +111,8 @@ push 后立即查询一次未处理的 Dependabot 告警，确认清零才继续
 
 该门禁须由发布工作流 fail-closed 执行（查询告警数，非 0 即中止发布），不得只靠人工核对。告警修复后须等下一轮扫描确认关闭，才算清零。依赖类告警按 E22 处理。
 
+门禁凭据一律用环境级只读 secret（至少能读 Dependabot / Code scanning / Secret scanning 告警）；`GITHUB_TOKEN` 读不到 secret scanning 告警，不得用它当门禁凭据。查询本身失败同样中止发布。
+
 ### E19｜打 tag 并推送〔interface〕
 
 一律用 annotated tag 并附说明。push 默认分支即部署、不使用版本号的站点不适用本条。
@@ -133,7 +137,9 @@ push 后立即查询一次未处理的 Dependabot 告警，确认清零才继续
 
 ### E23｜坏版本处理〔final〕
 
-用 deprecate，不得 unpublish，由 owner 在本机手动执行。无 deprecate 能力的市场只在 README 与 Release 说明里标注已知问题，指向修复版本。
+坏版本一律用 deprecate，不得 unpublish，由 owner 在本机手动执行。无 deprecate 能力的市场只在 README 与 Release 说明里标注已知问题，指向修复版本。
+
+退役包另有处置：发布后 24 小时内的 unpublish 窗口内可从 npm 移除；超出窗口的用 deprecate，并在 README 如实描述（不得笼统声称「npm 包已删除」）。以上 npm 处置均由 owner 执行。
 
 ### 本项目取值与流程
 
