@@ -117,6 +117,8 @@ tag 前须确认 CodeQL default setup 已扫过本轮 main 提交（查 `code-sc
 
 一律用 annotated tag 并附说明。push 默认分支即部署、不使用版本号的站点不适用本条。
 
+tag 提交须在默认分支上；发布工作流须对此做 fail-closed 校验（不在默认分支即中止），不靠人工核对。
+
 单次推送不超过 3 个 tag，超过时 GitHub 不生成 push 事件。多包仓库逐个推送，推送后确认 workflow 真的启动。
 
 ### E20｜发布凭据〔final〕
