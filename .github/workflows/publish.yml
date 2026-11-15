@@ -20,7 +20,21 @@ jobs:
       vulnerability-alerts: read
 
     steps:
+      # fetch-depth: 0 —— 下面「tag 提交必须在 main 上」的祖先校验需要完整历史。
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # E19 / E16：tag 必须先合到 main 再打。工作流在发布前兜底校验，
+      # 防止在未合并分支的提交上打 tag 直接发布。
+      - name: Verify tag commit is on main
+        shell: bash
+        run: |
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "${GITHUB_SHA}" origin/main; then
+            echo "::error::tag 提交不在 main 上：先把 dev 合并到 main 再打 tag（E16）"
+            exit 1
+          fi
 
       - uses: pnpm/action-setup@v6
 
