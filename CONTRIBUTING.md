@@ -42,15 +42,13 @@ Quick reference:
 - **Communication**: WebView ↔ Extension only through `webview/messaging.ts`
 - **CSS**: Must use `--vscode-*` variables for light/dark theme support
 - **Git commits**: English type prefix + Chinese description (e.g. `feat: 新增功能`)
-- **Testing**: `pnpm test` must pass before pushing (CI runs on every push/PR to `main`/`dev` — see `.github/workflows/ci.yml`)
+- **Testing**: `pnpm run verify` must pass before pushing (CI runs on every push/PR to `main` — see `.github/workflows/ci.yml`)
 
 ## Submitting Changes
 
-1. Create a branch from `dev`: `git checkout -b feature/your-feature`
-2. Make changes, write tests, run `pnpm test` + `pnpm build`
-3. Open a Pull Request against the **`dev`** branch
-
-> **Note:** `dev` is the active development branch. `main` is the stable release branch — do not target PRs there.
+1. Create a branch from `main`: `git checkout -b feature/your-feature`
+2. Make changes, write tests, run `pnpm run verify`
+3. Open a Pull Request against **`main`**
 
 ## Reporting Bugs
 
