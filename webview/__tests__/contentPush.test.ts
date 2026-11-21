@@ -5,7 +5,6 @@ import { EditorState, TextSelection } from "@milkdown/kit/prose/state";
 import type { EditorView } from "@milkdown/kit/prose/view";
 import { initSessionPersistence, type PersistenceDeps } from "../app/persistence";
 
-
 function fakeView(extra: Record<string, unknown> = {}): EditorView {
     const block = document.createElement("div");
     block.getBoundingClientRect = () => ({
@@ -22,7 +21,6 @@ function fakeView(extra: Record<string, unknown> = {}): EditorView {
     const doc = { forEach: (fn: (node: unknown, offset: number) => void) => fn({}, 0) };
     return { state: { doc }, nodeDOM: () => block, ...extra } as unknown as EditorView;
 }
-
 
 function viewWithSelection(from: number, to: number): EditorView {
     const schema = new Schema({

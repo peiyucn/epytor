@@ -6,12 +6,9 @@ import type { PathSuggestionItem } from "../../shared/messages";
 
 const item = (path: string, isDir = false, webviewUri?: string): PathSuggestionItem => ({ path, isDir, webviewUri });
 
-
 const flush = () => new Promise<void>((resolve) => { queueMicrotask(resolve); });
 
-
 HTMLElement.prototype.scrollIntoView = HTMLElement.prototype.scrollIntoView ?? (() => {});
-
 
 function typeAndGetRequestId(input: HTMLInputElement, value: string): string {
     input.value = value;
@@ -45,11 +42,9 @@ describe("imgPathComplete 补全竞态防护", () => {
         const idB = typeAndGetRequestId(input, "@/b");
         expect(idA).not.toBe(idB);
 
-
         resolvePathSuggestionRequest(idA, [item("a.md"), item("a-dir", true)]);
         await flush();
         expect(document.querySelector(".img-path-complete-list")).toBeNull();
-
 
         resolvePathSuggestionRequest(idB, [item("b.md"), item("b-dir", true)]);
         await flush();

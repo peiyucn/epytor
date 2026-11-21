@@ -5,7 +5,6 @@ function countCmEditors(container: HTMLElement): number {
     return container.querySelectorAll(".cm-editor").length;
 }
 
-
 export function observeCmEditorCount(container: HTMLElement, onChange: () => void): () => void {
     let lastCount = countCmEditors(container);
     const observer = new MutationObserver(() => {

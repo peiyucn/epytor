@@ -16,12 +16,10 @@ const IMAGE_BLUR_CLOSE_DELAY_MS = 150;
 
 const _pendingResolve = new Map<string, (uri: string) => void>();
 
-
 export function dispatchImagePathResolved(id: string, webviewUri: string): void {
     const cb = _pendingResolve.get(id);
     if (cb) { _pendingResolve.delete(id); cb(webviewUri); }
 }
-
 
 export function resolveToWebviewUri(relPath: string): Promise<string> {
     return new Promise((resolve) => {
@@ -37,7 +35,6 @@ export function resolveToWebviewUri(relPath: string): Promise<string> {
         notifyResolveImagePath(id, relPath);
     });
 }
-
 
 export function attachImgPathComplete(
     input: HTMLInputElement,
@@ -93,11 +90,9 @@ export function attachImgPathComplete(
             return;
         }
 
-
         const handle = beginPathSuggestionRequest();
         latestSuggestionId = handle.id;
         handle.promise.then((items) => {
-
 
             if (teardown.disposed || handle.id !== latestSuggestionId) { return; }
 

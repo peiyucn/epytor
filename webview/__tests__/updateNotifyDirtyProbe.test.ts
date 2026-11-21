@@ -32,7 +32,6 @@ describe("updateNotifyPlugin 首帧脏标记", () => {
         const onDocumentChanged = vi.fn();
         const editor = await createEditor(root, "hello world", onDocumentChanged);
 
-
         root.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
         const view: EditorView = editor.action((ctx) => ctx.get(editorViewCtx));
 

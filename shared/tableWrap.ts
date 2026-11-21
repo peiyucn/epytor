@@ -1,7 +1,6 @@
 
 export type TableWrapMode = "wrap" | "nowrap";
 
-
 export function normalizeTableWrapMode(value: unknown): TableWrapMode {
     return value === "nowrap" || value === "none" ? "nowrap" : "wrap";
 }
@@ -16,7 +15,6 @@ export interface TableWrapVars {
 
     tableWidth: "auto" | "max-content";
 }
-
 
 export function resolveTableWrapVars(mode: string): TableWrapVars {
     switch (mode) {

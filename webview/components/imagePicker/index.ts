@@ -8,7 +8,6 @@ type OnUrl = (url: string) => void;
 
 let activePickerClose: (() => void) | null = null;
 
-
 export function closeImagePicker(): void {
     activePickerClose?.();
 }
@@ -61,7 +60,6 @@ export function showImagePicker(
     fileInput.type = "file"; fileInput.accept = "image/*";
     fileInput.style.display = "none";
 
-
     panelUpload.appendChild(fileInput);
     panelUpload.appendChild(dropZone);
     const uploadStatus = document.createElement("div");
@@ -87,7 +85,6 @@ export function showImagePicker(
     panelUrl.appendChild(urlInput);
     panelUrl.appendChild(urlInsertBtn);
 
-
     const detachComplete = attachImgPathComplete(urlInput);
 
     const panelProject = document.createElement("div");
@@ -107,7 +104,6 @@ export function showImagePicker(
     dialog.appendChild(panelProject);
     overlay.appendChild(dialog);
 
-
     const close = () => {
         if (activePickerClose === close) { activePickerClose = null; }
         detachComplete();
@@ -115,8 +111,6 @@ export function showImagePicker(
     };
     activePickerClose = close;
     overlay.addEventListener("mousedown", (e) => { if (e.target === overlay) close(); });
-
-
 
     async function submitFile(file: File): Promise<void> {
         dropZone.style.pointerEvents = "none";

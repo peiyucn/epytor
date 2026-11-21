@@ -4,10 +4,8 @@ const attrs = `width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="cu
 
 const svg = (content: string) => `<svg xmlns="http://www.w3.org/2000/svg" ${attrs}>${content}</svg>`;
 
-
 const tbAttrs = `width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="fill:none!important"`;
 const tbIcon = (d: string) => `<svg xmlns="http://www.w3.org/2000/svg" ${tbAttrs}><g transform="matrix(0.88 0 0 0.88 1.5 1.5)">${d}</g></svg>`;
-
 
 export const IconCheck = svg(`<polyline points="20 6 9 17 4 12"/>`);
 export const IconX = svg(`<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>`);
@@ -20,7 +18,6 @@ export const IconZoomIn      = svg(`<circle cx="11" cy="11" r="8"/><line x1="21"
 export const IconImageOff    = svg(`<line x1="2" y1="2" x2="22" y2="22"/><path d="M10.41 10.41a2 2 0 1 1-2.83-2.83"/><path d="M13.5 6H5a2 2 0 0 0-2 2v10"/><path d="M14.528 14.528 19 19"/><path d="M21 15V8a2 2 0 0 0-2-2h-1"/><path d="m7 21 3.43-3.43"/>`);
 export const IconMaximize2   = svg(`<polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>`);
 export const IconResetZoom   = svg(`<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>`);
-
 
 export const TbUndo  = tbIcon(`<path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>`);
 export const TbRedo  = tbIcon(`<path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"/>`);

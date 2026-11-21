@@ -7,11 +7,9 @@ function applyPxVar(name: string, value: number): void {
     document.documentElement.style.setProperty(name, `${Math.round(value)}px`);
 }
 
-
 export function applyEditorMaxWidth(value: number): void {
     applyPxVar(VAR_EDITOR_MAX_WIDTH, value);
 }
-
 
 export function applyCodeBlockMaxHeight(value: number): void {
     applyPxVar(VAR_CODE_BLOCK_MAX_HEIGHT, value);

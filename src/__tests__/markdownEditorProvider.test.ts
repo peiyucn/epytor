@@ -11,8 +11,6 @@ const DOC_FS_PATH = path.join(os.tmpdir(), "epytor-provider-test-doc.md");
 const DOC_URI = vscode.Uri.file(DOC_FS_PATH);
 const URI_KEY = DOC_URI.toString();
 
-
-
 const fsWatchMock = vi.hoisted(() => ({
     watch: vi.fn((..._args: unknown[]) => ({ on: vi.fn(), close: vi.fn() })),
 }));
@@ -29,7 +27,6 @@ const TOKEN = {
 } as unknown as vscode.CancellationToken;
 
 const fsMock = vscode.workspace.fs;
-
 
 function fileStat(type: vscode.FileType, size = 0): vscode.FileStat {
     return { type, ctime: 0, mtime: 0, size };
@@ -195,7 +192,6 @@ describe("MarkdownEditorProvider", () => {
         harness?.disposePanel();
         harness = undefined;
 
-
         await new Promise((resolve) => setTimeout(resolve, 0));
         vi.restoreAllMocks();
     });
@@ -247,7 +243,6 @@ describe("MarkdownEditorProvider", () => {
         if (!found) { throw new Error(`未发送消息 ${type}`); }
         return found;
     }
-
 
     async function readyAndActivate(target: Harness): Promise<void> {
         await target.receive({ type: "ready" });
@@ -469,8 +464,6 @@ describe("MarkdownEditorProvider", () => {
         it("回归：新打开即激活的面板（未收到 view-state 事件） 应该 也拉取 webview 内容再保存", async () => {
             const target = await openHarness("base");
 
-
-
             await target.receive({ type: "ready" });
 
             const savePromise = target.provider.saveCustomDocument(target.document, TOKEN);
@@ -608,8 +601,6 @@ describe("MarkdownEditorProvider", () => {
             const { target, fireExternalWrite } = await openHarnessWithWatcher("base");
             await target.receive({ type: "ready" });
 
-
-
             vi.mocked(fsMock.readFile).mockResolvedValue(Buffer.from("external", "utf-8"));
             await fireExternalWrite();
 
@@ -624,12 +615,10 @@ describe("MarkdownEditorProvider", () => {
         it("回归：ready 前到达的外部变更 应该 在 ready 后立刻结算，不留陈旧内容", async () => {
             const { target, fireExternalWrite } = await openHarnessWithWatcher("base");
 
-
             vi.mocked(fsMock.readFile).mockResolvedValue(Buffer.from("external-before-ready", "utf-8"));
             await fireExternalWrite();
             expect(target.document.getText()).toBe("base");
             expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
-
 
             await target.receive({ type: "ready" });
             await waitForPosted(target.posted, "requestContent");

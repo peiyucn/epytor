@@ -16,7 +16,6 @@ export class StatusBarPresenter {
 
     private readonly _fileSizes = new Map<string, number>();
 
-
     constructor(private readonly getActiveUriKey: () => string | undefined) {
         this._item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
         this._item.hide();
@@ -27,7 +26,6 @@ export class StatusBarPresenter {
         this.refresh();
     }
 
-
     async refreshFileSize(document: { uri: vscode.Uri }, uriKey: string): Promise<void> {
         try {
             const stat = await vscode.workspace.fs.stat(document.uri);
@@ -37,7 +35,6 @@ export class StatusBarPresenter {
         }
         this.refresh();
     }
-
 
     refresh(): void {
         const activeKey = this.getActiveUriKey();
@@ -61,7 +58,6 @@ export class StatusBarPresenter {
         this._item.tooltip = vscode.l10n.t("Chars (with spaces): {0}", wordCount.charsWithSpace.toLocaleString());
         this._item.show();
     }
-
 
     dispose(uriKey: string): void {
         this._wordCounts.delete(uriKey);

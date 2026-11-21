@@ -1,20 +1,17 @@
 
 import type { TableWrapMode } from "./tableWrap";
 
-
 export type ProjectImage = {
     relPath: string;
     webviewUri: string;
     name: string;
 };
 
-
 export type PathSuggestionItem = {
     path: string;
     isDir: boolean;
     webviewUri?: string;
 };
-
 
 export type ToExtensionMessage =
     | { type: "ready" }
@@ -34,7 +31,6 @@ export type ToExtensionMessage =
     | { type: "getPathSuggestions"; id: string; query: string }
     | { type: "resolveImagePath"; id: string; relPath: string }
     | { type: "wordCount"; lines: number; words: number; charsNoSpace: number; charsWithSpace: number };
-
 
 export type ToWebviewMessage =
     | { type: "init"; content: string; active?: boolean; serializationMode?: "clean" | "compatible"; lineMap?: number[]; lineEndMap?: number[]; scrollToLine?: number; frontmatter?: string; imageUriMap?: Record<string, string> }

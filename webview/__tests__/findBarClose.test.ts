@@ -22,12 +22,10 @@ describe("findBar 关闭清理（P3）", () => {
         bar.open("alpha");
         expect(bar.isOpen()).toBe(true);
 
-
         const input = document.querySelector<HTMLInputElement>(".find-bar input, .find-bar__input")!;
         input.value = "beta";
         input.dispatchEvent(new Event("input", { bubbles: true }));
         bar.close();
-
 
         vi.advanceTimersByTime(300);
         const countEl = document.querySelector<HTMLElement>(".find-bar__count, .find-bar .count");

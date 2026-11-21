@@ -62,7 +62,6 @@ export const ZH_CN_WEBVIEW: Record<string, string> = {
     'Invalid Regex': '无效的正则表达式',
     'No results': '无结果',
 
-
     'Add': '添加',
     'More': '更多',
     'Expand content': '展开内容',

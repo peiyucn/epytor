@@ -6,7 +6,6 @@ import { defaultHighlightStyle, syntaxHighlighting } from "@codemirror/language"
 import { languages } from "@codemirror/language-data";
 import { CM_RECONFIGURE_DELAY_MS, observeCmEditorCount } from "../editor/cmThemeObserver";
 
-
 function makeContainer(count: number): HTMLElement {
     const container = document.createElement("div");
     for (let i = 0; i < count; i++) {
@@ -17,7 +16,6 @@ function makeContainer(count: number): HTMLElement {
     document.body.appendChild(container);
     return container;
 }
-
 
 async function flushMutations(): Promise<void> {
     await new Promise<void>((resolve) => {
@@ -40,7 +38,6 @@ describe("observeCmEditorCount", () => {
         const container = makeContainer(1);
         const onChange = vi.fn();
         observeCmEditorCount(container, onChange);
-
 
         const cm = container.querySelector<HTMLElement>(".cm-editor")!;
         cm.appendChild(document.createElement("div"));
@@ -97,7 +94,6 @@ describe("observeCmEditorCount", () => {
 
     it("真实 reconfigure 引起 childList 变更时 应该 不再次排入补配（无限回环回归）", async () => {
 
-
         vi.useRealTimers();
         const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
         const js = languages.find((l) => l.name === "JavaScript")!;
@@ -117,13 +113,11 @@ describe("observeCmEditorCount", () => {
         });
         observeCmEditorCount(container, reconfigure);
 
-
         const newCm = document.createElement("div");
         newCm.className = "cm-editor";
         container.appendChild(newCm);
         await wait(CM_RECONFIGURE_DELAY_MS * 4);
         expect(reconfigure).toHaveBeenCalledOnce();
-
 
         await wait(CM_RECONFIGURE_DELAY_MS * 30);
 

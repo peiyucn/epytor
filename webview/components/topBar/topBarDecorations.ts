@@ -2,9 +2,7 @@
 import { applyTooltip } from "@/ui/tooltip";
 import { t } from "@/i18n";
 
-
 let tooltipsMismatchWarned = false;
-
 
 export function setupTopBarTooltips(container: HTMLElement): void {
     const tooltips = [
@@ -34,9 +32,6 @@ export function setupTopBarTooltips(container: HTMLElement): void {
         if (!topBar) return;
         const items = topBar.querySelectorAll<HTMLElement>('.top-bar-item');
 
-
-
-
         if (items.length !== tooltips.length && !tooltipsMismatchWarned) {
             tooltipsMismatchWarned = true;
             console.warn(
@@ -57,7 +52,6 @@ export function setupTopBarTooltips(container: HTMLElement): void {
     new MutationObserver(() => requestAnimationFrame(applyAll))
         .observe(container, { childList: true, subtree: true });
 }
-
 
 export function setupTopBarBrand(container: HTMLElement): void {
     const inject = () => {

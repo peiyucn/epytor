@@ -210,7 +210,6 @@ describe("lightbox 关闭契约", () => {
     });
 });
 
-
 describe("组件接线：图片灯箱与代码块全屏", () => {
     beforeEach(() => {
         vi.clearAllMocks();

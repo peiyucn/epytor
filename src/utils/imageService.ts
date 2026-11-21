@@ -58,14 +58,12 @@ async function dirExists(uri: vscode.Uri): Promise<boolean> {
     }
 }
 
-
 export async function firstExistingDir(candidates: string[]): Promise<string | null> {
     for (const candidate of candidates) {
         if (await dirExists(vscode.Uri.file(candidate))) { return candidate; }
     }
     return null;
 }
-
 
 export function isWorkspaceLevelSetting(cfg: vscode.WorkspaceConfiguration, key: string): boolean {
     const inspect = cfg.inspect?.(key);
@@ -79,7 +77,6 @@ interface SaveImageResult {
     downgraded: boolean;
 }
 
-
 export async function saveImageLocally(
     docUri: vscode.Uri,
     cfg: vscode.WorkspaceConfiguration,
@@ -90,15 +87,12 @@ export async function saveImageLocally(
     const ext = mimeToExt(mimeType);
     let targetDir: vscode.Uri;
 
-
     const plan = planImageLocalDir({
         customPath: cfg.get<string>("imageLocalPath", "").trim(),
         docDir: docUri.scheme === "file" ? path.dirname(docUri.fsPath) : null,
         workspaceRoot: vscode.workspace.getWorkspaceFolder(docUri)?.uri.fsPath ?? null,
         workspaceLevel: isWorkspaceLevelSetting(cfg, "imageLocalPath"),
     });
-
-
 
     const localDirDowngraded = plan.kind === "fixed" && plan.downgraded;
 
@@ -120,14 +114,11 @@ export async function saveImageLocally(
         }
     }
 
-
     const newHash = crypto.createHash("md5").update(data).digest("hex");
     let entries: [string, vscode.FileType][] = [];
     try {
         entries = await vscode.workspace.fs.readDirectory(targetDir);
-    } catch {
-
-    }
+    } catch {}
     for (const [name, type] of entries) {
         if (type !== vscode.FileType.File) {
             continue;
@@ -139,9 +130,7 @@ export async function saveImageLocally(
         let existingData: Uint8Array | null = null;
         try {
             existingData = await vscode.workspace.fs.readFile(existingUri);
-        } catch {
-
-        }
+        } catch {}
         if (!existingData) {
             continue;
         }
@@ -174,7 +163,6 @@ export function buildRelPath(docUri: vscode.Uri, fileUri: vscode.Uri): string {
     }
     return rel;
 }
-
 
 export async function uploadImageToServer(
     settings: ImageServerSettings,

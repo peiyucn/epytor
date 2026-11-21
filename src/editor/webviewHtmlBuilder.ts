@@ -14,11 +14,9 @@ import {
 import { buildWebviewHtml } from "../utils/webviewHtml";
 import { normalizeTableWrapMode, resolveTableWrapVars } from "../../shared/tableWrap";
 
-
 function appendCacheStamp(uri: string, stamp: string): string {
     return `${uri}${uri.includes("?") ? "&" : "?"}v=${stamp}`;
 }
-
 
 function webviewBuildStamp(extensionUri: vscode.Uri): string {
     try {

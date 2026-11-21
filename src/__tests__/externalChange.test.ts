@@ -74,7 +74,6 @@ describe("ExternalChangeCoordinator 外部变更采纳", () => {
 
         await coordinator.handle(document, URI_KEY);
 
-
         expect(document.getText()).toBe("C1");
         expect(panel.webview.postMessage).not.toHaveBeenCalled();
         expect(coordinator.isDeferred(URI_KEY)).toBe(true);

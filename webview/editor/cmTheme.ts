@@ -29,7 +29,6 @@ export function createCmTheme(container: HTMLElement, isDark: () => boolean): Cm
         });
     };
 
-
     const disconnect = observeCmEditorCount(container, reconfigureAll);
 
     return {

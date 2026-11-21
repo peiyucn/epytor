@@ -59,10 +59,6 @@ describe("minimalDiff", () => {
 
     it("父项与子列表之间有空行时 嵌套项提升为同级 应该 采用新缩进（回归：层级被写回旧值）", () => {
 
-
-
-
-
         const saved = "- [ ] P\n\n  - [ ] C1\n  - [ ] C2\n  - [ ] C3";
         const serialized = "- [ ] P\n  - [ ] C1\n- [ ] C2\n  - [ ] C3";
 
@@ -70,9 +66,6 @@ describe("minimalDiff", () => {
     });
 
     it("父项与子列表之间有空行时 未改动的嵌套项 应该 保留原文缩进宽度", () => {
-
-
-
 
         const saved = "- P\n    - C1\n    - C2";
         const serialized = "- P\n  - C1\n  - C2";
@@ -107,9 +100,6 @@ describe("minimalDiff", () => {
         const saved = lines.join("\n");
         lines[lineCount / 2] = `paragraph ${lineCount / 2} changed`;
         const serialized = lines.join("\n");
-
-
-
 
         applyMinimalChanges(saved, serialized);
         let best = Number.POSITIVE_INFINITY;

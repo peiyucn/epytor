@@ -3,7 +3,6 @@ import type { MermaidPreview, PreviewApply } from "./mermaidPreview";
 
 export type { PreviewApply };
 
-
 type CodeBlockPreviewResult = null | string | HTMLElement | undefined;
 
 export type CodeBlockPreviewRenderer = (lang: string, code: string, apply: PreviewApply) => CodeBlockPreviewResult;

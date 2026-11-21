@@ -51,7 +51,6 @@ describe("WebView i18n", () => {
 
     it("词典键 应该 与代码 t() 字面键一一对应（无死键/无缺键，回归：曾 41% 死键 + 4 缺键）", () => {
 
-
         const repoRoot = path.resolve(process.cwd());
         const dictSrc = readFileSync(
             path.join(repoRoot, "src", "i18n", "webviewTranslations.ts"),
@@ -77,7 +76,6 @@ describe("WebView i18n", () => {
         expect(missing).toEqual([]);
     });
 });
-
 
 function collectTsSources(dir: string): string[] {
     const out: string[] = [];

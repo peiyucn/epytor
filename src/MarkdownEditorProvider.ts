@@ -27,12 +27,10 @@ import type { ToExtensionMessage, ToWebviewMessage } from "../shared/messages";
 
 const CONTENT_REQUEST_TIMEOUT_MS = 3000;
 
-
 function isMarkdownDocument(document: vscode.TextDocument): boolean {
     const name = document.uri.path.toLowerCase();
     return name.endsWith(".md") || name.endsWith(".markdown");
 }
-
 
 function logHandlerFailure(handler: string): (error: unknown) => void {
     return (error) => console.error(`[epytor] ${handler} failed:`, error);
@@ -48,11 +46,9 @@ export class MarkdownEditorProvider
     public readonly onDidChangeCustomDocument =
         this._onDidChangeCustomDocument.event;
 
-
     private readonly _contentRequests: ContentRequestCoordinator;
 
     private readonly _webviewPanels = new Map<string, vscode.WebviewPanel>();
-
 
     private readonly _lastSaveTimes = new Map<string, number>();
 
@@ -64,10 +60,8 @@ export class MarkdownEditorProvider
 
     private readonly _panelActive = new Map<string, boolean>();
 
-
     private readonly _imageUriMaps = new Map<string, Map<string, string>>();
     private readonly _frontmatterMap = new Map<string, string>();
-
 
     private readonly _navigation = new NavigationState();
 
@@ -75,11 +69,9 @@ export class MarkdownEditorProvider
 
     public static current: MarkdownEditorProvider | null = null;
 
-
     public setGlobalRevealLine(line: number): void {
         this._navigation.setGlobalRevealLine(line);
     }
-
 
     public setPendingNavigation(fsPath: string, line: number, opts?: { directOnly?: boolean }): void {
         const uriKey = vscode.Uri.file(fsPath).toString();
@@ -98,7 +90,6 @@ export class MarkdownEditorProvider
         const panel = this._webviewPanels.get(uri.toString());
         if (panel) { panel.webview.postMessage(msg); }
     }
-
 
     public hasPanel(uri: vscode.Uri): boolean {
         return this._webviewPanels.has(uri.toString());
@@ -125,9 +116,6 @@ export class MarkdownEditorProvider
             {
                 webviewOptions: {
 
-
-
-
                     retainContextWhenHidden: true,
                 },
                 supportsMultipleEditorsPerDocument: false,
@@ -139,9 +127,7 @@ export class MarkdownEditorProvider
 
     private readonly _statusBar: StatusBarPresenter;
 
-
     private readonly _writeAudit: WriteAudit;
-
 
     private readonly _externalChange: ExternalChangeCoordinator;
 
@@ -185,7 +171,6 @@ export class MarkdownEditorProvider
         );
     }
 
-
     private _externalChangeHost(): ExternalChangeHost {
         return {
             getPanel: (uriKey) => this._webviewPanels.get(uriKey),
@@ -206,21 +191,16 @@ export class MarkdownEditorProvider
         };
     }
 
-
     private _activePanelUriKey(): string | undefined {
         for (const [key, panel] of this._webviewPanels) {
             try {
                 if (panel.active) { return key; }
-            } catch {
-
-            }
+            } catch {}
         }
         return undefined;
     }
 
-
     private readonly _fallbackWarnedUris = new Set<string>();
-
 
     private _warnContentFallback(uriKey: string): void {
         if (this._fallbackWarnedUris.has(uriKey)) return;
@@ -244,7 +224,6 @@ export class MarkdownEditorProvider
         _token: vscode.CancellationToken,
     ): Promise<void> {
 
-
         if (document.uri.scheme !== 'file') {
             webviewPanel.webview.html = '<!DOCTYPE html><html><body></body></html>';
             return;
@@ -253,13 +232,8 @@ export class MarkdownEditorProvider
         const uriKey = document.uri.toString();
         this._webviewPanels.set(uriKey, webviewPanel);
 
-
-
-
-
         this._panelActive.set(uriKey, webviewPanel.active);
         this._lastSavedContent.set(uriKey, document.getText());
-
 
         this._auditWrite(uriKey, "open", document.getText());
 
@@ -281,8 +255,6 @@ export class MarkdownEditorProvider
 
         webviewPanel.webview.onDidReceiveMessage(
             async (message: ToExtensionMessage) => {
-
-
 
                 try {
                     await this._handleWebviewMessage(document, webviewPanel, uriKey, message);
@@ -307,7 +279,6 @@ export class MarkdownEditorProvider
         });
     }
 
-
     private _disposePanelState(uriKey: string): void {
         this._webviewPanels.delete(uriKey);
         this._lastSaveTimes.delete(uriKey);
@@ -324,7 +295,6 @@ export class MarkdownEditorProvider
         this._externalChange.dispose(uriKey);
     }
 
-
     private _registerViewStateHandler(
         document: MarkdownDocument,
         webviewPanel: vscode.WebviewPanel,
@@ -335,12 +305,8 @@ export class MarkdownEditorProvider
             this._panelActive.set(uriKey, p.active);
             try {
                 p.webview.postMessage({ type: "panelActiveState", active: p.active });
-            } catch {
-
-            }
+            } catch {}
             if (!p.active) {
-
-
 
                 if (this._webviewDirty.get(uriKey) === true) {
                     const cts = new vscode.CancellationTokenSource();
@@ -353,12 +319,10 @@ export class MarkdownEditorProvider
             this._refreshStatusBar();
             if (!this._initializedPanels.has(uriKey)) { return; }
 
-
             if (this._externalChange.isDeferred(uriKey)) {
                 this._externalChange.consumeDeferred(uriKey);
                 void this._handleExternalChange(document, uriKey);
             }
-
 
             const line = this._consumePendingNavigation(document.uri.fsPath)
                 ?? this._navigation.consumeGlobalRevealLine()
@@ -369,14 +333,12 @@ export class MarkdownEditorProvider
         });
     }
 
-
     private async _handleOpenFileMessage(document: MarkdownDocument, message: { path: string }): Promise<void> {
         await openPathLink(document.uri.fsPath, message.path, {
             viewType: MarkdownEditorProvider.viewType,
             setPendingNavigation: (fsPath, line) => this.setPendingNavigation(fsPath, line),
         });
     }
-
 
     private _registerFileWatcher(
         document: MarkdownDocument,
@@ -388,7 +350,6 @@ export class MarkdownEditorProvider
         });
         webviewPanel.onDidDispose(stopWatching);
     }
-
 
     private async _handleExternalChange(document: MarkdownDocument, uriKey: string): Promise<void> {
         await this._externalChange.handle(document, uriKey);
@@ -404,8 +365,6 @@ export class MarkdownEditorProvider
             case "ready": {
                 this._initializedPanels.add(uriKey);
 
-
-
                 const pushedContent = this._pushedContent.get(uriKey);
                 const memoryContent = document.getText();
                 const initContent = pushedContent ?? memoryContent;
@@ -413,7 +372,6 @@ export class MarkdownEditorProvider
                     document.update(pushedContent);
                     this._markDirty(document);
                 } else if (pushedContent !== undefined) {
-
 
                     this._pushedContent.delete(uriKey);
                     this._webviewDirty.set(uriKey, false);
@@ -432,8 +390,6 @@ export class MarkdownEditorProvider
                     ...(scrollToLine !== undefined ? { scrollToLine } : {}),
                 });
                 void this._refreshFileSize(document, uriKey);
-
-
 
                 if (this._externalChange.isDeferred(uriKey)) {
                     this._externalChange.consumeDeferred(uriKey);
@@ -496,8 +452,6 @@ export class MarkdownEditorProvider
 
                 const latest = await this._requestContent(document, uriKey);
 
-
-
                 const diskText = await this._readDiskText(document);
                 if (diskText !== undefined && shouldSkipSave({
                     content: latest,
@@ -530,10 +484,6 @@ export class MarkdownEditorProvider
                     const pos = new vscode.Position(message.line - 1, 0);
                     opts.selection = new vscode.Range(pos, pos);
                 }
-
-
-
-
 
                 if (message.line && message.line > 0) {
                     this._navigation.stashEditorReveal(document.uri.toString(), message.line);
@@ -629,7 +579,6 @@ export class MarkdownEditorProvider
         this._statusBar.refresh();
     }
 
-
     private _markDirty(document: MarkdownDocument): void {
         this._onDidChangeCustomDocument.fire({
             document,
@@ -639,11 +588,9 @@ export class MarkdownEditorProvider
         });
     }
 
-
     private _auditWrite(uriKey: string, reason: string, content: string, extra?: Record<string, unknown>): void {
         this._writeAudit.record(uriKey, reason, content, extra);
     }
-
 
     private async _saveNow(
         document: MarkdownDocument,
@@ -675,7 +622,6 @@ export class MarkdownEditorProvider
         return true;
     }
 
-
     private _postLineMapUpdate(document: MarkdownDocument, uriKey: string): void {
         const panel = this._webviewPanels.get(uriKey);
         if (!panel) { return; }
@@ -687,11 +633,9 @@ export class MarkdownEditorProvider
         });
     }
 
-
     private async _requestContent(document: MarkdownDocument, uriKey: string): Promise<string> {
         return (await this._requestContentDetailed(document, uriKey)).content;
     }
-
 
     private async _readDiskText(document: MarkdownDocument): Promise<string | undefined> {
         try {
@@ -702,7 +646,6 @@ export class MarkdownEditorProvider
         }
     }
 
-
     private async _requestContentDetailed(
         document: MarkdownDocument,
         uriKey: string,
@@ -710,8 +653,6 @@ export class MarkdownEditorProvider
         const panel = this._webviewPanels.get(uriKey);
         const pushed = this._pushedContent.get(uriKey);
         const fallback = pushed ?? document.getText();
-
-
 
         const canAskWebview = panel !== undefined
             && this._panelActive.get(uriKey) === true
@@ -731,9 +672,6 @@ export class MarkdownEditorProvider
         const trigger = this._writeAudit.consumeSaveTrigger();
 
         const content = await this._requestContent(document, uriKey);
-
-
-
 
         const lastSaved = this._lastSavedContent.get(uriKey);
         let diskText = document.getText();
@@ -790,7 +728,6 @@ export class MarkdownEditorProvider
         }
     }
 
-
     private _lifecyclePayload(
         uriKey: string,
         content: string,
@@ -834,10 +771,7 @@ export class MarkdownEditorProvider
 
         if (document.uri.scheme !== 'file') { return content; }
 
-
         const workspaceRoot = resolveWorkspaceRoot(document.uri);
-
-
 
         return rewriteImageSources(content, (rawSrc) => {
             if (/^(https?:|data:|vscode-resource:|vscode-webview-)/.test(rawSrc)) { return undefined; }
@@ -854,7 +788,6 @@ export class MarkdownEditorProvider
         });
     }
 
-
     private _registerImageMapping(uriKey: string, webviewUri: string, displayPath: string): void {
         let uriMap = this._imageUriMaps.get(uriKey);
         if (!uriMap) {
@@ -869,7 +802,6 @@ export class MarkdownEditorProvider
         const uriMap = this._imageUriMaps.get(uriKey) ?? new Map<string, string>();
         return restoreContentForSave(content, frontmatter, uriMap);
     }
-
 
     private _imageContext(
         document: MarkdownDocument,

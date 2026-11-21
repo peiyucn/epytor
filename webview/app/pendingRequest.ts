@@ -21,7 +21,6 @@ export class PendingRequestRegistry<T> {
 
     constructor(private readonly idPrefix: string) {}
 
-
     begin(opts: { timeoutMs: number; timeout: PendingTimeout<T> }): PendingHandle<T> {
         const id = `${this.idPrefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
         let settled = false;
@@ -69,7 +68,6 @@ export class PendingRequestRegistry<T> {
         };
     }
 
-
     resolve(id: string, value: T): void {
         const cb = this._pending.get(id);
         if (cb) {
@@ -77,7 +75,6 @@ export class PendingRequestRegistry<T> {
             cb.resolve(value);
         }
     }
-
 
     reject(id: string, error: string): void {
         const cb = this._pending.get(id);

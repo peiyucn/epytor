@@ -23,7 +23,6 @@ export const Uri = {
 
 export const FileType = { Unknown: 0, File: 1, Directory: 2, SymbolicLink: 64 } as const;
 
-
 export class Position {
     constructor(public readonly line: number, public readonly character: number) {}
 }
@@ -31,7 +30,6 @@ export class Position {
 export class Range {
     readonly start: Position;
     readonly end: Position;
-
 
     constructor(
         start: Position | number,
@@ -63,7 +61,6 @@ export const TextEditorRevealType = {
 } as const;
 
 export const ViewColumn = { Active: -1, Beside: -2, One: 1, Two: 2, Three: 3 } as const;
-
 
 export class TabInputCustom {
     constructor(
@@ -128,7 +125,6 @@ export const env = {
     openExternal: vi.fn(() => Promise.resolve(true)),
 };
 
-
 export class EventEmitter<T = unknown> {
     private listeners = new Set<(event: T) => void>();
 
@@ -151,7 +147,6 @@ export const l10n = {
         args.reduce<string>((s, arg, i) => s.replace(`{${i}}`, String(arg)), msg)
     ),
 };
-
 
 export class CancellationTokenSource {
     readonly token = {

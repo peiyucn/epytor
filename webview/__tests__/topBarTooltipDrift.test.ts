@@ -1,7 +1,6 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-
 function nextFrame(): Promise<void> {
     return new Promise((resolve) => { requestAnimationFrame(() => resolve()); });
 }

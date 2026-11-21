@@ -6,7 +6,6 @@ interface PendingRequest {
     timer: ReturnType<typeof setTimeout>;
 }
 
-
 export interface ContentReply {
     content: string;
 
@@ -23,16 +22,13 @@ export class ContentRequestCoordinator {
         private readonly onTimeout?: (uriKey: string) => void,
     ) {}
 
-
     has(uriKey: string): boolean {
         return this._pending.has(uriKey);
     }
 
-
     request(uriKey: string, fallbackContent: string): Promise<string> {
         return this.requestDetailed(uriKey, fallbackContent).then((reply) => reply.content);
     }
-
 
     requestDetailed(uriKey: string, fallbackContent: string): Promise<ContentReply> {
         const pending = this._pending.get(uriKey);
@@ -53,11 +49,9 @@ export class ContentRequestCoordinator {
         });
     }
 
-
     resolve(uriKey: string, content: string): void {
         this._settle(uriKey, { content, authoritative: true });
     }
-
 
     settleAll(uriKey: string): void {
         const entry = this._pending.get(uriKey);

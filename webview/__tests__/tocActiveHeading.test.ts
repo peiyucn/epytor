@@ -2,7 +2,6 @@
 import { describe, expect, it } from "vitest";
 import { currentHeadingIndex, computeStickyRows, effectiveReadingLineY, type StickyHeadingRect } from "../outline/headingSticky";
 
-
 const h = (depth: number, top: number, sectionBottom: number): StickyHeadingRect => ({ depth, top, sectionBottom });
 
 describe("当前章节判据", () => {
@@ -14,11 +13,8 @@ describe("当前章节判据", () => {
 
     it("两节交替（当前节被推挤出局）时 不应该 退回父章节", () => {
 
-
-
         const transiting = [h(1, -300, 100), h(2, -200, 5), h(3, -60, 4), h(2, 30, 300)];
         expect(currentHeadingIndex(transiting, 0)).toBe(2);
-
 
         const rows = computeStickyRows(transiting, 0);
         expect(rows[rows.length - 1]).toBe(0);
@@ -74,7 +70,6 @@ describe("effectiveReadingLineY（尾部逐级下滑的阅读线）", () => {
             docTops.map((docTop) => h(1, docTop - scrollY, 0)),
             effectiveReadingLineY(BOTTOM, VIEW, scrollY, CONTENT),
         );
-
 
         expect([800, 900, 1000, 1050, 1150, 1200].map(activeAt)).toEqual([0, 1, 1, 2, 2, 3]);
     });

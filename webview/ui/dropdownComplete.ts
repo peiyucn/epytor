@@ -5,7 +5,6 @@ export interface DropdownState {
     activeIndex: number;
 }
 
-
 export function closeDropdown(state: DropdownState): void {
     if (state.el) {
         state.el.remove();
@@ -13,7 +12,6 @@ export function closeDropdown(state: DropdownState): void {
     }
     state.activeIndex = -1;
 }
-
 
 export function updateActiveItem(state: DropdownState, activeClass: string): void {
     if (!state.el) { return; }

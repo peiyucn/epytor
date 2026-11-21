@@ -70,7 +70,6 @@ function setWorkspaceRoot(root: string | undefined): void {
     }).workspaceFolders = folder ? [folder] : undefined;
 }
 
-
 function fileStat(type: vscode.FileType, size = 0): vscode.FileStat {
     return { type, ctime: 0, mtime: 0, size };
 }

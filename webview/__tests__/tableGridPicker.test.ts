@@ -36,7 +36,6 @@ describe("tableGridPicker", () => {
         openTableGridPicker(anchor, vi.fn());
         const cells = document.querySelectorAll<HTMLElement>(".epytor-grid-picker__cell");
 
-
         cells[10].dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
 
         const label = document.querySelector(".epytor-grid-picker__label");

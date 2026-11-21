@@ -22,7 +22,6 @@ async function mount(markdown: string): Promise<HTMLElement> {
     return root;
 }
 
-
 function composeInOneTransaction(view: EditorView, at: number, pinyin: string, hanzi: string): void {
     const tr = view.state.tr.insertText(pinyin, at);
     tr.replaceWith(at, at + pinyin.length, view.state.schema.text(hanzi));
@@ -37,11 +36,8 @@ describe("列表 spread 规范化", () => {
         expect(list.type.name).toBe("bullet_list");
         const itemEnd = 2 + list.firstChild!.content.size;
 
-
-
         view.dispatch(view.state.tr.insert(itemEnd, view.state.schema.nodes.paragraph!.create()));
         expect(view.state.doc.firstChild!.firstChild!.childCount).toBe(2);
-
 
         view.dispatch(view.state.tr.delete(itemEnd, itemEnd + 2));
         expect(view.state.doc.firstChild!.firstChild!.attrs.spread).toBe(false);
@@ -51,8 +47,6 @@ describe("列表 spread 规范化", () => {
     }, 60000);
 
     it("回归（2026-10-26）：嵌套任务列表两项结构 应该 不被强标成松散（否则每项之间多出空行）", async () => {
-
-
 
         const root = await mount("- [ ] P\n  - [ ] C1\n  - [ ] C2\n  - [ ] C3");
         const view = getEditorView()!;
@@ -97,7 +91,6 @@ describe("列表 spread 规范化", () => {
         it("列表项内 应该 不抛错", async () => {
             const root = await mount("- hello\n- b");
             const view = getEditorView()!;
-
 
             const item = view.state.doc.firstChild!.firstChild!;
             const at = 3 + item.firstChild!.content.size;

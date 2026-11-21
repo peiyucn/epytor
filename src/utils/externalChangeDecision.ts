@@ -26,7 +26,6 @@ export function decideExternalChange(ctx: ExternalChangeContext): ExternalChange
         return { action: "ignore" };
     }
 
-
     if (ctx.latestAuthoritative === false) {
         return { action: "defer", reason: "webview content unavailable" };
     }
@@ -35,7 +34,6 @@ export function decideExternalChange(ctx: ExternalChangeContext): ExternalChange
         : !ctx.webviewDirty;
     return { action: wantsDisk ? "adoptDisk" : "keepUserContent" };
 }
-
 
 export function shouldSkipSave(input: {
 

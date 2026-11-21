@@ -28,7 +28,6 @@ function fakeView(spec: BlockSpec): EditorView {
     } as unknown as EditorView;
 }
 
-
 function withRect(el: HTMLElement, top: number, height: number): HTMLElement {
     el.getBoundingClientRect = () => ({
         top, height, bottom: top + height, left: 0, right: 0, width: 0, x: 0, y: top,
@@ -40,7 +39,6 @@ function withRect(el: HTMLElement, top: number, height: number): HTMLElement {
 function block(top: number, height: number): HTMLElement {
     return withRect(document.createElement("div"), top, height);
 }
-
 
 function installTopBar(height = 40): void {
     const bar = document.createElement("div");

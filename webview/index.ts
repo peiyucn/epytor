@@ -83,23 +83,17 @@ const INITIAL_VIEWPORT_LINE_REPORT_DELAY_MS = 600;
 
 let _topBarOverflowCtl: { dispose(): void } | null = null;
 
-
 initViewportLedger();
 
 let currentEditor: Editor | null = null;
 let currentLineMap: number[] = [];
 let currentLineEndMap: number[] = [];
 
-
 let _lastNavLine: number | null = null;
-
-
 
 installModifierKeyTracking();
 
-
 const imageRequests = createImageRequestController({ getEditor: () => currentEditor });
-
 
 const scrollTargets = createScrollTargets({
     getView: getEditorView,
@@ -116,7 +110,6 @@ let _frontmatterPanelHandle: FrontmatterPanelHandle | null = null;
 let _docChangedTimer: ReturnType<typeof setTimeout> | null = null;
 let _tocRefreshTimer: ReturnType<typeof setTimeout> | null = null;
 let _lastTocSignature = "";
-
 
 function releaseDocTimers(): void {
     if (_docChangedTimer !== null) {
@@ -151,7 +144,6 @@ function renderFrontmatterPanel(frontmatter: string | undefined): void {
     editor?.parentNode?.insertBefore(_frontmatterPanelHandle.panel, editor);
     if (editor) { editor.style.paddingTop = '16px'; }
 }
-
 
 function countWords(text: string): number {
     let count = 0;
@@ -291,10 +283,8 @@ if (editorContainer) {
         view.focus();
     });
 
-
     initImageDropPaste(editorContainer, imageRequests);
 }
-
 
 window.addEventListener("keydown", (e) => {
     if ((e.metaKey || e.ctrlKey) && e.code === "KeyF" && !e.shiftKey) {
@@ -334,7 +324,6 @@ const persistence = initSessionPersistence({
     notifyViewportLine,
 });
 
-
 let _isActivePanel = true;
 
 const restoreEditorFocus = () => {
@@ -368,9 +357,7 @@ const restoreEditorFocus = () => {
 };
 window.addEventListener("focus", restoreEditorFocus);
 
-
 let _editorLifecycleChain: Promise<unknown> = Promise.resolve();
-
 
 const compositionGate = createCompositionGate();
 
@@ -411,7 +398,6 @@ async function handleEditorLifecycleMessage(
     const savedSelection = continuity === null && isInit ? persistence.readSavedSelection() : null;
     let restoredSavedSelection = false;
 
-
     if (!isInit) { adoptDiskContentAsBaseline(msg.content); }
     await initEditor(container, msg.content);
 
@@ -448,7 +434,6 @@ async function handleEditorLifecycleMessage(
         const savedScrollY = Number((getWebviewState() as { scrollY?: number } | null)?.scrollY ?? 0);
         scrollTargets.scheduleDelayedScroll(() => { window.scrollTo({ top: savedScrollY }); });
     } else if (isInit && scrollTargets.pending.line === null) {
-
 
         const epochAtStart = getUserInteractionEpoch();
         for (const delay of INITIAL_SCROLL_TOP_DELAYS_MS) {

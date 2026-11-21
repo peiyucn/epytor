@@ -38,9 +38,7 @@ const ITEM_LABELS: Record<string, string> = {
     "settings": t("Settings"),
 };
 
-
 const PINNED_KEYS = new Set(["heading", "undo", "redo"]);
-
 
 const ALWAYS_IN_MENU_KEYS = new Set(["settings"]);
 
@@ -61,14 +59,12 @@ export function setTopBarButtonMeta(meta: TopBarButtonMeta[]): void {
     _meta = meta;
 }
 
-
 function getTopBarUsableWidth(topBar: HTMLElement): number {
     const style = window.getComputedStyle(topBar);
     const padLeft = Number.parseFloat(style.paddingLeft) || 0;
     const padRight = Number.parseFloat(style.paddingRight) || 0;
     return Math.max(0, topBar.clientWidth - padLeft - padRight);
 }
-
 
 export function findTopBarButtonEl(topBar: HTMLElement, key: string): HTMLElement | null {
     const children = Array.from(
@@ -82,7 +78,6 @@ export function findTopBarButtonEl(topBar: HTMLElement, key: string): HTMLElemen
     }
     return null;
 }
-
 
 let _activeMenu: AnchoredOverlay | null = null;
 
@@ -144,7 +139,6 @@ export function initTopBarOverflow(host: TopBarOverflowHost): { dispose(): void 
     const measure = (): void => {
         rafId = null;
 
-
         mutObs?.disconnect();
         mutObs = null;
         const topBar = host.getTopBarEl();
@@ -153,7 +147,6 @@ export function initTopBarOverflow(host: TopBarOverflowHost): { dispose(): void 
             moreBtn.hidden = true;
             return;
         }
-
 
         inner.querySelectorAll<HTMLElement>(`.${HIDDEN_CLASS}`).forEach((el) => el.classList.remove(HIDDEN_CLASS));
 
@@ -181,12 +174,9 @@ export function initTopBarOverflow(host: TopBarOverflowHost): { dispose(): void 
             pinnedKeys: PINNED_KEYS,
         });
 
-
         for (const key of ALWAYS_IN_MENU_KEYS) {
             hiddenKeys.add(key);
         }
-
-
 
         const children = Array.from(inner.children) as HTMLElement[];
         const hiddenFlags = new Map<HTMLElement, boolean>();
@@ -229,13 +219,9 @@ export function initTopBarOverflow(host: TopBarOverflowHost): { dispose(): void 
         const rect = topBar.getBoundingClientRect();
         moreBtn.style.top = `${Math.max(2, rect.top + (rect.height - MORE_BTN_HEIGHT_PX) / 2)}px`;
 
-
         const viewportW = document.documentElement.clientWidth;
         moreBtn.style.left = `${viewportW - MORE_BTN_WIDTH - MORE_BTN_RIGHT_MARGIN_PX}px`;
         moreBtn.style.right = "auto";
-
-
-
 
         resizeObserver.observe(topBar, { box: "content-box" });
         mutObs = new MutationObserver(schedule);
@@ -252,7 +238,6 @@ export function initTopBarOverflow(host: TopBarOverflowHost): { dispose(): void 
         if (rafId !== null) return;
         rafId = requestAnimationFrame(measure);
     };
-
 
     const scheduleUnlessCollapsed = (): void => {
         if (isHostCollapsedViewport()) return;
@@ -286,7 +271,6 @@ export function initTopBarOverflow(host: TopBarOverflowHost): { dispose(): void 
             mutObs?.disconnect();
             if (rafId !== null) cancelAnimationFrame(rafId);
             resizeObserver.disconnect();
-
 
             window.removeEventListener("resize", scheduleUnlessCollapsed);
             moreBtn.remove();

@@ -12,7 +12,6 @@ export interface PathLinkHost {
     setPendingNavigation(fsPath: string, line: number): void;
 }
 
-
 export async function openPathLink(
     documentFsPath: string,
     pathLink: string,
@@ -24,21 +23,16 @@ export async function openPathLink(
     const lineMatch = fragment?.match(/^(\d+)(-\d+)?$/);
     const lineNumber = lineMatch ? parseInt(lineMatch[1], 10) : undefined;
 
-
-
     const containingFolder = vscode.workspace.workspaceFolders?.find(
         f => documentFsPath.startsWith(f.uri.fsPath + path.sep),
     );
 
-
     const workspaceRootForDoc = containingFolder?.uri.fsPath ?? null;
-
 
     const absPath = resolveDocPath(
         filePath,
         { docFsPath: documentFsPath, workspaceRoot: workspaceRootForDoc },
     );
-
 
     if (containingFolder && !isPathWithinBase(absPath, containingFolder.uri.fsPath)) {
         return;

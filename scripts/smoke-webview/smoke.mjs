@@ -1,16 +1,5 @@
 
 
-
-
-
-
-
-
-
-
-
-
-
 import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
@@ -47,7 +36,7 @@ async function waitForResponse(url, timeoutMs = 20000) {
         try {
             const res = await fetch(url);
             if (res.ok) return res;
-        } catch {  }
+        } catch {}
         await sleep(200);
     }
     throw new Error(`timeout waiting for ${url}`);
@@ -90,7 +79,7 @@ class Cdp {
         if (!this.listeners.has(method)) this.listeners.set(method, []);
         this.listeners.get(method).push(handler);
     }
-    close() { try { this.ws.close(); } catch {  } }
+    close() { try { this.ws.close(); } catch {} }
 }
 
 function killTree(child) {
@@ -101,7 +90,7 @@ function killTree(child) {
         } else {
             child.kill();
         }
-    } catch {  }
+    } catch {}
 }
 
 function removeProfile() {
@@ -218,17 +207,15 @@ async function main() {
             while (Date.now() - start < timeoutMs) {
                 try {
                     if (await evaluate(expression)) return true;
-                } catch {  }
+                } catch {}
                 await sleep(100);
             }
             throw new Error(`timeout waiting for ${label}`);
         };
 
-
         await waitForExpr("document.readyState === 'complete'", 30000, "page load");
         await waitForExpr("Array.isArray(window.__posted) && window.__posted.some(m => m.type === 'ready')", 30000, "ready message");
         check("webview bundle boots and posts ready", true);
-
 
         const blocks = 28;
         const lines = ["# Smoke heading", ""];
@@ -266,12 +253,10 @@ async function main() {
         const wordCount = await evaluate("window.__posted.filter(m => m.type === 'wordCount').pop()");
         check("word count posted", wordCount.lines >= blocks, JSON.stringify({ lines: wordCount.lines, words: wordCount.words }));
 
-
         await evaluate("window.postMessage({type:'requestContent'}, '*'); true");
         await waitForExpr("window.__posted.some(m => m.type === 'contentResponse')", 10000, "contentResponse");
         const unedited = await evaluate("window.__posted.filter(m => m.type === 'contentResponse').pop().content");
         check("unedited save is byte-identical", unedited === markdown, `${unedited.length} vs ${markdown.length} chars`);
-
 
         await evaluate("document.querySelector('#editor .ProseMirror').focus(); true");
         await cdp.send("Input.insertText", { text: " SMOKE-TYPED" });
@@ -280,7 +265,6 @@ async function main() {
         await waitForExpr("window.__posted.filter(m => m.type === 'contentResponse').length >= 2", 10000, "second contentResponse");
         const typed = await evaluate("window.__posted.filter(m => m.type === 'contentResponse').pop().content");
         check("typed text is serialized", typed.includes("SMOKE-TYPED"), typed.slice(0, 80));
-
 
         await evaluate("window.postMessage({type:'tableWrapModeChanged', mode:'nowrap'}, '*'); true");
         await evaluate("window.postMessage({type:'editorMaxWidthChanged', value:1234}, '*'); true");
@@ -298,15 +282,12 @@ async function main() {
         check("editor max width applied", vars.maxWidth === "1234px", vars.maxWidth);
         check("code block max height applied", vars.codeHeight === "777px", vars.codeHeight);
 
-
         await evaluate(`window.postMessage(${JSON.stringify({ type: "scrollToLine", line: 41 })}, "*"); true`);
         await sleep(3000);
         const scrollY = await evaluate("window.scrollY");
         check("scrollToLine scrolls the viewport", scrollY > 0, `scrollY=${scrollY}`);
         const persisted = await evaluate("window.__webviewState");
         check("scroll position persisted to webview state", persisted !== null && Number(persisted.scrollY) > 0, JSON.stringify(persisted));
-
-
 
         await evaluate(`window.postMessage(${JSON.stringify({
             type: "revert",
@@ -321,9 +302,6 @@ async function main() {
         await waitForExpr("document.querySelector('.milkdown-code-block') !== null", 30000, "code block mounted");
         check("fenced code block mounts in the real bundle", true);
 
-
-
-
         const plainBlockState = await evaluate(`(() => {
             const block = document.querySelector('.milkdown-code-block');
             return {
@@ -336,7 +314,6 @@ async function main() {
             plainBlockState !== null && plainBlockState.toggle === false && plainBlockState.preview === null,
             JSON.stringify(plainBlockState),
         );
-
 
         check("no page errors", pageErrors.length === 0, pageErrors.slice(0, 3).join(" | "));
 

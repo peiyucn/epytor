@@ -7,7 +7,6 @@ import { getMarkdown } from "@milkdown/kit/utils";
 import type { SerializationMode } from "../markdown/markdownSerializer";
 import { prepareMarkdownForSave } from "./serialization";
 
-
 export class SavedSnapshot {
     private _markdown = "";
     private _doc: ProseNode | null = null;
@@ -20,31 +19,25 @@ export class SavedSnapshot {
         return this._doc;
     }
 
-
     adoptDiskContent(content: string): void {
         this._markdown = content;
     }
-
 
     seedMarkdown(markdown: string): void {
         this._markdown = markdown;
     }
 
-
     seedDoc(doc: ProseNode): void {
         this._doc = doc;
     }
-
 
     invalidateDoc(): void {
         this._doc = null;
     }
 
-
     matches(doc: ProseNode): boolean {
         return this._doc !== null && doc.eq(this._doc);
     }
-
 
     recordSave(markdown: string, doc: ProseNode): void {
         this._markdown = markdown;
@@ -86,7 +79,6 @@ export function createEditorSession(): EditorSession {
     function getMarkdownForSave(): string {
         if (!editor) return snapshot.markdown;
         const view = editor.action((ctx) => ctx.get(editorViewCtx));
-
 
         if (snapshot.matches(view.state.doc)) { return snapshot.markdown; }
         const serialized = editor.action(getMarkdown());

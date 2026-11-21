@@ -30,11 +30,9 @@ function onKeyUp(event: KeyboardEvent): void {
     }
 }
 
-
 function onWindowBlur(): void {
     setActive(false);
 }
-
 
 export function installModifierKeyTracking(): void {
     if (installed) {
@@ -46,11 +44,9 @@ export function installModifierKeyTracking(): void {
     window.addEventListener("blur", onWindowBlur);
 }
 
-
 export function isModifierActive(): boolean {
     return active;
 }
-
 
 export function onModifierChange(listener: ModifierListener): () => void {
     installModifierKeyTracking();

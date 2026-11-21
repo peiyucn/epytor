@@ -1,7 +1,6 @@
 
 import * as path from "path";
 
-
 type PathPrimitives = Pick<typeof path, "resolve" | "relative" | "isAbsolute" | "sep">;
 
 export function isPathWithinBase(

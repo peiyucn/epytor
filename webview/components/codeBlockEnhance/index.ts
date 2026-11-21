@@ -8,9 +8,7 @@ import { t } from "@/i18n";
 const COPY_FEEDBACK_RESET_MS = 1500;
 const COPY_FEEDBACK_DELAY_MS = 100;
 
-
 const fullscreenLightboxHost = createLightboxHost();
-
 
 export function closeCodeBlockLightbox(): void {
     fullscreenLightboxHost.close();
@@ -26,7 +24,6 @@ export function enhanceCodeBlocks(container: HTMLElement): void {
             setTimeout(() => tip.setText(t('Copy Code')), COPY_FEEDBACK_RESET_MS);
         }, COPY_FEEDBACK_DELAY_MS);
     });
-
 
     const addFullscreenBtn = (block: Element): void => {
         const copyBtn = block.querySelector('.copy-button') as HTMLElement | null;
@@ -72,7 +69,6 @@ export function enhanceCodeBlocks(container: HTMLElement): void {
                 },
                 onOpen: (root) => {
 
-
                     const body = root.querySelector('.epytor-fs-body');
                     if (!body) return;
                     body.appendChild(cmEditor);
@@ -91,9 +87,6 @@ export function enhanceCodeBlocks(container: HTMLElement): void {
     requestAnimationFrame(scanBlocks);
     new MutationObserver(() => requestAnimationFrame(scanBlocks))
         .observe(container, { childList: true, subtree: true });
-
-
-
 
     const navStates = new WeakMap<HTMLElement, { activeIndex: number }>();
     container.addEventListener('keydown', (e) => {

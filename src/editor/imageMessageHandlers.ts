@@ -15,7 +15,6 @@ import { resolveDocPath, resolveWorkspaceRoot } from "../utils/docPath";
 import { sanitizeBasename } from "../utils/safeBasename";
 import type { PathSuggestionItem, ProjectImage } from "../../shared/messages";
 
-
 const MAX_IMAGE_UPLOAD_BYTES = 20 * 1024 * 1024;
 
 const PATH_SUGGESTION_LIMIT = 15;
@@ -23,7 +22,6 @@ const PATH_SUGGESTION_LIMIT = 15;
 const PATH_SUGGESTION_IGNORED_NAMES = new Set(["node_modules", ".git", "dist", ".DS_Store", "out", ".vscode-test"]);
 
 const IMAGE_EXTS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".tiff", ".ico"]);
-
 
 export interface ImageHandlerContext {
     readonly documentUri: vscode.Uri;
@@ -36,7 +34,6 @@ export interface ImageHandlerContext {
 
     deleteImageMapping(webviewUri: string): void;
 }
-
 
 const insecureServerUrlWarned = new Set<string>();
 
@@ -83,11 +80,8 @@ export async function handleImageUpload(
     const storage = cfg.get<string>("imageStorage", "local");
     try {
 
-
         const resolution = storage === "server" ? readImageServerConfig(cfg) : undefined;
         if (resolution) { warnImageServerIssues(resolution.issues); }
-
-
 
         const downgraded = resolution !== undefined
             && shouldDowngradeServerStorage(readServerStorageOrigin(cfg, resolution.settings.url));
@@ -112,7 +106,6 @@ export async function handleImageUpload(
             url = webviewUri.toString();
             ctx.registerImageMapping(url, relPath);
 
-
             if (localDirDowngraded) {
                 ctx.panel.webview.postMessage({
                     type: "notice",
@@ -130,8 +123,6 @@ export async function handleImageUpload(
 
 export async function handleGetProjectImages(ctx: ImageHandlerContext, id: string): Promise<void> {
     const cfg = vscode.workspace.getConfiguration("epytor", ctx.documentUri);
-
-
 
     const plan = planImageLocalDir({
         customPath: cfg.get<string>("imageLocalPath", "").trim(),
@@ -199,8 +190,6 @@ export async function handleImageRename(
     try {
         const mdDir = path.dirname(ctx.documentUri.fsPath);
 
-
-
         const oldAbsPath = resolveDocPath(normalizeImageDestination(oldRelPath), {
             docFsPath: ctx.documentUri.fsPath,
             workspaceRoot: resolveWorkspaceRoot(ctx.documentUri) ?? null,
@@ -208,7 +197,6 @@ export async function handleImageRename(
         const oldUri = vscode.Uri.file(oldAbsPath);
 
         await vscode.workspace.fs.stat(oldUri);
-
 
         const oldExt = path.extname(oldAbsPath);
         const safeBasename = sanitizeBasename(newBasename);
@@ -220,14 +208,13 @@ export async function handleImageRename(
         const dir = path.dirname(oldAbsPath);
         const targetUri = vscode.Uri.file(path.join(dir, safeBasename + oldExt));
 
-
         try {
             await vscode.workspace.fs.stat(targetUri);
             const errMsg = vscode.l10n.t('A file named "{0}" already exists.', safeBasename + oldExt);
             ctx.panel.webview.postMessage({ type: "imageRenameError", id, error: errMsg });
             vscode.window.showErrorMessage(errMsg);
             return;
-        } catch {  }
+        } catch {}
 
         await vscode.workspace.fs.rename(oldUri, targetUri);
 
@@ -270,9 +257,6 @@ export async function handleGetPathSuggestions(
     const lastSlash = q.lastIndexOf("/");
     const dirPart = lastSlash >= 0 ? q.slice(0, lastSlash + 1) : "";
     const namePart = lastSlash >= 0 ? q.slice(lastSlash + 1) : q;
-
-
-
 
     const absDir = resolveDocPath(dirPart, {
         docFsPath,
@@ -327,8 +311,6 @@ export async function handleResolveImagePath(
             docFsPath: ctx.documentUri.fsPath,
             workspaceRoot: resolveWorkspaceRoot(ctx.documentUri) ?? null,
         });
-
-
 
         const exists = await vscode.workspace.fs.stat(vscode.Uri.file(absPath))
             .then(() => true, () => false);

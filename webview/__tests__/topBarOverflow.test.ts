@@ -3,7 +3,6 @@ import { computeOverflow, type TopBarMeasuredItem } from "../shell/topBarOverflo
 import { initTopBarOverflow, setTopBarButtonMeta } from "../components/topBarOverflow";
 import { IFRAME_DEFAULT_HEIGHT, IFRAME_DEFAULT_WIDTH, TINY_REAL_ATTRIBUTE } from "../scroll/viewportLedger";
 
-
 function setViewport(width: number, height: number): void {
     Object.defineProperty(window, "innerWidth", { value: width, configurable: true });
     Object.defineProperty(window, "innerHeight", { value: height, configurable: true });
@@ -50,7 +49,6 @@ describe("computeOverflow", () => {
         expect(hidden).toEqual(new Set(["d", "c"]));
     });
 });
-
 
 describe("initTopBarOverflow 生命周期", () => {
 
@@ -102,8 +100,6 @@ describe("initTopBarOverflow 生命周期", () => {
         window.dispatchEvent(new Event("resize"));
         flushRaf();
 
-
-
         expect(getTopBarEl).toHaveBeenCalledTimes(measured);
         expect(observerDisconnects).toBe(1);
     });
@@ -121,7 +117,6 @@ describe("initTopBarOverflow 生命周期", () => {
 
         window.dispatchEvent(new Event("resize"));
         flushRaf();
-
 
         expect(getTopBarEl).toHaveBeenCalledTimes(measured + 1);
         ctl.dispose();
@@ -157,7 +152,6 @@ describe("initTopBarOverflow 生命周期", () => {
     });
 });
 
-
 describe("溢出菜单（anchoredOverlay 接线）", () => {
     let rafQueue: FrameRequestCallback[];
 
@@ -192,7 +186,6 @@ describe("溢出菜单（anchoredOverlay 接线）", () => {
         setViewport(1024, 768);
         document.body.innerHTML = "";
     });
-
 
     function makeTopBar(keys: string[]): HTMLElement {
         const topBar = document.createElement("div");

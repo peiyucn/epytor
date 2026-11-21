@@ -6,7 +6,6 @@ import { IconResetZoom } from "@/ui/icons";
 
 const DEFAULT_ZOOM = 0.8;
 
-
 function measureSvgBaseWidth(svg: SVGElement): number {
     const rect = svg.getBoundingClientRect();
     if (Number.isFinite(rect.width) && rect.width > 0) return rect.width;
@@ -14,7 +13,6 @@ function measureSvgBaseWidth(svg: SVGElement): number {
     if (Number.isFinite(attr) && attr > 0) return attr;
     return 0;
 }
-
 
 export function enhanceMermaidPreview(container: HTMLElement, svg: SVGElement): void {
 

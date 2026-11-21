@@ -13,11 +13,9 @@ declare global {
 const _t: Record<string, string> = window.__i18n?.translations ?? {};
 const _isMac: boolean = window.__i18n?.isMac ?? false;
 
-
 export function t(key: string): string {
     return _t[key] ?? key;
 }
-
 
 export function kbd(shortcut: string): string {
     const parts = shortcut.split("-");

@@ -22,5 +22,4 @@ if (typeof (globalThis as unknown as Record<string, unknown>).IntersectionObserv
     };
 }
 
-
 export { mockVscodeApi };

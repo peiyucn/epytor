@@ -44,13 +44,11 @@ const MD = [
     "正文三",
 ].join("\n");
 
-
 function setViewport(width: number, height: number): void {
     Object.defineProperty(window, "innerWidth", { value: width, configurable: true });
     Object.defineProperty(window, "innerHeight", { value: height, configurable: true });
     Object.defineProperty(document.documentElement, "clientWidth", { value: width, configurable: true });
 }
-
 
 async function mount(): Promise<{ list: HTMLElement; refresh: () => void }> {
     const root = document.createElement("div");
@@ -89,7 +87,6 @@ async function mount(): Promise<{ list: HTMLElement; refresh: () => void }> {
     return { list: document.querySelector<HTMLElement>(".toc-list")!, refresh: toc.refresh };
 }
 
-
 function bodyTextPos(): number {
     const view = getEditorView()!;
     let pos = -1;
@@ -98,7 +95,6 @@ function bodyTextPos(): number {
     });
     return pos;
 }
-
 
 async function typeAndRefresh(refresh: () => void, count: number): Promise<void> {
     const view = getEditorView()!;
@@ -143,7 +139,6 @@ describe("输入正文时 TOC 不重建（回归：目录内容一下一下闪�
 
         await typeAndRefresh(refresh, 5);
 
-
         window.dispatchEvent(new Event("scroll"));
         await new Promise((r) => setTimeout(r, 500));
         await new Promise((r) => requestAnimationFrame(() => r(null)));
@@ -158,13 +153,10 @@ describe("输入正文时 TOC 不重建（回归：目录内容一下一下闪�
         Object.defineProperty(document.documentElement, "scrollHeight", { get: () => 5000, configurable: true });
         const { list } = await mount();
 
-
         window.dispatchEvent(new Event("scroll"));
         await new Promise((r) => setTimeout(r, 500));
         await new Promise((r) => requestAnimationFrame(() => r(null)));
         expect(list.querySelectorAll(".toc-item--active")).toHaveLength(1);
-
-
 
         const view = getEditorView()!;
         view.dispatch(view.state.tr.insertText("字", bodyTextPos()));
@@ -214,7 +206,6 @@ describe("输入正文时 TOC 不重建（回归：目录内容一下一下闪�
         Object.defineProperty(document.documentElement, "scrollHeight", { get: () => 5000, configurable: true });
         const { list } = await mount();
 
-
         const originalScrollTo = window.scrollTo;
         window.scrollTo = ((arg: unknown) => {
             scrollY = Number((arg as { top?: number } | undefined)?.top ?? 0);
@@ -259,7 +250,6 @@ describe("输入正文时 TOC 不重建（回归：目录内容一下一下闪�
 
             const items = Array.from(list.querySelectorAll<HTMLElement>(".toc-item"));
 
-
             items[1].dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
             await new Promise((r) => requestAnimationFrame(() => r(null)));
 
@@ -281,7 +271,6 @@ describe("输入正文时 TOC 不重建（回归：目录内容一下一下闪�
         window.scrollTo = scrollTo as unknown as typeof window.scrollTo;
         try {
             await new Promise((r) => setTimeout(r, 400));
-
 
             const toggle = list.querySelector<HTMLElement>(".toc-collapse-toggle")!;
             toggle.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));

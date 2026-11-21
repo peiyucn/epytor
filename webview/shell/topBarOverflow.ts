@@ -12,7 +12,6 @@ export interface OverflowBudgetInput {
     pinnedKeys?: ReadonlySet<string>;
 }
 
-
 export function computeOverflow(input: OverflowBudgetInput): Set<string> {
     const { items, containerWidth, moreBtnWidth } = input;
     const pinned = input.pinnedKeys ?? new Set<string>();

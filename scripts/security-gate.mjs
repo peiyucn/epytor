@@ -6,13 +6,11 @@ const API_BASE = "https://api.github.com";
 const PAGE_SIZE = 100;
 const REQUEST_TIMEOUT_MS = 30_000;
 
-
 const ALERT_TYPES = [
     { name: "Dependabot", path: "dependabot/alerts", tokenKey: "alerts" },
     { name: "Code scanning", path: "code-scanning/alerts", tokenKey: "alerts" },
     { name: "Secret scanning", path: "secret-scanning/alerts", tokenKey: "secretScan" },
 ];
-
 
 function evaluateAlertsResponse(status, body) {
     if (status !== 200) {
@@ -48,7 +46,6 @@ async function fetchOpenAlerts(fetchImpl, repository, type, token) {
     return evaluateAlertsResponse(response.status, body);
 }
 
-
 async function runGate({ fetchImpl = fetch, repository, alertsToken, secretScanToken }) {
     if (!repository) {
         return { pass: false, reason: "GITHUB_REPOSITORY is not set", results: [] };
@@ -81,7 +78,6 @@ async function runGate({ fetchImpl = fetch, repository, alertsToken, secretScanT
         results,
     };
 }
-
 
 async function runSelfTest() {
     const cases = [];

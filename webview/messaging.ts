@@ -2,7 +2,6 @@ import type { ToExtensionMessage, ToWebviewMessage, ProjectImage } from "../shar
 
 export type { ProjectImage };
 
-
 type IncomingMessage = ToWebviewMessage;
 
 declare function acquireVsCodeApi(): {
@@ -10,7 +9,6 @@ declare function acquireVsCodeApi(): {
     getState(): unknown;
     setState(state: unknown): void;
 };
-
 
 const vscode = acquireVsCodeApi();
 
@@ -45,7 +43,6 @@ export function notifyOpenFile(relativePath: string): void {
 export function notifySwitchToTextEditor(line?: number): void {
     vscode.postMessage({ type: "switchToTextEditor", ...(line !== undefined ? { line } : {}) });
 }
-
 
 export function notifyViewportLine(line: number): void {
     vscode.postMessage({ type: "viewportLine", line });
@@ -95,7 +92,6 @@ export function notifyWordCount(
 
 export function onMessage(handler: (msg: IncomingMessage) => void): void {
     window.addEventListener("message", (event: MessageEvent) => {
-
 
         const data = event.data as unknown;
         if (data === null || typeof data !== "object") {

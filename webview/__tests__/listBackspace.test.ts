@@ -35,7 +35,6 @@ type Editor = Awaited<ReturnType<typeof makeEditor>>;
 const getView = (editor: Editor): EditorView => editor.action((ctx) => ctx.get(editorViewCtx));
 const serialize = (editor: Editor): string => editor.action(getMarkdown());
 
-
 const serializeNormalized = (editor: Editor): string =>
     serialize(editor).trim().replace(/^(\s*)\* /gm, "$1- ");
 
@@ -52,7 +51,6 @@ function pressBackspace(view: EditorView): boolean {
     });
     return handled;
 }
-
 
 function topLevelOutline(view: EditorView): string[] {
     const out: string[] = [];
@@ -101,7 +99,6 @@ describe("列表项行首 Backspace：断开列表变成普通行", () => {
         setCursor(view, itemPositions(view)[1] + 1);
         expect(pressBackspace(view)).toBe(true);
 
-
         expect(topLevelOutline(view)).toEqual(["ul[•a]", "p:b", "ul[•c]"]);
 
         expect(cursorText(view)).toBe("b");
@@ -146,12 +143,10 @@ describe("列表项行首 Backspace：断开列表变成普通行", () => {
         setCursor(view, itemPositions(view)[2] + 1);
         expect(pressBackspace(view)).toBe(true);
 
-
         expect(cursorInTextblock(view)).toBe(true);
     });
 
     it("嵌套任务列表第一项退格 应该 只提升本项，后面的子项留在原父项下", async () => {
-
 
         const editor = await makeEditor("- [ ] 第一项\n- [ ] 第二项\n  - [ ] 子项 A\n  - [ ] 子项 B\n- [ ] 第三项\n");
         const view = getView(editor);
@@ -217,7 +212,6 @@ describe("列表项行首 Backspace：断开列表变成普通行", () => {
 
     it("嵌套空任务项退格 应该 直接删除空项，而不是把它逐级提到顶级", async () => {
 
-
         const editor = await makeEditor("- [ ] parent\n  - [ ] 1\n  - [ ] 4\n  - [ ] 2\n");
         const view = getView(editor);
         let fourFrom = 0;
@@ -242,8 +236,6 @@ describe("列表项行首 Backspace：断开列表变成普通行", () => {
 
         setCursor(view, itemPositions(view)[0] + 3);
         pressBackspace(view);
-
-
 
         expect(topLevelOutline(view)).toEqual(["ul[•ab, •c]"]);
     });

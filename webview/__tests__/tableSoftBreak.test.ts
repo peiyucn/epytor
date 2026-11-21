@@ -78,14 +78,11 @@ describe("表格软换行（softBreakKeymap）", () => {
         const handled = pressShiftEnter(view);
         expect(handled).toBe(true);
 
-
         let hasHardbreak = false;
         view.state.doc.descendants((node) => {
             if (node.type.name === "hardbreak") hasHardbreak = true;
         });
         expect(hasHardbreak).toBe(true);
-
-
 
         let hbPos = -1;
         view.state.doc.descendants((node, pos) => {

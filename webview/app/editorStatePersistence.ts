@@ -2,7 +2,6 @@
 
 import type { TextSelectionRange } from "./rebuildRestore";
 
-
 export function parseSavedSelection(raw: unknown): TextSelectionRange | null {
     if (typeof raw !== "object" || raw === null) { return null; }
     const { from, to } = raw as { from?: unknown; to?: unknown };

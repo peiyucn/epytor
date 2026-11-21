@@ -1,6 +1,5 @@
 
 
-
 const COMPOSITION_WAIT_TIMEOUT_MS = 3000;
 
 export interface CompositionGate {

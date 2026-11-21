@@ -41,9 +41,6 @@ function normalizeFenceOpen(line: string): string {
 
 function normalizeLine(line: string, listLine: ListLineParts | null, indentRank: number | undefined): string {
 
-
-
-
     if (listLine && indentRank !== undefined) {
         return `\u0000list\u0000${indentRank}\u0000${listLine.canonicalMarker}\u0000${normalizeSplitStrong(listLine.rest)}`;
     }
@@ -66,13 +63,11 @@ function signatureLines(markdown: string): SigLine[] {
     }, []);
 }
 
-
 interface ListLineParts {
     indent: number;
     canonicalMarker: string;
     rest: string;
 }
-
 
 const LIST_LINE_RE = /^([ \t]*)([-*+]|\d{1,9})([.)]?)([ \t]+|$)(.*)$/;
 
@@ -82,13 +77,11 @@ function listLineParts(line: string): ListLineParts | null {
     const [, rawIndent, numberOrBullet, delimiter, , rest] = match;
     const indent = [...rawIndent].reduce((sum, ch) => sum + (ch === "\t" ? 4 : 1), 0);
 
-
     const canonicalMarker = delimiter
         ? `${numberOrBullet}|`
         : "\u2022";
     return { indent, canonicalMarker, rest };
 }
-
 
 function listIndentRanks(listLines: Array<ListLineParts | null>): Map<number, number> {
     const ranks = new Map<number, number>();
@@ -97,7 +90,6 @@ function listIndentRanks(listLines: Array<ListLineParts | null>): Map<number, nu
         if (parts && parts.indent < minIndent) minIndent = parts.indent;
     }
     if (!Number.isFinite(minIndent)) return ranks;
-
 
     let step = Number.POSITIVE_INFINITY;
     for (const parts of listLines) {
@@ -200,7 +192,6 @@ function uniqueSignaturePositions(
     }
     return positions;
 }
-
 
 function addBoundedLcsMatches(
     saved: SigLine[],

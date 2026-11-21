@@ -9,22 +9,17 @@ export interface LineRange {
     end: number;
 }
 
-
 interface MdastTopLevelNode {
     type: string;
     position?: { start: { line: number }; end: { line: number } };
 }
 
-
 const NON_RENDERED_NODE_TYPES = new Set(["definition", "footnoteDefinition", "yaml", "toml"]);
-
 
 const parser = unified().use(remarkParse).use(remarkGfm).use(remarkMath);
 
-
 let cachedContent: string | undefined;
 let cachedRanges: LineRange[] = [];
-
 
 export function computeLineRanges(content: string): LineRange[] {
     if (content === cachedContent) { return cachedRanges; }
@@ -42,13 +37,11 @@ export function computeLineRanges(content: string): LineRange[] {
     return ranges;
 }
 
-
 function splitFrontmatter(content: string): { frontmatterLines: number; body: string } {
     const match = content.match(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/);
     if (!match) return { frontmatterLines: 0, body: content };
     return { frontmatterLines: match[0].split("\n").length - 1, body: content.slice(match[0].length) };
 }
-
 
 export function computeDisplayLineRanges(content: string): LineRange[] {
     const { frontmatterLines, body } = splitFrontmatter(content);

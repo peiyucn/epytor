@@ -20,11 +20,9 @@ interface HeadingEntry {
     key: string;
 }
 
-
 export function headingFoldKey(level: number, text: string, nth: number): string {
     return `${level}:${text}#${nth}`;
 }
-
 
 export function assignFoldKeys<T extends { level: number; text: string }>(headings: T[]): (T & { key: string })[] {
     const seen = new Map<string, number>();
@@ -44,20 +42,16 @@ const TAB_DRAG_THRESHOLD_PX = 3;
 const ITEM_INDENT_STEP_PX = 12;
 const ITEM_INDENT_BASE_PX = 8;
 
-
 export const TOC_AUTO_SHOW_EXTRA_PX = 100;
-
 
 export function shouldAutoShowToc(viewportWidth: number, editorMaxWidth: number): boolean {
     return viewportWidth >= editorMaxWidth + TOC_AUTO_SHOW_EXTRA_PX;
 }
 
-
 export function resolveTocOpen(dismissed: boolean, viewportWidth: number, editorMaxWidth: number): boolean {
     if (dismissed) { return false; }
     return shouldAutoShowToc(viewportWidth, editorMaxWidth);
 }
-
 
 function getHeadings(view: EditorView): HeadingEntry[] {
     return assignFoldKeys(
@@ -68,7 +62,6 @@ function getHeadings(view: EditorView): HeadingEntry[] {
         })),
     );
 }
-
 
 function findHeadingElement(view: EditorView, pos: number): HTMLElement | null {
     const dom = view.nodeDOM(pos) as HTMLElement | null;
@@ -96,7 +89,6 @@ function isHeadingVisible(headings: HeadingEntry[], index: number, collapsed: Se
     return true;
 }
 
-
 let _editorMaxWidth = DEFAULT_EDITOR_MAX_WIDTH;
 
 export function setTocEditorMaxWidth(width: number): void {
@@ -114,26 +106,18 @@ export function initToc(getEditorView: () => EditorView | null): {
     const panel = document.createElement("div");
     panel.className = "toc-panel";
 
-
     const headingEls = new WeakMap<HTMLElement, HTMLElement>();
-
 
     const itemByPos = new Map<number, HTMLElement>();
 
-
     const posByItem = new Map<HTMLElement, number>();
-
 
     let renderedSignature: string | null = null;
     let renderedItems: HTMLElement[] = [];
 
-
     function applyActiveHeading(pos: number | null): void {
 
-
         if (pos !== null && !itemByPos.has(pos)) { rebindFromDocument(); }
-
-
 
         const resolved = resolveHighlight(pinnedHighlight, pos, getUserInteractionEpoch());
         pinnedHighlight = resolved.pin;
@@ -151,9 +135,7 @@ export function initToc(getEditorView: () => EditorView | null): {
         list.scrollTop += itemRect.top - listRect.top - (listRect.height - itemRect.height) / 2;
     }
 
-
     let pinnedHighlight: HeadingHighlightPin | null = null;
-
 
     function releasePinOnInteraction(): void {
         if (pinnedHighlight === null) { return; }
@@ -161,7 +143,6 @@ export function initToc(getEditorView: () => EditorView | null): {
         pinnedHighlight = null;
         applyActiveHeading(getActiveHeadingPos());
     }
-
 
     function rebindFromDocument(): void {
         const view = getEditorView();
@@ -188,17 +169,14 @@ export function initToc(getEditorView: () => EditorView | null): {
     panel.appendChild(header);
     panel.appendChild(list);
 
-
     const tabEl = document.createElement("button");
     tabEl.className = "toc-toggle-tab";
     tabEl.tabIndex = -1;
     document.body.appendChild(tabEl);
 
-
     let isOpen = false;
     let dismissedByUser = false;
     let panelWidth = TOC_WIDTH;
-
 
     const savedState = getWebviewState();
     if (savedState?.tocDismissed === true) { dismissedByUser = true; }
@@ -207,12 +185,9 @@ export function initToc(getEditorView: () => EditorView | null): {
     }
     panel.style.width = `${panelWidth}px`;
 
-
-
     const collapsedHeadings = new Set<string>();
     if (Array.isArray(savedState?.tocCollapsed)) {
         for (const key of savedState.tocCollapsed) {
-
 
             if (typeof key === "string" && key.includes("#")) collapsedHeadings.add(key);
         }
@@ -227,17 +202,14 @@ export function initToc(getEditorView: () => EditorView | null): {
         });
     }
 
-
     function foldStateOf(headings: HeadingEntry[], idx: number): string {
         if (!hasChildren(headings, idx)) { return "-"; }
         return collapsedHeadings.has(headings[idx].key) ? "closed" : "open";
     }
 
-
     function renderSignature(headings: HeadingEntry[], visible: number[]): string {
         return visible.map((idx) => `${headings[idx].key}|${foldStateOf(headings, idx)}`).join("\n");
     }
-
 
     function visibleHeadingIndices(headings: HeadingEntry[]): number[] {
         const visible: number[] = [];
@@ -246,7 +218,6 @@ export function initToc(getEditorView: () => EditorView | null): {
         }
         return visible;
     }
-
 
     function createItem(headings: HeadingEntry[], idx: number): HTMLElement {
         const h = headings[idx];
@@ -284,16 +255,12 @@ export function initToc(getEditorView: () => EditorView | null): {
 
         item.appendChild(label);
 
-
-
-
         item.addEventListener("mousedown", (e) => {
             e.preventDefault();
             e.stopPropagation();
             const v = getEditorView();
             if (!v) return;
             try {
-
 
                 const el = headingEls.get(item);
                 if (!el || !v.dom.contains(el)) return;
@@ -308,16 +275,14 @@ export function initToc(getEditorView: () => EditorView | null): {
                     topbarH,
                 );
 
-
                 pinnedHighlight = pinHeadingHighlight(targetPos, getUserInteractionEpoch());
                 applyActiveHeading(targetPos);
                 window.scrollTo({ top, behavior: "smooth" });
-            } catch {  }
+            } catch {}
         });
 
         return item;
     }
-
 
     function bindPositions(view: EditorView, headings: HeadingEntry[], visible: number[]): void {
         itemByPos.clear();
@@ -340,14 +305,11 @@ export function initToc(getEditorView: () => EditorView | null): {
         const visible = visibleHeadingIndices(headings);
         const signature = renderSignature(headings, visible);
 
-
-
         if (signature === renderedSignature) {
             bindPositions(view, headings, visible);
             applyActiveHeading(getActiveHeadingPos());
             return;
         }
-
 
         renderedSignature = signature;
         list.innerHTML = "";
@@ -383,14 +345,12 @@ export function initToc(getEditorView: () => EditorView | null): {
         }
     }
 
-
     function updateTabPos(): void {
         tabEl.style.transform = isOpen ? `translateX(${panelWidth}px)` : 'translateX(0px)';
         tabEl.textContent = isOpen ? "‹" : "›";
         tabEl.dataset.tocState = isOpen ? "open" : "closed";
         applyTooltip(tabEl, isOpen ? t("Collapse") : t("Expand"), { placement: "above" });
     }
-
 
     function close(byUser: boolean): void {
         isOpen = false;
@@ -402,7 +362,6 @@ export function initToc(getEditorView: () => EditorView | null): {
         updateTabPos();
         syncBodyPadding();
     }
-
 
     function open(byUser: boolean): void {
         isOpen = true;
@@ -423,7 +382,6 @@ export function initToc(getEditorView: () => EditorView | null): {
             open(true);
         }
     }
-
 
     let tabDragStart = 0;
     let tabDragWidth = 0;
@@ -473,8 +431,6 @@ export function initToc(getEditorView: () => EditorView | null): {
         }
     }
 
-
-
     updateTabPos();
     requestAnimationFrame(() => {
         checkAutoShow();
@@ -486,8 +442,6 @@ export function initToc(getEditorView: () => EditorView | null): {
 
     const unsubscribeActiveHeading = onActiveHeadingChange(applyActiveHeading);
 
-
-
     window.addEventListener("scroll", releasePinOnInteraction, { passive: true });
     for (const type of USER_INTERACTION_EVENT_TYPES) {
         window.addEventListener(type, releasePinOnInteraction, { passive: true });
@@ -497,7 +451,6 @@ export function initToc(getEditorView: () => EditorView | null): {
         panel.style.visibility = 'visible';
         tabEl.style.visibility = 'visible';
     }
-
 
     let disposed = false;
     function dispose(): void {

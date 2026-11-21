@@ -17,7 +17,6 @@ export interface FindMatchesResult {
     truncated: boolean;
 }
 
-
 export const MAX_MATCHES = 5000;
 
 export function findMatches(

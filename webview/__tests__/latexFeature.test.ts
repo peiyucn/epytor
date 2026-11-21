@@ -16,8 +16,6 @@ const h = vi.hoisted(() => {
     return { katexModuleGate, resolveKatexModule, katexRender };
 });
 
-
-
 vi.mock("katex", async () => {
     await h.katexModuleGate;
     return {
@@ -142,7 +140,6 @@ describe("惰性 KaTeX latex feature", () => {
         expect(mathCount).toBe(1);
         expect(mathValue).toBe("hello");
 
-
         editor.action((ctx) => {
             ctx.get(commandsCtx).call("ToggleLatex");
         });
@@ -156,18 +153,15 @@ describe("惰性 KaTeX latex feature", () => {
         const span = root.querySelector<HTMLElement>('span[data-type="math_inline"]');
         expect(span).not.toBeNull();
 
-
         expect(span!.classList.contains("epytor-math-inline--loading")).toBe(true);
         expect(span!.textContent).toBe("a");
         expect(document.head.querySelectorAll("link[data-epytor-katex]")).toHaveLength(1);
-
 
         const view = getView(editor);
         const pos = findMathPos(editor);
         expect(pos).toBeGreaterThan(0);
         view.dispatch(view.state.tr.setNodeMarkup(pos, undefined, { value: "b" }));
         expect(span!.textContent).toBe("b");
-
 
         h.resolveKatexModule();
         await vi.waitFor(() => expect(h.katexRender).toHaveBeenCalledTimes(1));
@@ -184,7 +178,6 @@ describe("惰性 KaTeX latex feature", () => {
         await makeEditor("$a$");
         h.resolveKatexModule();
         await vi.waitFor(() => expect(h.katexRender).toHaveBeenCalledTimes(1));
-
 
         const second = await makeEditor("$b$");
         void second;

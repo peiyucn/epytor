@@ -1,14 +1,10 @@
 
 
-
 export const BUBBLE_BOUNDARY_PADDING = 8;
-
 
 export const BUBBLE_GAP = 10;
 
-
 export const BUBBLE_MIN_WIDTH = 120;
-
 
 export interface BubbleRect {
     x: number;
@@ -16,7 +12,6 @@ export interface BubbleRect {
     width: number;
     height: number;
 }
-
 
 export interface BubbleViewport {
 
@@ -27,12 +22,10 @@ export interface BubbleViewport {
     viewportHeight: number;
 }
 
-
 export interface BubblePosition {
     x: number;
     y: number;
 }
-
 
 export function placeBubble(
     reference: BubbleRect,

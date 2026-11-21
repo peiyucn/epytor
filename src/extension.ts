@@ -11,7 +11,6 @@ import {
 import type { ToWebviewMessage } from "../shared/messages";
 import { normalizeTableWrapMode } from "../shared/tableWrap";
 
-
 export const CONFIG_BROADCASTS: ReadonlyArray<{
     section: string;
     message: (value: unknown) => ToWebviewMessage;
@@ -45,26 +44,12 @@ export function activate(context: vscode.ExtensionContext) {
         MarkdownEditorProvider.register(context),
     );
 
-
-
-
-
-
-
-
-
-
-
-
-
-
     context.subscriptions.push(
         vscode.commands.registerCommand(
             'revealLine',
             (args: { lineNumber: number; at?: string }) => {
                 const targetLine = args.lineNumber + 1;
                 MarkdownEditorProvider.current?.setGlobalRevealLine(targetLine);
-
 
                 const activeTab = vscode.window.tabGroups.activeTabGroup?.activeTab;
                 if (activeTab?.input instanceof vscode.TabInputCustom
@@ -116,10 +101,6 @@ export function activate(context: vscode.ExtensionContext) {
 
                 const provider = MarkdownEditorProvider.current;
 
-
-
-
-
                 if (provider?.hasPanel(target)) {
                     provider.postToPanel(target, { type: "requestSwitchToTextEditor" });
                     return;
@@ -139,9 +120,6 @@ export function activate(context: vscode.ExtensionContext) {
                 if (!target) {
                     return;
                 }
-
-
-
 
                 const topVisibleLine = activeEditor?.visibleRanges[0]?.start.line
                     ?? activeEditor?.selection.active.line
@@ -166,9 +144,6 @@ export function activate(context: vscode.ExtensionContext) {
                         }
                     }
                 }
-
-
-
 
                 try {
                     await vscode.commands.executeCommand(

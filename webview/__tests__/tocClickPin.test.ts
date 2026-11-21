@@ -83,7 +83,6 @@ async function mount(): Promise<{ list: HTMLElement }> {
     return { list: document.querySelector<HTMLElement>(".toc-list")! };
 }
 
-
 function stubClampedScrollTo(): () => void {
     const maxScroll = Math.max(0, CONTENT_HEIGHT - VIEWPORT_HEIGHT);
     const original = window.scrollTo;
@@ -94,7 +93,6 @@ function stubClampedScrollTo(): () => void {
     }) as unknown as typeof window.scrollTo;
     return () => { window.scrollTo = original; };
 }
-
 
 async function settleGeometry(): Promise<void> {
     window.dispatchEvent(new Event("scroll"));
@@ -147,8 +145,6 @@ describe("点击目录项后的高亮钉住", () => {
             await clickItem(list, 0);
             expect(activeIndex(list)).toBe(0);
 
-
-
             scrollY = 300;
             await settleGeometry();
             expect(activeIndex(list)).toBe(0);
@@ -169,9 +165,6 @@ describe("点击目录项后的高亮钉住", () => {
             scrollY = 300;
             await settleGeometry();
             const pinned = activeIndex(list);
-
-
-
 
             document.body.dispatchEvent(new Event("wheel", { bubbles: true }));
             await settleGeometry();

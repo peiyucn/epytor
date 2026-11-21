@@ -1,7 +1,6 @@
 
 import * as vscode from "vscode";
 
-
 const GLOBAL_REVEAL_LINE_TTL_MS = 10_000;
 
 const PENDING_NAVIGATION_TTL_MS = 5000;
@@ -10,7 +9,6 @@ interface PendingLine {
     line: number;
     ts: number;
 }
-
 
 export function revealLineAtTop(editor: vscode.TextEditor, line: number): void {
     const target = Math.max(0, Math.min(line - 1, editor.document.lineCount - 1));
@@ -23,16 +21,12 @@ export class NavigationState {
 
     private readonly _pendingNavigations = new Map<string, PendingLine>();
 
-
     private _pendingRevealLine: PendingLine | undefined;
-
 
     private _pendingEditorReveal: { uriKey: string; line: number } | undefined;
 
-
     private readonly _lastPreviewLines = new Map<string, number>();
     private readonly _lastTextLines = new Map<string, number>();
-
 
     setGlobalRevealLine(line: number): void {
         this._pendingRevealLine = { line, ts: Date.now() };
@@ -45,7 +39,6 @@ export class NavigationState {
         if (Date.now() - pending.ts > GLOBAL_REVEAL_LINE_TTL_MS) { return undefined; }
         return pending.line;
     }
-
 
     rememberPendingNavigation(uriKey: string, line: number): void {
         this._pendingNavigations.set(uriKey, { line, ts: Date.now() });
@@ -71,7 +64,6 @@ export class NavigationState {
         this._lastTextLines.set(uriKey, line);
     }
 
-
     consumeLastTextLine(uriKey: string): number | undefined {
         const line = this._lastTextLines.get(uriKey);
         this._lastTextLines.delete(uriKey);
@@ -86,14 +78,12 @@ export class NavigationState {
         return this._pendingEditorReveal !== undefined;
     }
 
-
     takeEditorReveal(uriKey: string): number | undefined {
         const pending = this._pendingEditorReveal;
         if (!pending || pending.uriKey !== uriKey) { return undefined; }
         this._pendingEditorReveal = undefined;
         return pending.line;
     }
-
 
     dispose(uriKey: string): void {
         this._pendingNavigations.delete(uriKey);

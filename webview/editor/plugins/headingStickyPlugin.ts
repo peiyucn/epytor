@@ -13,9 +13,7 @@ import { computeStickyRows, currentHeadingIndex, effectiveReadingLineY, STICKY_M
 import { headingScrollTop } from "../../outline/headingScroll";
 import { getUserInteractionEpoch } from "../../shell/userInteraction";
 
-
 let _hideStickyUntilNextInteraction: (() => void) | null = null;
-
 
 const activeHeading = {
 
@@ -39,7 +37,6 @@ function publishActiveHeading(pos: number | null): void {
     activeHeading.pos = pos;
     for (const listener of activeHeading.listeners) { listener(pos); }
 }
-
 
 export function hideStickyUntilNextInteraction(): void {
     _hideStickyUntilNextInteraction?.();
@@ -73,7 +70,6 @@ export const headingStickyPlugin = $prose(() =>
             document.body.appendChild(sticky);
 
             let rafId: number | null = null;
-
 
             let suppressSticky = false;
             let suppressEpoch: number | null = null;
@@ -149,8 +145,6 @@ export const headingStickyPlugin = $prose(() =>
                 lastRowSignature = "";
             };
 
-
-
             interface CachedHeading {
                 el: HTMLElement;
                 pos: number;
@@ -167,7 +161,6 @@ export const headingStickyPlugin = $prose(() =>
             let cacheDirty = true;
             let rebuildTimer: ReturnType<typeof setTimeout> | null = null;
             let lastRowSignature = "";
-
 
             const clearRebuildTimer = () => {
                 if (rebuildTimer !== null) {
@@ -213,7 +206,6 @@ export const headingStickyPlugin = $prose(() =>
                 cacheDirty = false;
             };
 
-
             let lastStableBodyWidth = -1;
 
             const markCacheDirty = () => {
@@ -222,14 +214,11 @@ export const headingStickyPlugin = $prose(() =>
                 rebuildTimer = setTimeout(() => {
                     rebuildTimer = null;
 
-
                     if (shouldSkipViewportWork()) { return; }
                     rebuildCache();
                     scheduleUpdate();
                 }, CACHE_REBUILD_DEBOUNCE_MS);
             };
-
-
 
             const onLayoutChange = () => {
                 if (shouldSkipViewportWork()) return;
@@ -240,7 +229,6 @@ export const headingStickyPlugin = $prose(() =>
                 lastStableBodyWidth = bodyWidth;
                 scheduleUpdate();
             };
-
 
             const maxStickyRows = (): number => Math.min(
                 STICKY_MAX_ROWS,
@@ -355,8 +343,6 @@ export const headingStickyPlugin = $prose(() =>
             });
             resizeObserver.observe(view.dom);
 
-
-
             const layoutObserver = new ResizeObserver(onLayoutChange);
             layoutObserver.observe(document.body, { box: "content-box" });
 
@@ -384,9 +370,6 @@ export const headingStickyPlugin = $prose(() =>
                     if (_hideStickyUntilNextInteraction === suppressUntilNextInteraction) {
                         _hideStickyUntilNextInteraction = null;
                     }
-
-
-
 
                     if (activeHeading.owner === instanceToken) {
                         activeHeading.owner = null;

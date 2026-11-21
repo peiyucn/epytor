@@ -3,7 +3,6 @@
 const KB = 1024;
 const MB = KB * KB;
 
-
 export function formatFileSize(bytes: number | undefined | null): string | null {
     if (bytes === undefined || bytes === null) { return null; }
     if (typeof bytes !== "number" || !Number.isFinite(bytes)) { return null; }
@@ -14,7 +13,6 @@ export function formatFileSize(bytes: number | undefined | null): string | null 
     if (size < MB) { return `${(size / KB).toFixed(1)} KB`; }
     return `${(size / MB).toFixed(1)} MB`;
 }
-
 
 export function composeStatusBarText(
     base: string,

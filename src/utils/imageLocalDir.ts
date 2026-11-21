@@ -2,7 +2,6 @@
 import * as path from "path";
 import { isPathWithinBase } from "./pathGuard";
 
-
 export const CANDIDATE_IMAGE_DIRS = ["images", "imgs", "assets/images", "assets"];
 
 interface ImageLocalDirInput {
@@ -21,7 +20,6 @@ type ImageLocalDirPlan =
 
     | { kind: "probe"; candidates: string[]; fallbackDir: string | null };
 
-
 export function expandCandidateDirs(roots: Array<string | null>): string[] {
     const result: string[] = [];
     for (const root of roots) {
@@ -33,7 +31,6 @@ export function expandCandidateDirs(roots: Array<string | null>): string[] {
     }
     return result;
 }
-
 
 export function planImageLocalDir(input: ImageLocalDirInput): ImageLocalDirPlan {
     const { customPath, docDir, workspaceRoot, workspaceLevel } = input;

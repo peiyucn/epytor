@@ -3,13 +3,11 @@ import type { Node as ProseNode, Schema } from "@milkdown/kit/prose/model";
 import type { StepMap } from "@milkdown/kit/prose/transform";
 import type { Transaction } from "@milkdown/kit/prose/state";
 
-
 function mapThrough(maps: readonly StepMap[], start: number, pos: number, assoc: number): number {
     let result = pos;
     for (let i = start; i < maps.length; i++) { result = maps[i].map(result, assoc); }
     return result;
 }
-
 
 export function changeRangeInFinalDoc(
     transactions: readonly Transaction[],
@@ -33,12 +31,10 @@ export function changeRangeInFinalDoc(
         });
     });
 
-
     from = Math.max(0, Math.min(from, docSize));
     to = Math.max(0, Math.min(to, docSize));
     return from > to ? null : { from, to };
 }
-
 
 export function normalizeListSpread(
     doc: ProseNode,
@@ -67,7 +63,6 @@ export function normalizeListSpread(
     }
     return changed;
 }
-
 
 function countParagraphs(item: ProseNode): number {
     let count = 0;

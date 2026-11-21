@@ -11,7 +11,6 @@ export interface EditorContinuity {
     previousScrollY: number;
 }
 
-
 export function captureContinuity(view: EditorView): EditorContinuity {
     const sel = view.state.selection;
     return {
@@ -21,7 +20,6 @@ export function captureContinuity(view: EditorView): EditorContinuity {
         previousScrollY: window.scrollY,
     };
 }
-
 
 export function restoreContinuity(
     view: EditorView,
@@ -50,7 +48,6 @@ export function restoreContinuity(
     }
     return plan.restoreFocus;
 }
-
 
 export function restoreSelection(view: EditorView, selection: TextSelectionRange): boolean {
     const docSize = view.state.doc.content.size;

@@ -33,7 +33,6 @@ async function openEditor(markdown: string): Promise<void> {
     throw new Error("editor was not mounted");
 }
 
-
 function strongRange(): { from: number; to: number; text: string } {
     const view = getEditorView();
     if (!view) { throw new Error("view missing"); }
@@ -112,7 +111,6 @@ describe("行内格式边界输入（2026-11-01 手测）", () => {
 
     it("IME 组合结束后光标多跳一个字 应该 拉回到组合文本末尾", async () => {
 
-
         await openEditor("**粗体**斯\n");
         const { to } = strongRange();
         const view = getEditorView();
@@ -125,7 +123,6 @@ describe("行内格式边界输入（2026-11-01 手测）", () => {
         const end = new Event("compositionend", { bubbles: true });
         Object.defineProperty(end, "data", { value: "：" });
         view.dom.dispatchEvent(end);
-
 
         const tr = view.state.tr.insertText("：", to);
         tr.setSelection(TextSelection.create(tr.doc, to + 2));

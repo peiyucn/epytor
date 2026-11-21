@@ -31,7 +31,6 @@ export interface TooltipHorizontalPos {
     right?: string;
 }
 
-
 export function computeTooltipHorizontal(
     el: { left: number; right: number },
     viewportWidth: number,
@@ -83,7 +82,6 @@ function position(
     }
     tip.style.top = `${y}px`;
 
-
     const finalRect = tip.getBoundingClientRect();
     if (finalRect.width > 0 && finalRect.right > window.innerWidth - TOOLTIP_VIEWPORT_MARGIN_PX) {
         tip.style.left = "auto";
@@ -96,13 +94,11 @@ function position(
     tip.style.visibility = "visible";
 }
 
-
 export function hideTooltip(): void {
     if (tooltipEl) {
         tooltipEl.style.display = "none";
     }
 }
-
 
 export function showTooltipAt(
     el: Element,
@@ -113,7 +109,6 @@ export function showTooltipAt(
     tip.textContent = text;
     position(tip, el as HTMLElement, placement);
 }
-
 
 export function applyTooltip(
     el: HTMLElement,

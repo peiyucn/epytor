@@ -26,13 +26,11 @@ const manifest = JSON.parse(readFileSync(path.resolve(root, "package.json"), "ut
 const nlsEn = JSON.parse(readFileSync(path.resolve(root, "package.nls.json"), "utf-8")) as NlsMap;
 const nlsZh = JSON.parse(readFileSync(path.resolve(root, "package.nls.zh-cn.json"), "utf-8")) as NlsMap;
 
-
 function placeholderKey(value: string): string | undefined {
     return value.length > 1 && value.startsWith("%") && value.endsWith("%")
         ? value.slice(1, -1)
         : undefined;
 }
-
 
 function collectPlaceholders(value: unknown, out: Set<string>): void {
     if (typeof value === "string") {
@@ -54,7 +52,6 @@ function collectPlaceholders(value: unknown, out: Set<string>): void {
         }
     }
 }
-
 
 function resolveDisplayName(value: string | undefined, nls: NlsMap): string | undefined {
     if (value === undefined) {

@@ -9,7 +9,6 @@ import {
     type CellClickState,
 } from "../table/cellClickState";
 
-
 function clickAt(state: CellClickState, pos: number, x = 0, y = 0): void {
     beginClick(state, { pos, x, y });
 }

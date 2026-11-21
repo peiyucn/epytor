@@ -25,7 +25,6 @@ interface CssRule {
     body: string;
 }
 
-
 function parseRules(css: string): CssRule[] {
     const rules: CssRule[] = [];
     for (const match of css.replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
@@ -36,7 +35,6 @@ function parseRules(css: string): CssRule[] {
     }
     return rules;
 }
-
 
 function hasSelectorContaining(rules: CssRule[], fragment: string): boolean {
     return rules.some((rule) => rule.selectors.some((selector) => selector.includes(fragment)));
@@ -68,7 +66,6 @@ describe("顶栏样式归属", () => {
     });
 
     it("全局 style.css 不应该 再承载顶栏布局与品牌规则", () => {
-
 
         expect(hasSelectorContaining(globalRules, ".milkdown .milkdown-top-bar")).toBe(false);
         expect(hasSelectorContaining(globalRules, ".epytor-brand")).toBe(false);

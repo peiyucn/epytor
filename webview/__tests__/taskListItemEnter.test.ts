@@ -49,7 +49,6 @@ function pressEnter(view: EditorView): boolean {
     return handled;
 }
 
-
 function checkedFlags(view: EditorView): Array<boolean | null> {
     const out: Array<boolean | null> = [];
     view.state.doc.descendants((node) => {
@@ -58,7 +57,6 @@ function checkedFlags(view: EditorView): Array<boolean | null> {
     return out;
 }
 
-
 function itemTexts(view: EditorView): string[] {
     const out: string[] = [];
     view.state.doc.descendants((node) => {
@@ -66,7 +64,6 @@ function itemTexts(view: EditorView): string[] {
     });
     return out;
 }
-
 
 function textStart(view: EditorView, itemIndex: number): number {
     const positions: number[] = [];
@@ -92,7 +89,6 @@ describe("任务项回车：新建项一律未勾选", () => {
 
         expect(itemTexts(view)).toEqual(["done", ""]);
         expect(checkedFlags(view)).toEqual([true, false]);
-
 
         const md = serialize(editor);
         expect(md).toContain("[x] done");
@@ -155,8 +151,6 @@ describe("任务项回车：新建项一律未勾选", () => {
     });
 
     it("嵌套任务列表：内层空项回车 应该 提升一级、不产生圆点项", async () => {
-
-
 
         const editor = await makeEditor("- [ ] outer\n  - [ ] inner\n");
         const view = getView(editor);

@@ -38,11 +38,6 @@ describe("katex API 兼容性（mermaid 数学标签 + epytor 公式共用）", 
 
     it("@types/katex 应该 保持不统一（上游 DT 停在 0.16，katex 自带类型）", () => {
 
-
-
-
-
-
         const katexPkg = createRequire(import.meta.url)("katex/package.json") as {
             types?: string;
             exports?: Record<string, { types?: string } | string>;

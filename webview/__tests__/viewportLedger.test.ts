@@ -14,23 +14,19 @@ import {
     shouldSkipViewportWork,
 } from "../scroll/viewportLedger";
 
-
 function setViewport(width: number, height: number): void {
     Object.defineProperty(window, "innerWidth", { value: width, configurable: true });
     Object.defineProperty(window, "innerHeight", { value: height, configurable: true });
 }
-
 
 function stubBodyWidth(width: number): void {
     vi.spyOn(document.body, "getBoundingClientRect")
         .mockReturnValue({ width } as unknown as DOMRect);
 }
 
-
 function cssVarValue(): string {
     return document.documentElement.style.getPropertyValue(LAST_BODY_WIDTH_VAR);
 }
-
 
 class FakeResizeObserver {
     static instances: FakeResizeObserver[] = [];
@@ -48,19 +44,16 @@ class FakeResizeObserver {
     }
 }
 
-
 function installFakeResizeObserver(): void {
     FakeResizeObserver.instances = [];
     vi.stubGlobal("ResizeObserver", FakeResizeObserver);
 }
-
 
 function ledgerObserver(): FakeResizeObserver {
     const observer = FakeResizeObserver.instances[0];
     if (!observer) { throw new Error("initViewportLedger 未创建 ResizeObserver"); }
     return observer;
 }
-
 
 describe("isCollapsedViewport", () => {
     it("恰好 300×150 应该 判定为折叠", () => {
@@ -77,7 +70,6 @@ describe("isCollapsedViewport", () => {
     });
 });
 
-
 describe("shouldSkipViewportWork", () => {
     afterEach(() => { setViewport(1024, 768); });
 
@@ -91,7 +83,6 @@ describe("shouldSkipViewportWork", () => {
         expect(shouldSkipViewportWork()).toBe(false);
     });
 });
-
 
 describe("nextLastBodyWidth", () => {
     const real = { width: 846, height: 677 };
@@ -118,7 +109,6 @@ describe("nextLastBodyWidth", () => {
     });
 });
 
-
 describe("nextTinyReal", () => {
     const tiny = { width: IFRAME_DEFAULT_WIDTH, height: IFRAME_DEFAULT_HEIGHT };
     const real = { width: 846, height: 677 };
@@ -137,7 +127,6 @@ describe("nextTinyReal", () => {
         expect(nextTinyReal(true, real, true)).toBe(false);
     });
 });
-
 
 describe("initViewportLedger", () => {
     beforeEach(() => {
@@ -214,8 +203,6 @@ describe("initViewportLedger", () => {
         expect(cssVarValue()).toBe("");
     });
 
-
-
     it("折叠读数下用户操作（真实小窗口） 应该 立刻移除属性并按真实几何记账", () => {
         setViewport(IFRAME_DEFAULT_WIDTH, IFRAME_DEFAULT_HEIGHT);
         stubBodyWidth(285);
@@ -250,7 +237,6 @@ describe("initViewportLedger", () => {
     });
 });
 
-
 describe("真实小窗口标记接线", () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -280,7 +266,6 @@ describe("真实小窗口标记接线", () => {
             window.dispatchEvent(new Event(type));
 
             expect(isRealTinyViewport()).toBe(true);
-
 
             expect(isHostCollapsedViewport()).toBe(false);
             expect(shouldSkipViewportWork()).toBe(true);

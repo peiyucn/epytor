@@ -15,7 +15,6 @@ function keyUp(init: KeyboardEventInit): void {
     document.dispatchEvent(new KeyboardEvent("keyup", init));
 }
 
-
 function resetModifierState(): void {
     keyUp({ key: "Control" });
 }

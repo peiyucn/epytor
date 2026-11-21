@@ -10,7 +10,6 @@ import { t } from "../../i18n";
 import { findHeadingFoldRange, getHeadingLevel, isHeadingNode, buildHeadingIndex, computeAllHeadingSignature, computeHeadingSignature } from "../../outline/headingFold";
 import { getWebviewState, setWebviewState } from "../../messaging";
 
-
 function persistFoldState(doc: ProseNode, folded: ReadonlySet<number>): void {
     const cur = getWebviewState() ?? {};
     setWebviewState({
@@ -18,7 +17,6 @@ function persistFoldState(doc: ProseNode, folded: ReadonlySet<number>): void {
         foldState: { sig: computeAllHeadingSignature(doc), folded: [...folded] },
     });
 }
-
 
 export function normalizeFoldPositions(doc: ProseNode, folded: number[]): number[] {
     return folded.filter((pos) => {
@@ -130,7 +128,6 @@ export function buildFoldDecorations(doc: ProseNode, folded: ReadonlySet<number>
 
     if (hiddenRanges.length > 0) {
 
-
         const sorted = [...hiddenRanges].sort((a, b) => a.from - b.from);
         const merged: HeadingFoldRange[] = [];
         for (const range of sorted) {
@@ -203,7 +200,6 @@ export const headingFoldPlugin = $prose(() => {
             decorations(state) {
                 const folded = headingFoldPluginKey.getState(state) ?? new Set<number>();
 
-
                 const signature = computeHeadingSignature(state.doc, folded);
                 if (cachedDecorations !== null && signature === cachedSignature) {
                     return cachedDecorations;
@@ -231,7 +227,6 @@ export const headingFoldPlugin = $prose(() => {
                 }
                 if (headingPos === null || !folded.has(headingPos)) return false;
                 if ($from.pos < headingPos + 1 + headingTextLen) return false;
-
 
                 const headingNode = view.state.doc.nodeAt(headingPos);
                 const range = headingNode
@@ -279,7 +274,6 @@ export const headingFoldPlugin = $prose(() => {
                     if (hoveredGutter && !view.dom.contains(hoveredGutter)) {
                         setHoveredGutter(null);
                     }
-
 
                     const folded = headingFoldPluginKey.getState(view.state);
                     if (folded !== headingFoldPluginKey.getState(prevState)) {

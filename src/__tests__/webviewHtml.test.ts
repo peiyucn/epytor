@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildWebviewHtml, type WebviewHtmlOptions } from "../utils/webviewHtml";
 
-
 const EDITOR_BACKGROUND_DECL = "background-color: var(--vscode-editor-background)";
 
 const OPTIONS: WebviewHtmlOptions = {
@@ -16,7 +15,6 @@ const OPTIONS: WebviewHtmlOptions = {
         "--editor-max-width": "900px",
     },
 };
-
 
 function tagSource(html: string, tag: "html" | "body"): string {
     return html.match(new RegExp(`<${tag}\\b[^>]*>`))?.[0] ?? "";

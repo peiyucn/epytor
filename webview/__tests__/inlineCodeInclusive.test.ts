@@ -35,7 +35,6 @@ function getView(editor: Awaited<ReturnType<typeof makeEditor>>): EditorView {
     return editor.action((ctx) => ctx.get(editorViewCtx));
 }
 
-
 function caretAtEndOfCode(view: EditorView, text: string): void {
     view.state.doc.descendants((node, pos) => {
         if (node.text === text) {

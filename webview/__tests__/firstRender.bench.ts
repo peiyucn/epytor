@@ -27,7 +27,6 @@ if (typeof (window as unknown as Record<string, unknown>).IntersectionObserver =
     serializationMode: "clean",
 };
 
-
 function makeTypicalDoc(chapterCount: number): string {
     const lines: string[] = [];
     for (let i = 0; i < chapterCount; i++) {
@@ -46,7 +45,6 @@ function makeTypicalDoc(chapterCount: number): string {
     }
     return lines.join("\n");
 }
-
 
 function makeCodeDoc(blockCount: number): string {
     const lines: string[] = [];

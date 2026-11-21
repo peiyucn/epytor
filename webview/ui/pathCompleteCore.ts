@@ -31,11 +31,9 @@ export interface PathDropdown<T> {
     handleKeydown(e: KeyboardEvent): void;
 }
 
-
 export function pathLastSegment(path: string): string {
     return path.replace(/\/$/, "").split("/").pop() ?? path;
 }
-
 
 function escapeHtml(text: string): string {
     return text
@@ -54,7 +52,6 @@ export interface PathSuggestionRenderOptions {
     thumbnail?: { className: string; webviewUri: string };
 }
 
-
 export function renderPathSuggestionItem(
     item: PathSuggestionItem,
     opts: PathSuggestionRenderOptions,
@@ -66,7 +63,6 @@ export function renderPathSuggestionItem(
     }
     return `<span class="${opts.iconClass}">${opts.iconHtml}</span><span class="${opts.labelClass}">${label}</span>`;
 }
-
 
 export function retriggerCompletionAfterDirectoryPick(
     dropdown: { close(): void },
@@ -90,7 +86,6 @@ export interface CompletionTeardown {
     readonly disposed: boolean;
     dispose(): void;
 }
-
 
 export function createCompletionTeardown(options: CompletionTeardownOptions): CompletionTeardown {
     let disposed = false;

@@ -2,14 +2,12 @@ import "./pathLink.css";
 import { notifyOpenFile } from "@/messaging";
 import { isModifierActive, onModifierChange } from "@/ui/modifierKeys";
 
-
 const PATH_REGEX =
     /^(@\/[^\s]+|\.{1,2}\/[^\s]+|[a-zA-Z0-9_-][a-zA-Z0-9._-]*\/[^\s]+|[a-zA-Z0-9_-][a-zA-Z0-9._-]*\.[a-zA-Z][a-zA-Z0-9]*(#\d+(-\d+)?)?)$/;
 
 function isPathLike(text: string): boolean {
     return PATH_REGEX.test(text.trim());
 }
-
 
 function isEligibleCode(el: Element): boolean {
     if (el.tagName !== "CODE") return false;
@@ -34,8 +32,6 @@ export function setupPathLink(container: HTMLElement): void {
         activeCode.classList.remove("path-link--active");
         activeCode = null;
     }
-
-
 
     onModifierChange((held) => {
         if (!held) {

@@ -6,7 +6,6 @@ import { IconChevronUp, IconChevronDown, IconX } from "@/ui/icons";
 import { t, kbd } from "@/i18n";
 import { findMatches, MAX_MATCHES } from "@/find/findMatches";
 
-
 declare class Highlight {
     constructor(...ranges: Range[]);
 }
@@ -16,9 +15,7 @@ interface CssHighlights {
 }
 const cssHighlights = (CSS as unknown as { highlights: CssHighlights }).highlights;
 
-
 const SEARCH_DEBOUNCE_MS = 150;
-
 
 const FIND_SCROLL_OFFSET_PX = 60;
 
@@ -239,7 +236,6 @@ export function initFindBar(getEditorEl: () => HTMLElement | null): FindBarContr
         search(input.value);
     });
 
-
     bar.addEventListener("mousedown", (e) => e.stopPropagation());
 
     function open(initialQuery?: string) {
@@ -255,7 +251,6 @@ export function initFindBar(getEditorEl: () => HTMLElement | null): FindBarContr
 
     function close() {
         visible = false;
-
 
         clearTimeout(debounceTimer);
         debounceTimer = 0;

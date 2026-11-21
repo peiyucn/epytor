@@ -18,7 +18,6 @@ export interface HighlightResolution {
     pin: HeadingHighlightPin | null;
 }
 
-
 export function resolveHighlight(
     pin: HeadingHighlightPin | null,
     incoming: number | null,

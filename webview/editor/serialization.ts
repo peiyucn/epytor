@@ -18,7 +18,6 @@ export interface PrepareMarkdownOptions {
     mode: SerializationMode;
 }
 
-
 export function prepareMarkdownForSave(options: PrepareMarkdownOptions): string {
     const { source, serialized, mode } = options;
     const eol = detectLineEnding(source);

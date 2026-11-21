@@ -22,7 +22,6 @@ async function mount(markdown: string): Promise<HTMLElement> {
     return root;
 }
 
-
 function compose(view: EditorView, pinyin: string, hanzi: string, compositionId: number): void {
     const at = Selection.atEnd(view.state.doc).from;
     view.dispatch(
@@ -85,8 +84,6 @@ describe("撤销粒度", () => {
         const view = getEditorView()!;
         compose(view, "nihao", "你好", 1);
         expect(view.state.doc.textContent).toBe("hello你好");
-
-
 
         expect(doUndo(view)).toBe(true);
         expect(view.state.doc.textContent).toBe("hello");

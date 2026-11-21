@@ -1,8 +1,6 @@
 
 
-
 const DRAG_THRESHOLD_PX = 4;
-
 
 const CELL_SELECTION_CLEAR_DELAY_MS = 200;
 
@@ -40,7 +38,6 @@ export function createCellClickState(): CellClickState {
     };
 }
 
-
 export function beginClick(state: CellClickState, point: ClickPoint | null): void {
     if (!point) {
         state.pendingClickPos = null;
@@ -64,7 +61,6 @@ export function markDragged(state: CellClickState, x: number, y: number, originX
     }
 }
 
-
 export function endClick(state: CellClickState): void {
     if (state.wasCrossCell) {
         state.pendingClickPos = null;
@@ -81,7 +77,6 @@ export function endClick(state: CellClickState): void {
         state.clickIsPlain = true;
     });
 }
-
 
 export type CellSelectionDecision =
 
@@ -102,7 +97,6 @@ export function decideCellSelection(
     }
     return { kind: "toCursor" };
 }
-
 
 export function consumeCellClickTarget(state: CellClickState): number | null {
     const pos = state.cellClickTarget;

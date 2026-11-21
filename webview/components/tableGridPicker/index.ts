@@ -4,7 +4,6 @@ import { TABLE_GRID_SIZE, gridIndexToCell, isCellHighlighted } from "@/table/tab
 import { t } from "@/i18n";
 import { openAnchoredOverlay, type AnchoredOverlay } from "@/ui/anchoredOverlay";
 
-
 const CELL_SIZE_PX = 18;
 const CELL_GAP_PX = 2;
 const PANEL_PADDING_X_PX = 16;
@@ -15,7 +14,6 @@ const VIEWPORT_MARGIN_PX = 8;
 const GAP_PX = 6;
 
 let _activePanel: AnchoredOverlay | null = null;
-
 
 export function closeTableGridPicker(): void {
     closeActivePanel();
@@ -89,7 +87,6 @@ export function openTableGridPicker(
         gap: GAP_PX,
         viewportMargin: VIEWPORT_MARGIN_PX,
         viewportRightMargin: VIEWPORT_MARGIN_PX,
-
 
         viewportWidth: () => window.innerWidth,
         size: { width: PANEL_WIDTH_PX, height: PANEL_HEIGHT_PX },

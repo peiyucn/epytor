@@ -57,7 +57,6 @@ export function buildTopBarConfig(builder: TopBarBuilder, onTocToggle?: () => vo
             const tr = v.state.tr;
             const linkType = v.state.schema.marks['link'];
 
-
             if (empty && linkType) {
                 const $from = v.state.doc.resolve(from);
                 if (linkType.isInSet($from.marks())) {
@@ -69,7 +68,6 @@ export function buildTopBarConfig(builder: TopBarBuilder, onTocToggle?: () => vo
                     return;
                 }
             }
-
 
             if (linkType) {
                 while (from > 0 && v.state.doc.rangeHasMark(from - 1, from, linkType)) from--;
@@ -215,7 +213,6 @@ export function buildTopBarConfig(builder: TopBarBuilder, onTocToggle?: () => vo
                 liftListItem(liType)(state, dispatch);
                 return;
             }
-
 
             const items = findListItems(state);
             const lists = findTopLists(state, items);

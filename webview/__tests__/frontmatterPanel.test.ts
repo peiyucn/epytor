@@ -31,13 +31,11 @@ describe("frontmatterPanel 组件", () => {
         const onChangeOld = vi.fn();
         const onChangeNew = vi.fn();
 
-
         const oldHandle = createFrontmatterPanel("---\ntitle: A\n---\n", onChangeOld)!;
         document.body.appendChild(oldHandle.panel);
         const oldInput = oldHandle.panel.querySelector<HTMLInputElement>(".fm-val-input")!;
         oldInput.value = "STALE";
         oldInput.dispatchEvent(new Event("input"));
-
 
         oldHandle.dispose();
         const newHandle = createFrontmatterPanel("---\ntitle: A\n---\n", onChangeNew)!;
@@ -105,7 +103,6 @@ describe("frontmatterPanel 组件", () => {
         newKey.value = "date";
         newVal.value = "2026-09-07";
 
-
         newVal.dispatchEvent(new FocusEvent("blur"));
 
         expect(onChange).toHaveBeenCalledWith("---\ntitle: A\ndate: 2026-09-07\n---\n");
@@ -117,16 +114,13 @@ describe("frontmatterPanel 组件", () => {
         const handle = createFrontmatterPanel(src, onChange)!;
         document.body.appendChild(handle.panel);
 
-
         expect(handle.panel.querySelectorAll("tr.fm-row")).toHaveLength(2);
-
 
         const titleVal = handle.panel.querySelector<HTMLInputElement>(".fm-val-input")!;
         titleVal.value = "Y";
         titleVal.dispatchEvent(new Event("input"));
         vi.advanceTimersByTime(300);
         expect(onChange).toHaveBeenLastCalledWith("---\ntitle: Y\ntags:\n  - a\n  - b\n---\n");
-
 
         const delBtn = handle.panel.querySelector<HTMLButtonElement>(".fm-del-btn")!;
         delBtn.click();

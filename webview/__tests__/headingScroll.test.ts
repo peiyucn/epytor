@@ -6,7 +6,6 @@ import { currentHeadingIndex, type StickyHeadingRect } from "../outline/headingS
 const READING_LINE_Y = 36;
 const HEADING_HEIGHT = 40;
 
-
 function viewportRects(docTops: number[], scrollTop: number): StickyHeadingRect[] {
     return docTops.map((docTop) => ({
         depth: 1,
@@ -33,7 +32,6 @@ describe("跳转落点与「当前章节」判据同基准（回归：点击目�
         const scrollTop = headingScrollTop(docTop, READING_LINE_Y);
         const headingTop = docTop - scrollTop;
 
-
         expect(headingTop).toBeLessThan(READING_LINE_Y);
         expect(READING_LINE_Y - headingTop).toBe(HEADING_JUMP_OVERLAP_PX);
     });
@@ -55,7 +53,6 @@ describe("跳转落点与「当前章节」判据同基准（回归：点击目�
         const docTops = [60, 400, 900];
         const clicked = 1;
         const legacyScrollTop = docTops[clicked] - READING_LINE_Y - 8;
-
 
         expect(docTops[clicked] - legacyScrollTop).toBeGreaterThan(READING_LINE_Y);
         expect(currentHeadingIndex(viewportRects(docTops, legacyScrollTop), READING_LINE_Y)).toBe(clicked - 1);

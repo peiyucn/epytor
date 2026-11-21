@@ -61,7 +61,6 @@ describe("行内代码行尾方向键（vendor 虚拟光标）", () => {
 
         pressKey(view, "ArrowRight");
 
-
         expect(view.state.selection.from).toBe(posBefore);
 
         view.dispatch(view.state.tr.insertText("x"));
@@ -93,7 +92,6 @@ describe("行内代码行尾方向键（vendor 虚拟光标）", () => {
         view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 4)));
 
         pressKey(view, "ArrowRight");
-
 
         expect(view.state.selection.from).toBe(5);
     });

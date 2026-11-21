@@ -5,9 +5,7 @@ import { getUserInteractionEpoch } from "../shell/userInteraction";
 import { computeAllHeadingSignature } from "../outline/headingFold";
 import { headingFoldPluginKey } from "../editor/plugins/headingFoldPlugin";
 
-
 const SCROLL_RETRY_DELAYS_MS = [0, 250, 500, 750, 1000, 1250, 1500, 1750, 2000];
-
 
 export class PendingScroll {
     private _line: number | null = null;
@@ -19,7 +17,6 @@ export class PendingScroll {
     set(line: number): void {
         this._line = line;
     }
-
 
     clearIf(line: number): void {
         if (this._line === line) { this._line = null; }

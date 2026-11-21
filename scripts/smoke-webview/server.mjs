@@ -1,6 +1,5 @@
 
 
-
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
@@ -9,7 +8,6 @@ const PORT = Number(process.env.SMOKE_PORT ?? 0);
 const REPO_ROOT = path.resolve(import.meta.dirname, "../..");
 const DIST_ROOT = path.resolve(REPO_ROOT, "dist");
 const HARNESS = path.join(import.meta.dirname, "harness.html");
-
 
 function resolveDistPath(urlPath) {
     const resolved = path.resolve(DIST_ROOT, urlPath.slice("/dist/".length));

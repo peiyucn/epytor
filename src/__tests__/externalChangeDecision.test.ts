@@ -20,8 +20,6 @@ describe("decideExternalChange 外部写盘回退决策", () => {
 
     it("回归（焦点丢失）：自己保存后迟到的 watcher 事件 应该 忽略（不触发 revert 重建）", () => {
 
-
-
         expect(decideExternalChange(ctx({
             latest: "C2",
             lastSaved: "C2",
@@ -60,8 +58,6 @@ describe("decideExternalChange 外部写盘回退决策", () => {
 
     it("回归：原文含 ~（序列化会转义成 \\~）且用户没编辑 应该 仍然采纳外部写入", () => {
 
-
-
         expect(decideExternalChange(ctx({
             latest: "H\\~2\\~O",
             lastSaved: "H\\~2\\~O",
@@ -96,8 +92,6 @@ describe("decideExternalChange 外部写盘回退决策", () => {
 
     describe("兜底内容不足以下结论（回归：编辑器自己跳回编辑前的状态）", () => {
 
-
-
         const fallbackCase = ctx({
             latest: "C1",
             lastSaved: "C1",
@@ -117,7 +111,6 @@ describe("decideExternalChange 外部写盘回退决策", () => {
 
         it("非权威内容即使看起来有未保存编辑 也应该 defer（不能把兜底文本写进文档模型）", () => {
 
-
             expect(decideExternalChange({ ...fallbackCase, latest: "C1 + 新输入" }).action)
                 .toBe("defer");
         });
@@ -130,7 +123,6 @@ describe("decideExternalChange 外部写盘回退决策", () => {
 });
 
 describe("shouldSkipSave 空保存守卫", () => {
-
 
     it("内容等于上次写入、且文档里已是别的文本 应该 跳过（磁盘被外部改过）", () => {
         expect(shouldSkipSave({ content: "C1", lastSaved: "C1", diskText: "C2" })).toBe(true);

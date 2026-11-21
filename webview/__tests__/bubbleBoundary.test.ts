@@ -8,14 +8,12 @@ import {
     placeBubble,
 } from "../editor/bubbleBoundary";
 
-
 const VIEW = {
     contentLeft: 200,
     contentTop: 36,
     viewportWidth: 1200,
     viewportHeight: 800,
 };
-
 
 const FLOAT = { width: 260, height: 44 };
 
@@ -46,7 +44,6 @@ describe("placeBubble：气泡必须落在编辑区内", () => {
     it("公式贴近视口底部、下方放不下时 应该 翻到上方（而不是跑到页面顶部压住工具栏）", () => {
 
         const pos = placeBubble({ x: 400, y: 780, width: 40, height: 18 }, FLOAT, VIEW);
-
 
         expect(pos.y).toBeLessThan(780);
         expect(pos.y).toBe(780 - FLOAT.height - BUBBLE_GAP);
@@ -93,7 +90,6 @@ describe("placeBubble：气泡必须落在编辑区内", () => {
     });
 });
 
-
 describe("接线（latexFeature）", () => {
     const latexSrc = readFileSync(
         path.resolve(process.cwd(), "webview/vendor/latexFeature.ts"),
@@ -133,10 +129,8 @@ describe("接线（latexFeature）", () => {
 
     it("气泡应该 留在 .milkdown 内（继承 --crepe-* 变量；fixed 不需要挪到 body）", () => {
 
-
         expect(latexSrc).not.toContain("document.body.appendChild(content)");
         expect(latexSrc).not.toMatch(/root:\s*document\.body/);
-
 
         expect(latexSrc).toMatch(/strategy:\s*"fixed"/);
     });
@@ -172,14 +166,10 @@ describe("样式（latex.css）", () => {
 
     it("选择器 应该 带 .milkdown 前缀（气泡留在 .milkdown 内以继承 --crepe-* 变量）", () => {
 
-
         expect(latexCss).toMatch(/\.milkdown \.milkdown-latex-inline-edit\s*\{/);
     });
 
 });
-
-
-
 
 describe("外观必须与链接/文件引用弹层完全一致（镜像 style.css 的覆盖值）", () => {
     const latexCssNoComments = latexCss.replace(/\/\*[\s\S]*?\*\//g, "");

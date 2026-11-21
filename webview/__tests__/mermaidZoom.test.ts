@@ -41,10 +41,8 @@ describe("enhanceMermaidPreview 倍率保持", () => {
         expect(zoomIn).not.toBeNull();
         zoomIn!.dispatchEvent(new MouseEvent("click"));
 
-
         expect(container.dataset["epytorMermaidZoom"]).toBe("1");
         expect(svg.style.width).toBe("100%");
-
 
         container.innerHTML = "";
         const svg2 = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -64,10 +62,8 @@ describe("enhanceMermaidPreview 倍率保持", () => {
 
         enhanceMermaidPreview(container, svg);
 
-
         expect(svg.style.width).toBe("400px");
         expect(svg.style.maxWidth).toBe("none");
-
 
         const buttons = container.querySelectorAll<HTMLButtonElement>(".epytor-mermaid-zoom-btn");
         buttons[0].dispatchEvent(new MouseEvent("click"));

@@ -3,9 +3,7 @@ import * as path from "path";
 import * as https from "https";
 import * as http from "http";
 
-
 import * as vscode from "vscode";
-
 
 vi.mock("https", () => ({ request: vi.fn() }));
 vi.mock("http", () => ({ request: vi.fn() }));
@@ -26,9 +24,6 @@ import {
     saveImageLocally,
     uploadImageToServer,
 } from "../../src/utils/imageService";
-
-
-
 
 describe("mimeToExt", () => {
     it.each([
@@ -52,9 +47,6 @@ describe("mimeToExt", () => {
         expect(mimeToExt("")).toBe("png");
     });
 });
-
-
-
 
 describe("generateFilename", () => {
     it("返回的文件名以正确扩展名结尾", () => {
@@ -99,13 +91,9 @@ describe("generateFilename", () => {
         const n1 = generateFilename("test", "image/png");
         const n2 = generateFilename("test", "image/png");
 
-
         expect(n1).not.toBe(n2);
     });
 });
-
-
-
 
 describe("buildRelPath", () => {
     it("同目录下文件返回 ./filename", () => {
@@ -137,9 +125,6 @@ describe("buildRelPath", () => {
     });
 });
 
-
-
-
 describe("getByPath", () => {
     it("顶层属性正确提取", () => {
         expect(getByPath({ url: "https://example.com" }, "url")).toBe("https://example.com");
@@ -163,9 +148,6 @@ describe("getByPath", () => {
         expect(getByPath({}, "x")).toBeUndefined();
     });
 });
-
-
-
 
 describe("saveImageLocally — MD5 去重", () => {
     const docUri = vscode.Uri.file("/project/docs/note.md");
@@ -195,7 +177,6 @@ describe("saveImageLocally — MD5 去重", () => {
     });
 
     it("工作区级 imageLocalPath 越界时 应该 标 downgraded（上层据此提示用户）", async () => {
-
 
         const cfg = {
             get: vi.fn((key: string, def?: unknown) => (key === "imageLocalPath" ? "../../outside" : def)),
@@ -249,7 +230,6 @@ describe("saveImageLocally — MD5 去重", () => {
         const cfg = makeCfg();
         await saveImageLocally(docUri, cfg as never, imageData, "image/png", "photo");
 
-
         expect(mockFs.readFile).not.toHaveBeenCalled();
         expect(mockFs.writeFile).toHaveBeenCalledOnce();
     });
@@ -276,9 +256,6 @@ describe("saveImageLocally — MD5 去重", () => {
         expect(mockFs.writeFile).toHaveBeenCalledOnce();
     });
 });
-
-
-
 
 describe("saveImageLocally — 目录选择", () => {
     const docUri = vscode.Uri.file("/project/docs/note.md");
@@ -315,9 +292,6 @@ describe("saveImageLocally — 目录选择", () => {
         expect(createdUri.fsPath).toContain("images");
     });
 });
-
-
-
 
 describe("saveImageLocally — 额外路径分支", () => {
     const imageData = new Uint8Array([1, 2, 3]);
@@ -416,10 +390,6 @@ describe("saveImageLocally — 额外路径分支", () => {
     });
 });
 
-
-
-
-
 function createSuccessMockTransport(responseBody: string) {
     const dataHandlers: Array<(chunk: Buffer) => void> = [];
     const endHandlers: Array<() => void> = [];
@@ -461,7 +431,6 @@ function createErrorMockTransport(error: Error) {
 
 describe("uploadImageToServer", () => {
     const imageData = new Uint8Array([1, 2, 3, 4]);
-
 
     function makeSettings(overrides: Partial<ImageServerSettings> = {}): ImageServerSettings {
         return { url: "", fieldName: "file", extraParams: {}, responsePath: "url", ...overrides };

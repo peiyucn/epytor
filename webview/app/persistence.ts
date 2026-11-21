@@ -9,7 +9,6 @@ const CONTENT_PUSH_IDLE_MS = 400;
 const SCROLL_SAVE_DEBOUNCE_MS = 200;
 const SELECTION_SAVE_DEBOUNCE_MS = 300;
 
-
 export interface PersistenceDeps {
     getView(): EditorView | null;
     getMarkdownForSave(): string;
@@ -45,7 +44,6 @@ export function initSessionPersistence(deps: PersistenceDeps): SessionPersistenc
         deps.notifyUnsavedContent(deps.getMarkdownForSave());
     }
 
-
     function scheduleContentPush(): void {
         if (pushTimer !== null) { clearTimeout(pushTimer); }
         pushTimer = setTimeout(() => {
@@ -66,8 +64,6 @@ export function initSessionPersistence(deps: PersistenceDeps): SessionPersistenc
         deps.notifyViewportLine(visibleSourceLine(view, lineMap, lineEndMap));
     }
 
-
-
     function saveSelectionNow(): void {
         const view = deps.getView();
         if (!view) { return; }
@@ -82,9 +78,6 @@ export function initSessionPersistence(deps: PersistenceDeps): SessionPersistenc
         if (!cur) { return null; }
         return parseSavedSelection((cur as { selection?: unknown }).selection);
     }
-
-
-
 
     window.addEventListener("blur", flushUnsavedContent);
     window.addEventListener("pagehide", flushUnsavedContent);

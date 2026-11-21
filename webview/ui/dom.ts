@@ -1,6 +1,5 @@
 import { applyTooltip } from '@/ui/tooltip';
 
-
 export function createButton(options: {
     className: string;
     icon?: string;
@@ -33,13 +32,11 @@ export function createButton(options: {
     return btn;
 }
 
-
 export function createSeparator(className: string, tag: 'div' | 'span' = 'div'): HTMLElement {
     const el = document.createElement(tag);
     el.className = className;
     return el;
 }
-
 
 export function setupInputKeyboard(
     input: HTMLInputElement,

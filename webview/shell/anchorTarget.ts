@@ -8,7 +8,6 @@ function safeDecodeURIComponent(value: string): string | null {
     }
 }
 
-
 export function anchorIdCandidates(fragment: string): string[] {
     if (fragment.length === 0) { return []; }
     const decoded = safeDecodeURIComponent(fragment);

@@ -5,14 +5,11 @@ export interface FrontmatterRow {
     value: string;
 }
 
-
 export type FrontmatterEntry =
     | { type: "kv"; key: string; value: string }
     | { type: "raw"; text: string };
 
-
 const KV_LINE_RE = /^([^\s\-*#][^:]*):(.*)$/;
-
 
 export function parseFrontmatter(raw: string): FrontmatterEntry[] {
     const lines = raw.split("\n");
@@ -29,7 +26,6 @@ export function parseFrontmatter(raw: string): FrontmatterEntry[] {
     }
     return entries;
 }
-
 
 export function serializeFrontmatter(entries: FrontmatterEntry[]): string {
     const lines: string[] = [];

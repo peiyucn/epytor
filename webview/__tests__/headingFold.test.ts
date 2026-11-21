@@ -106,7 +106,6 @@ describe("computeAllHeadingFoldRanges（单遍 O(n)，与 findHeadingFoldRange �
         const headings = headingPositions(view);
         const all = computeAllHeadingFoldRanges(doc);
 
-
         for (const { pos, level } of headings) {
             expect(all.get(pos)).toEqual(findHeadingFoldRange(doc, pos, level));
         }

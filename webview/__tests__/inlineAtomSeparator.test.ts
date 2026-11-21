@@ -48,8 +48,6 @@ describe("行内原子节点分隔符（prosemirror-view 1.42.6）", () => {
     it("块首的行内公式 应该 被分隔符包住（公式前一个；行尾 trailingBreak 前还有一个）", async () => {
         const { root } = await makeEditor("$x$\n");
 
-
-
         const separators = root.querySelectorAll(SEPARATOR_SELECTOR);
         expect(separators.length).toBeGreaterThanOrEqual(1);
 
@@ -68,10 +66,8 @@ describe("行内原子节点分隔符（prosemirror-view 1.42.6）", () => {
     it("表格单元格以行内公式开头 应该 分隔符落在 <p> 内部（不破坏 td 的 :first-child 贴边规则）", async () => {
         const { root } = await makeEditor("| 列A | 列B |\n| --- | --- |\n| $x$ 说明 | 普通 |\n");
 
-
         const cell = root.querySelector("td")!;
         const paragraph = cell.firstElementChild!;
-
 
         expect(paragraph.tagName).toBe("P");
         expect(paragraph.firstElementChild!.matches(SEPARATOR_SELECTOR)).toBe(true);

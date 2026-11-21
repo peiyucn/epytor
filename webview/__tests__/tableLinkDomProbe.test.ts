@@ -71,10 +71,6 @@ describe("表格内自动链接 DOM 形态诊断", () => {
         expect(td!.closest(".milkdown")).not.toBeNull();
         expect(td!.closest(".ProseMirror")).not.toBeNull();
 
-
-
-
-
         expect(document.querySelector(".milkdown-table-block")).toBeNull();
     });
 });

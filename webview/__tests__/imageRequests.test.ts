@@ -12,14 +12,12 @@ import { mockVscodeApi } from "./setup";
 
 const postMessage = mockVscodeApi.postMessage;
 
-
 function fakeEditor(view: unknown): Editor {
     return {
         action: (fn: (ctx: { get(key: unknown): unknown }) => unknown) =>
             fn({ get: (key: unknown) => (key === editorViewCtx ? view : undefined) }),
     } as unknown as Editor;
 }
-
 
 function insertionView() {
     const node = { kind: "image-node" };

@@ -46,7 +46,6 @@ describe("嵌套标题 schema 行为诊断", () => {
             return true;
         });
 
-
         expect(nested.length).toBeGreaterThan(0);
 
         const topLevel = new Set<number>();

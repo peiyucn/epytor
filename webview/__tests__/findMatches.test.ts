@@ -66,7 +66,6 @@ describe("findMatches：正则模式", () => {
 
     it("零宽正则（.*）应该 快速返回且不死循环", () => {
 
-
         const text = "a\n".repeat(500);
         findMatches(text, ".*", { caseSensitive: false, useRegex: true });
         let best = Number.POSITIVE_INFINITY;

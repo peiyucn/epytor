@@ -9,11 +9,9 @@ export interface StickyHeadingRect {
     sectionBottom: number;
 }
 
-
 export const STICKY_ROW_HEIGHT_PX = 22;
 
 export const STICKY_MAX_ROWS = 3;
-
 
 export function computeStickyRows(
     headings: StickyHeadingRect[],
@@ -35,7 +33,6 @@ export function computeStickyRows(
     return rows;
 }
 
-
 export function currentHeadingIndex(
     headings: StickyHeadingRect[],
     readingLineY: number,
@@ -46,7 +43,6 @@ export function currentHeadingIndex(
     }
     return hit;
 }
-
 
 export function effectiveReadingLineY(
     topbarBottom: number,

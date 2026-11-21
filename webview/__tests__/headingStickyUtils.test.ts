@@ -4,7 +4,6 @@ import { computeStickyRows, STICKY_ROW_HEIGHT_PX } from "../outline/headingStick
 const TOP = 36;
 const ROW = STICKY_ROW_HEIGHT_PX;
 
-
 const h1 = (top: number, sectionBottom = 10000) => ({ depth: 1, top, sectionBottom });
 
 const h2 = (top: number, sectionBottom = 10000) => ({ depth: 2, top, sectionBottom });
@@ -23,7 +22,6 @@ describe("computeStickyRows", () => {
     });
 
     it("标题部分被顶栏遮挡 应该 已经吸顶（用户口径：碰到了就进入固定状态）", () => {
-
 
         expect(computeStickyRows([h1(-10, 200)], TOP)).toEqual([0]);
     });

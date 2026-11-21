@@ -40,15 +40,11 @@ export const cellClickFixPlugin = $prose(() => {
     const cell = createCellClickState();
     let capturedView: EditorView | null = null;
 
-
-
     let pendingAtomClickPos: number | null = null;
 
     return new Plugin({
         view(editorView) {
             capturedView = editorView;
-
-
 
             const onCaptureMouseDown = (event: MouseEvent) => {
                 if (event.button !== 0 || event.detail !== 1 ||
@@ -59,8 +55,6 @@ export const cellClickFixPlugin = $prose(() => {
                 const atomPos = atomPosAtEvent(editorView, event);
                 pendingAtomClickPos = atomPos;
                 if (atomPos === null) return;
-
-
 
                 const pinSelectionToAtom = () => {
                     const node = editorView.state.doc.nodeAt(atomPos);
@@ -73,7 +67,7 @@ export const cellClickFixPlugin = $prose(() => {
                                 NodeSelection.create(editorView.state.doc, atomPos),
                             ),
                         );
-                    } catch {  }
+                    } catch {}
                 };
 
                 pinSelectionToAtom();
@@ -126,9 +120,7 @@ export const cellClickFixPlugin = $prose(() => {
         },
         filterTransaction(tr, state) {
 
-
             if (pendingAtomClickPos !== null) return true;
-
 
             if (tr.selection instanceof NodeSelection) {
 
@@ -151,12 +143,12 @@ export const cellClickFixPlugin = $prose(() => {
                                 try {
                                     const p = Math.min(clickPos ?? tr.selection.from, v.state.doc.content.size);
                                     v.dispatch(v.state.tr.setSelection(TextSelection.near(v.state.doc.resolve(p))));
-                                } catch {  }
+                                } catch {}
                             });
                             return false;
                         }
                     }
-                } catch {  }
+                } catch {}
             }
             if (!cell.lastGoodCellSelection) return true;
             if (state.selection instanceof CellSelection && !(tr.selection instanceof CellSelection)) {
@@ -166,10 +158,8 @@ export const cellClickFixPlugin = $prose(() => {
         },
         appendTransaction(_trs, _oldState, newState) {
 
-
             if (pendingAtomClickPos !== null) {
                 const atomPos = pendingAtomClickPos;
-
 
                 const node = newState.doc.nodeAt(atomPos);
                 if (node?.isAtom) {
@@ -209,7 +199,7 @@ export const cellClickFixPlugin = $prose(() => {
                         const headP = Math.min(toCoords.pos, newState.doc.content.size);
                         try {
                             if (cellStartAt(newState.doc, clickPos) !== cellStartAt(newState.doc, headP)) { return null; }
-                        } catch {  }
+                        } catch {}
                         return newState.tr.setSelection(
                             TextSelection.create(newState.doc, headP, Math.min(clickPos, newState.doc.content.size)),
                         );

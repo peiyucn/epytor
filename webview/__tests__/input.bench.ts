@@ -45,7 +45,6 @@ describe("1 万行输入管道基准（探针）", () => {
         const editor = await makeEditor(lines.join("\n"));
         const view = getView(editor);
 
-
         const pos = Math.floor(view.state.doc.content.size / 2);
         let total = 0;
         let maxMs = 0;

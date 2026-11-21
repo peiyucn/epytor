@@ -13,7 +13,6 @@ export interface ImageServerSettings {
     responsePath: string;
 }
 
-
 interface LegacyImageServerSettings {
     url?: unknown;
     fieldName?: unknown;
@@ -27,7 +26,6 @@ type ImageServerIssueKind =
     | "extraParamsInvalidJson"
     | "extraParamsUnsupportedValue";
 
-
 export interface ImageServerIssue {
     kind: ImageServerIssueKind;
 
@@ -39,12 +37,10 @@ interface ImageServerResolution {
     issues: ImageServerIssue[];
 }
 
-
 interface LocalizableIssueMessage {
     message: string;
     args: string[];
 }
-
 
 export function describeImageServerIssue(issue: ImageServerIssue): LocalizableIssueMessage {
     switch (issue.kind) {
@@ -75,11 +71,9 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-
 export function sanitizeMultipartText(value: string): string {
     return value.replace(/[\r\n"]/g, "").trim();
 }
-
 
 function firstValid<T>(
     candidates: unknown[],
@@ -104,7 +98,6 @@ function normalizeFieldName(value: unknown): string | undefined {
     const trimmed = value.trim();
     return IMAGE_SERVER_FIELD_NAME_PATTERN.test(trimmed) ? trimmed : undefined;
 }
-
 
 function normalizeParamValue(value: unknown): string | undefined {
     if (typeof value === "string") { return sanitizeMultipartText(value); }
@@ -139,7 +132,6 @@ function normalizeExtraParams(input: unknown): {
     };
 }
 
-
 function parseLegacyExtraParams(raw: unknown): {
     params: Record<string, string>;
     issues: ImageServerIssue[];
@@ -154,7 +146,6 @@ function parseLegacyExtraParams(raw: unknown): {
     }
     return normalizeExtraParams(parsed);
 }
-
 
 export function resolveImageServerConfig(
     server: unknown,
@@ -194,14 +185,12 @@ export function resolveImageServerConfig(
     return { settings: { url, fieldName, extraParams: extra.params, responsePath }, issues };
 }
 
-
 interface ServerStorageOrigin {
 
     storageFromWorkspace: boolean;
 
     urlFromWorkspace: boolean;
 }
-
 
 export function readServerStorageOrigin(
     cfg: Pick<vscode.WorkspaceConfiguration, "inspect">,
@@ -231,11 +220,9 @@ export function readServerStorageOrigin(
     return { storageFromWorkspace, urlFromWorkspace };
 }
 
-
 export function shouldDowngradeServerStorage(origin: ServerStorageOrigin): boolean {
     return origin.storageFromWorkspace || origin.urlFromWorkspace;
 }
-
 
 export function readImageServerConfig(
     cfg: Pick<vscode.WorkspaceConfiguration, "get">,

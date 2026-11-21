@@ -3,7 +3,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { EditorView } from "@milkdown/kit/prose/view";
 import { createScrollTargets, PendingScroll } from "../app/scrollTargets";
 
-
 function fakeView(height: { value: number }): EditorView {
     const block = document.createElement("div");
     block.getBoundingClientRect = () => ({

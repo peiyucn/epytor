@@ -12,7 +12,6 @@ interface Rect {
     height: number;
 }
 
-
 function stubRect(el: Element, rect: Rect): void {
     vi.spyOn(el, "getBoundingClientRect").mockReturnValue({
         left: rect.left,
@@ -123,7 +122,6 @@ describe("anchoredOverlay 定位", () => {
         const el = makeEl();
         stubRect(el, { left: 0, top: 0, width: 120, height: 80 });
         const overlay = openAnchoredOverlay({ el, anchor });
-
 
         expect(el.style.top).toBe("614px");
         overlay.dispose();
@@ -238,7 +236,6 @@ describe("anchoredOverlay 关闭契约", () => {
         overlay.dispose();
         expect(() => overlay.dispose()).not.toThrow();
         expect(document.body.contains(el)).toBe(false);
-
 
         expect(() => pressEscape()).not.toThrow();
         expect(() => window.dispatchEvent(new Event("scroll"))).not.toThrow();

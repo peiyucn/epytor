@@ -43,7 +43,6 @@ describe("anchorIdCandidates（锚点片段 → 候选 id）", () => {
 
     it("非法转义 不应该 抛错，退回原文候选", () => {
 
-
         expect(() => anchorIdCandidates("%E4")).not.toThrow();
         expect(anchorIdCandidates("%E4")).toEqual(["%E4"]);
         expect(anchorIdCandidates("100%")).toEqual(["100%"]);
@@ -54,7 +53,6 @@ describe("anchorIdCandidates（锚点片段 → 候选 id）", () => {
     });
 
     it("不做 slug 归一化：GitHub 风格 slug 与编辑器实际 id 不一致时不硬猜", () => {
-
 
         expect(anchorIdCandidates("hello-world")).toEqual(["hello-world"]);
     });

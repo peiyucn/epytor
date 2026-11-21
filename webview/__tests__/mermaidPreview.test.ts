@@ -30,7 +30,6 @@ function fakeMermaid(): { module: FakeMermaidModule; load: () => Promise<FakeMer
     };
 }
 
-
 function mountApply(): { apply: (value: null | string | HTMLElement) => void; host: HTMLElement } {
     const host = document.createElement("div");
     document.body.appendChild(host);
@@ -61,7 +60,6 @@ describe("createMermaidPreview", () => {
         expect(loadCount()).toBe(0);
         const result = preview.renderPreview("graph TD; A-->B", apply);
 
-
         expect(result).toBeUndefined();
         const block = host.querySelector<HTMLElement>("[data-mermaid-key]");
         expect(block).not.toBeNull();
@@ -86,7 +84,6 @@ describe("createMermaidPreview", () => {
         preview.renderPreview("graph TD; B-->B1", second.apply);
         await flushAsync();
         expect(module.render).toHaveBeenCalledTimes(2);
-
 
         first.host.remove();
         const renderCallsBefore = module.render.mock.calls.length;

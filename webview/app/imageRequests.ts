@@ -15,7 +15,6 @@ const RENAME_IMAGE_TIMEOUT_MS = 15000;
 const UPLOAD_IMAGE_TIMEOUT_MS = 30000;
 const GET_PROJECT_IMAGES_TIMEOUT_MS = 10000;
 
-
 export interface ImageRequestDeps {
     getEditor(): Editor | null;
 }
@@ -90,7 +89,6 @@ export function createImageRequestController(deps: ImageRequestDeps): ImageReque
         return promise;
     }
 
-
     function handleImageRenamed(
         msg: Extract<ToWebviewMessage, { type: "imageRenamed" }>,
     ): void {
@@ -153,7 +151,6 @@ export function createImageRequestController(deps: ImageRequestDeps): ImageReque
     };
 }
 
-
 export function initImagePickerInsertion(controller: ImageRequestController): void {
     document.addEventListener("epytor:insertImage", () => {
         showImagePicker(
@@ -171,7 +168,6 @@ export function initImagePickerInsertion(controller: ImageRequestController): vo
         );
     });
 }
-
 
 export function initImageDropPaste(
     container: HTMLElement,

@@ -1,7 +1,6 @@
 
 import { describe, expect, it } from "vitest";
 
-
 if (typeof window.matchMedia === "undefined") {
     window.matchMedia = (() => ({
         matches: false, media: "", onchange: null,
@@ -22,16 +21,12 @@ for (const name of ["ResizeObserver", "IntersectionObserver"]) {
     translations: {}, isMac: false, serializationMode: "clean",
 };
 
-
-
-
 if (typeof document.elementFromPoint !== "function") {
     Object.defineProperty(document, "elementFromPoint", {
         configurable: true,
         value: (() => null) as unknown as typeof document.elementFromPoint,
     });
 }
-
 
 function clickMath(fixture: MathEditorFixture): void {
     fixture.mathEl.dispatchEvent(new MouseEvent("mousedown", {
@@ -45,7 +40,6 @@ function clickMath(fixture: MathEditorFixture): void {
 }
 
 const TABLE_MD = "| 列A | 列B |\n| --- | --- |\n| $x$ 说明 | 普通 |\n";
-
 
 async function flushFrames(count = 2): Promise<void> {
     for (let i = 0; i < count; i++) {
@@ -137,11 +131,9 @@ describe("表格内公式点击（document 捕获阶段修正目标）", () => {
 
             clickMath(fixture);
 
-
             expect(fixture.view.state.selection).toBeInstanceOf(NodeSelection);
             expect((fixture.view.state.selection as InstanceType<typeof NodeSelection>).from)
                 .toBe(fixture.mathPos);
-
 
             await flushFrames(3);
             expect(fixture.view.state.selection).toBeInstanceOf(NodeSelection);
@@ -159,8 +151,6 @@ describe("表格内公式点击（document 捕获阶段修正目标）", () => {
             const { NodeSelection } = await import("@milkdown/kit/prose/state");
             const { view } = fixture;
 
-
-
             const overrideSelection = (): void => {
                 view.dispatch(
                     view.state.tr.setSelection(
@@ -171,8 +161,6 @@ describe("表格内公式点击（document 捕获阶段修正目标）", () => {
             document.addEventListener("mousedown", overrideSelection, { once: true });
 
             clickMath(fixture);
-
-
 
             expect(view.state.selection).toBeInstanceOf(NodeSelection);
             expect((view.state.selection as InstanceType<typeof NodeSelection>).from)

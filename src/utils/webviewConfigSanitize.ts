@@ -8,7 +8,6 @@ export const MIN_EDITOR_MAX_WIDTH = 400;
 
 const MAX_CSS_NUMBER = 10_000;
 
-
 export function sanitizeCssNumber(
     value: unknown,
     fallback: number,
@@ -20,7 +19,6 @@ export function sanitizeCssNumber(
     }
     return Math.round(value);
 }
-
 
 export function sanitizeSerializationMode(value: unknown): "clean" | "compatible" {
     return value === "compatible" ? "compatible" : "clean";

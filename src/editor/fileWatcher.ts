@@ -2,9 +2,7 @@
 import * as fs from "fs";
 import * as path from "path";
 
-
 const FS_WATCH_DEBOUNCE_MS = 200;
-
 
 export function watchExternalWrites(documentFsPath: string, onExternalWrite: () => void): () => void {
     let debounceTimer: ReturnType<typeof setTimeout> | undefined;
@@ -21,11 +19,9 @@ export function watchExternalWrites(documentFsPath: string, onExternalWrite: () 
         });
     } catch (error) {
 
-
         console.error("[epytor] file watcher unavailable:", error);
         return () => {  };
     }
-
 
     watcher.on("error", (error) => {
         console.warn("[epytor] file watcher error:", error);

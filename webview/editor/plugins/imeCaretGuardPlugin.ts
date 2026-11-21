@@ -5,7 +5,6 @@ import { ReplaceStep } from "@milkdown/kit/prose/transform";
 
 const FULL_WIDTH_COLON = "：";
 
-
 function colonInsertionStep(tr: Transaction): ReplaceStep | null {
     for (const step of tr.steps) {
         if (!(step instanceof ReplaceStep) || step.slice.size !== 1) { continue; }
@@ -47,10 +46,8 @@ export const imeCaretGuardPlugin = $prose(() => {
                                     TextSelection.create(view.state.doc, view.state.selection.from - 1),
                                 ),
                             );
-                        } catch {  }
+                        } catch {}
                     };
-
-
 
                     setTimeout(() => {
                         fix();

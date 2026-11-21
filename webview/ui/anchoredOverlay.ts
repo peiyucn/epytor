@@ -1,6 +1,5 @@
 
 
-
 const DEFAULT_GAP_PX = 6;
 
 const DEFAULT_VIEWPORT_MARGIN_PX = 8;
@@ -65,7 +64,6 @@ export function openAnchoredOverlay(options: AnchoredOverlayOptions): AnchoredOv
         const height = size?.height ?? el.getBoundingClientRect().height;
 
         let left = align === "right" ? anchorRect.right - width : anchorRect.left;
-
 
         left = Math.min(left, measureViewportWidth() - width - viewportRightMargin);
         left = Math.max(left, viewportMargin);

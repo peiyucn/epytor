@@ -5,7 +5,6 @@ import { editorViewCtx } from "@milkdown/kit/core";
 import type { EditorView } from "@milkdown/kit/prose/view";
 import { createEditorSession, SavedSnapshot } from "../editor/editorSession";
 
-
 function fakeEditorWithView(view: EditorView): Editor {
     return {
         action: (fn: (ctx: { get(key: unknown): unknown }) => unknown) =>

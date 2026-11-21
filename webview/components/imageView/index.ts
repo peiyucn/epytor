@@ -26,10 +26,7 @@ const IMAGE_RETRY_MAX_DELAY_MS = 2000;
 const MIN_IMAGE_RESIZE_HEIGHT = 40;
 const MAX_IMAGE_RESIZE_RATIO = 0.8;
 
-
-
 const _uriToRel = new Map<string, string>();
-
 
 export function setImageUriMap(map: Record<string, string>): void {
     _uriToRel.clear();
@@ -38,12 +35,10 @@ export function setImageUriMap(map: Record<string, string>): void {
     }
 }
 
-
 export function remapImageUri(oldWebviewUri: string, newWebviewUri: string, newRelPath: string): void {
     _uriToRel.delete(oldWebviewUri);
     _uriToRel.set(newWebviewUri, newRelPath);
 }
-
 
 function toDisplayPath(src: string): string {
     return _uriToRel.get(src) ?? src;
@@ -51,9 +46,7 @@ function toDisplayPath(src: string): string {
 
 type ViewMutationRecord = MutationRecord | { type: "selection"; target: Node };
 
-
 const imageLightboxHost = createLightboxHost();
-
 
 export function showGlobalLightbox(src: string, alt: string): Lightbox | null {
     return imageLightboxHost.open({
@@ -76,7 +69,6 @@ export function showGlobalLightbox(src: string, alt: string): Lightbox | null {
     });
 }
 
-
 function closeLightboxShowing(src: string): void {
     const lightbox = imageLightboxHost.active();
     if (!lightbox) {
@@ -87,9 +79,6 @@ function closeLightboxShowing(src: string): void {
         lightbox.close();
     }
 }
-
-
-
 
 function isolateInput(input: HTMLInputElement): void {
     const stopOnly = (e: Event) => e.stopPropagation();
@@ -128,8 +117,6 @@ interface ToolbarInlineEditOptions {
         cancel: () => void,
     ) => (() => void) | void;
 }
-
-
 
 export function startToolbarInlineEdit(
     toolbar: HTMLElement,
@@ -223,7 +210,6 @@ export function createImageView(
     const wrapper = document.createElement("div");
     wrapper.className = "image-wrapper";
 
-
     const RATIO_RE = /\s*ratio:([\d.]+)\s*$/;
     function parseRatio(title: string): { clean: string; ratio: number } {
         const m = title.match(RATIO_RE);
@@ -294,7 +280,6 @@ export function createImageView(
         applyRatio();
     });
 
-
     loadingPlaceholder.style.display = "flex";
 
     const captionEl = document.createElement("div");
@@ -348,7 +333,6 @@ export function createImageView(
         showGlobalLightbox(img.src, img.alt);
     });
 
-
     const captionBtn = createButton({
         className: "img-tb-btn",
         tabIndex: -1,
@@ -358,7 +342,6 @@ export function createImageView(
         onClick: () => startCaptionEdit(),
     });
     captionBtn.style.fontWeight = "600";
-
 
     const renameBtn = makeBtn(IconPencil, t("Edit Image Path"));
     renameBtn.addEventListener("mousedown", (e) => {
@@ -379,7 +362,6 @@ export function createImageView(
         view.dispatch(view.state.tr.delete(pos, pos + currentNode.nodeSize));
         view.focus();
     });
-
 
     const infoSpan = document.createElement("span");
     infoSpan.className = "img-tb-info";
@@ -402,7 +384,6 @@ export function createImageView(
             infoInput.title = name;
         }
     }
-
 
     function isLocalImage(src: string): boolean {
         return /vscode-resource|vscode-cdn\.net/.test(src);
@@ -428,7 +409,6 @@ export function createImageView(
             const orig = basenameNoExt(rawSrc);
             if (newBasename && newBasename !== orig && onRenameImage) {
                 onRenameImage(rawSrc, newBasename).catch((error) => {
-
 
                     infoInput.value = orig;
                     showTooltipAt(
@@ -536,7 +516,7 @@ export function createImageView(
                     const tr = view.state.tr.setNodeMarkup(pos, null, { ...currentNode.attrs, src: newSrc });
                     const afterPos = pos + nodeSize;
                     if (afterPos <= tr.doc.content.size) {
-                        try { tr.setSelection(TextSelection.near(tr.doc.resolve(afterPos), 1)); } catch {  }
+                        try { tr.setSelection(TextSelection.near(tr.doc.resolve(afterPos), 1)); } catch {}
                     }
                     view.dispatch(tr);
                     view.focus();
@@ -545,7 +525,6 @@ export function createImageView(
                 if (datasetUri) {
                     applyUri(datasetUri);
                 } else if (displayVal) {
-
 
                     if (/^https?:\/\//i.test(displayVal)) {
                         applyUri(displayVal);
@@ -620,7 +599,6 @@ export function createImageView(
 
             detachActiveInlineEdit?.();
             detachActiveInlineEdit = null;
-
 
             closeLightboxShowing(img.src);
 

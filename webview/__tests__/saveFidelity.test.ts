@@ -25,7 +25,6 @@ if (typeof window.matchMedia === "undefined") {
 
 let disposeEditor: (() => void) | null = null;
 
-
 async function openEditor(markdown: string) {
     const editor = await import("../editor");
     const container = document.createElement("div");
@@ -71,7 +70,6 @@ describe("保存保真（列表写法不被重写）", () => {
 
     it("空任务项（`- [ ] ` 后什么都不写）应该 识别成复选框并逐字保存", async () => {
 
-
         const source = "- [ ] \n- [x] done\n    - [ ] \n";
         const { save, view } = await openEditor(source);
         const editorView = view();
@@ -87,7 +85,6 @@ describe("保存保真（列表写法不被重写）", () => {
     }, 60_000);
 
     it("改了某一行时 该行按新内容保存 且未改行的写法原样保留", async () => {
-
 
         const source = "- one\n- two\n\ntail\n";
         const { save, view } = await openEditor(source);
@@ -117,9 +114,6 @@ describe("保存保真（列表写法不被重写）", () => {
 
     it("列表项以代码块开头 应该 保存后不丢代码块（回归：上游 7.22.2 起的 `<br />` 占位会吞块）", async () => {
 
-
-
-
         const source = "- ```js\n  code\n  ```\n";
         const { save } = await openEditor(source);
         const saved = save();
@@ -129,9 +123,6 @@ describe("保存保真（列表写法不被重写）", () => {
     }, 60_000);
 
     it("未编辑保存松散列表 应该 逐字一致（回归：升到 Milkdown 7.22.2 后空行被吃掉）", async () => {
-
-
-
 
         const source = "# t\n\n- [x] done\n\n- a\n- b\n\n```js\nconst x = 1;\n```\n";
         const { save } = await openEditor(source);

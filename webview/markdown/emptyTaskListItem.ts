@@ -1,6 +1,5 @@
 
 
-
 export interface MdastNode {
     type?: string;
     checked?: boolean | null;
@@ -8,9 +7,7 @@ export interface MdastNode {
     children?: MdastNode[];
 }
 
-
 const EMPTY_TASK_MARKER_RE = /^\[([ xX])\][ \t]*$/;
-
 
 export function fixEmptyTaskListItems(root: unknown): void {
     walk(root as MdastNode | undefined);
@@ -35,11 +32,8 @@ function fixEmptyItem(item: MdastNode): void {
     if (!match) { return; }
     item.checked = match[1].toLowerCase() === "x";
 
-
-
     head.children?.shift();
 }
-
 
 export const emptyTaskListItemPlugin = () =>
     (tree: unknown): void => {

@@ -17,7 +17,6 @@ export function getHeadingLevel(node: { attrs?: Record<string, unknown> }): numb
     return typeof level === "number" ? level : 1;
 }
 
-
 export function findHeadingFoldRange(
     doc: ProseNode,
     headingPos: number,
@@ -38,7 +37,6 @@ export function findHeadingFoldRange(
     return from < to ? { from, to } : null;
 }
 
-
 export function computeHeadingSignature(
     doc: ProseNode,
     folded?: ReadonlySet<number>,
@@ -55,7 +53,6 @@ export function computeHeadingSignature(
     return sig;
 }
 
-
 export interface HeadingIndexEntry {
 
     pos: number;
@@ -68,7 +65,6 @@ export interface HeadingIndexEntry {
 
     foldRange: HeadingFoldRange | null;
 }
-
 
 export function buildHeadingIndex(doc: ProseNode): HeadingIndexEntry[] {
     const ranges = computeAllHeadingFoldRanges(doc);
@@ -88,7 +84,6 @@ export function buildHeadingIndex(doc: ProseNode): HeadingIndexEntry[] {
     return entries;
 }
 
-
 export function computeAllHeadingSignature(doc: ProseNode): string {
     let sig = "";
     doc.descendants((node, pos) => {
@@ -97,7 +92,6 @@ export function computeAllHeadingSignature(doc: ProseNode): string {
     });
     return sig;
 }
-
 
 export function computeAllHeadingFoldRanges(
     doc: ProseNode,

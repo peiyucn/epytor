@@ -8,13 +8,11 @@ const rawCss = readFileSync(
     "utf-8",
 );
 
-
 function stripComments(css: string): string {
     return css.replace(/\/\*[\s\S]*?\*\//g, "");
 }
 
 const css = stripComments(rawCss);
-
 
 function findRule(selector: string): { selectors: string[]; body: string } | null {
     for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
@@ -26,12 +24,10 @@ function findRule(selector: string): { selectors: string[]; body: string } | nul
     return null;
 }
 
-
 function declared(rule: { body: string }, prop: string): string | null {
     const m = new RegExp(`(?:^|;)\\s*${prop}\\s*:\\s*([^;]+)`, "i").exec(rule.body);
     return m ? m[1].trim() : null;
 }
-
 
 function transitionProperties(value: string): string[] {
     return value
@@ -65,7 +61,6 @@ describe("TOC 过渡声明", () => {
         const t = declared(bodyRule!, "transition");
         expect(t).not.toBeNull();
         expect(transitionProperties(t!)).toContain("padding-left");
-
 
         const gated = findRule("body.toc-open");
         if (gated) {

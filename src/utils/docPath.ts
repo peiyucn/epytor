@@ -9,11 +9,9 @@ export interface DocPathContext {
     workspaceRoot: string | null;
 }
 
-
 export function resolveWorkspaceRoot(uri: vscode.Uri): string | undefined {
     return vscode.workspace.getWorkspaceFolder(uri)?.uri.fsPath;
 }
-
 
 export function resolveDocPath(raw: string, ctx: DocPathContext): string {
     const docDir = path.dirname(ctx.docFsPath);

@@ -6,7 +6,6 @@ const URI_KEY = "file:///docs/note.md";
 
 const WORD_COUNT: WordCount = { lines: 10, words: 1234, charsNoSpace: 5678, charsWithSpace: 6000 };
 
-
 function fileStat(type: vscode.FileType, size = 0): vscode.FileStat {
     return { type, ctime: 0, mtime: 0, size };
 }

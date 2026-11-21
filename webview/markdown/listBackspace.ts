@@ -6,9 +6,6 @@ import { Plugin, TextSelection, type EditorState, type Transaction } from "@milk
 import { canJoin } from "@milkdown/kit/prose/transform";
 import { liftListItem } from "@milkdown/kit/prose/schema-list";
 
-
-
-
 function listItemDepth($from: ResolvedPos, listItem: NodeType): number {
     for (let depth = $from.depth; depth > 0; depth--) {
         if ($from.node(depth).type === listItem) { return depth; }
@@ -16,11 +13,9 @@ function listItemDepth($from: ResolvedPos, listItem: NodeType): number {
     return -1;
 }
 
-
 function isNestedList($from: ResolvedPos, listDepth: number, listItem: NodeType): boolean {
     return listDepth >= 1 && $from.node(listDepth - 1).type === listItem;
 }
-
 
 function withContinuationOrder(tr: Transaction, order: number): Transaction {
     const { $from } = tr.selection;
@@ -33,7 +28,6 @@ function withContinuationOrder(tr: Transaction, order: number): Transaction {
     if (next.type.name !== "ordered_list") { return tr; }
     return tr.setNodeMarkup($from.after($from.depth), undefined, { ...next.attrs, order });
 }
-
 
 function mergeAdjacentTopLevelLists(tr: Transaction): void {
     const positions: number[] = [];
@@ -54,7 +48,6 @@ function mergeAdjacentTopLevelLists(tr: Transaction): void {
         }
     }
 }
-
 
 function deleteEmptyNestedItem(
     state: EditorState,
@@ -84,7 +77,6 @@ function deleteEmptyNestedItem(
     return tr;
 }
 
-
 function liftNestedItem(state: EditorState, $from: ResolvedPos, itemDepth: number): Transaction | null {
     const parentListDepth = itemDepth - 1;
     const parentItemDepth = itemDepth - 2;
@@ -100,7 +92,6 @@ function liftNestedItem(state: EditorState, $from: ResolvedPos, itemDepth: numbe
     const parentListIndex = $from.index(parentItemDepth);
     const parentItemIndex = $from.index(grandListDepth);
 
-
     const remaining: Node[] = [];
     parentList.forEach((child, _offset, index) => {
         if (index !== itemIndex) { remaining.push(child); }
@@ -108,7 +99,6 @@ function liftNestedItem(state: EditorState, $from: ResolvedPos, itemDepth: numbe
     const newParentList = remaining.length > 0
         ? parentList.copy(Fragment.fromArray(remaining))
         : null;
-
 
     const parentChildren: Node[] = [];
     parentItem.forEach((child, _offset, index) => {
@@ -119,7 +109,6 @@ function liftNestedItem(state: EditorState, $from: ResolvedPos, itemDepth: numbe
         }
     });
     const newParentItem = parentItem.copy(Fragment.fromArray(parentChildren));
-
 
     const grandChildren: Node[] = [];
     grandList.forEach((child, _offset, index) => {
@@ -133,8 +122,6 @@ function liftNestedItem(state: EditorState, $from: ResolvedPos, itemDepth: numbe
 
     const grandListPos = $from.before(grandListDepth);
     const tr = state.tr.replaceWith(grandListPos, grandListPos + grandList.nodeSize, newGrandList);
-
-
 
     let liftedItemPos = grandListPos + 1;
     for (let index = 0; index < parentItemIndex; index++) {
@@ -162,9 +149,7 @@ export const listBackspacePlugin = $prose((ctx) => {
 
             if ($from.index(itemDepth) !== 0) { return false; }
 
-
             if (isNestedList($from, itemDepth - 1, listItem)) {
-
 
                 const empty = deleteEmptyNestedItem(state, $from, itemDepth);
                 if (empty) {

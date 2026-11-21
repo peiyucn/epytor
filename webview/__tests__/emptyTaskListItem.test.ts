@@ -2,7 +2,6 @@
 import { describe, expect, it } from "vitest";
 import { fixEmptyTaskListItems, type MdastNode } from "../markdown/emptyTaskListItem";
 
-
 function listTree(marker: string | null, checked: boolean | null = null, extra: MdastNode[] = []): MdastNode {
     const paragraph: MdastNode = {
         type: "paragraph",

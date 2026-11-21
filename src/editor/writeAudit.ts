@@ -10,9 +10,7 @@ export const WRITE_AUDIT_MAX_BYTES = 2 * 1024 * 1024;
 
 const WRITE_AUDIT_ROTATED_SUFFIX = ".1";
 
-
 const DEFAULT_SAVE_TRIGGER = "vs-code";
-
 
 export interface WriteAuditFileSystem {
     mkdir(dir: string): Promise<unknown>;
@@ -32,7 +30,6 @@ export class WriteAudit {
 
     private _saveTrigger = DEFAULT_SAVE_TRIGGER;
 
-
     private _writeChain: Promise<void> = Promise.resolve();
 
     constructor(
@@ -40,18 +37,15 @@ export class WriteAudit {
         private readonly fileSystem: WriteAuditFileSystem = nodeWriteAuditFileSystem,
     ) {}
 
-
     markSaveTrigger(trigger: string): void {
         this._saveTrigger = trigger;
     }
-
 
     consumeSaveTrigger(): string {
         const trigger = this._saveTrigger;
         this._saveTrigger = DEFAULT_SAVE_TRIGGER;
         return trigger;
     }
-
 
     record(uriKey: string, reason: string, content: string, extra?: Record<string, unknown>): void {
         const line = JSON.stringify({
@@ -71,13 +65,11 @@ export class WriteAudit {
             });
     }
 
-
     flush(): Promise<void> {
         return this._writeChain;
     }
 
     private async _append(logFile: string, reason: string, line: string): Promise<void> {
-
 
         await this.fileSystem.mkdir(path.dirname(logFile));
         const rotated = await this._rotateIfOversized(logFile);

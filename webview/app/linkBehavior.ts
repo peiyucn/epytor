@@ -4,7 +4,6 @@ import { anchorIdCandidates } from "../shell/anchorTarget";
 import { headingScrollTop } from "../outline/headingScroll";
 import { topbarHeight } from "../ui/topbarMetrics";
 
-
 export interface LinkBehaviorDeps {
     openUrl(url: string): void;
     openFile(relativePath: string): void;
@@ -39,7 +38,6 @@ export function initLinkBehavior(container: HTMLElement, deps: LinkBehaviorDeps)
             else deps.openFile(clean);
         }
     }, true);
-
 
     let linkTipCloseRaf = 0;
     window.addEventListener("scroll", () => {

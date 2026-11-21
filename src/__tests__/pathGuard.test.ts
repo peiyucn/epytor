@@ -31,7 +31,6 @@ describe("isPathWithinBase（当前平台语义）", () => {
     });
 });
 
-
 const WIN = path.win32;
 const POSIX = path.posix;
 

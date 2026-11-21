@@ -76,7 +76,6 @@ function shouldPreserveRelaxedCharacter(
     return true;
 }
 
-
 export const cleanTextHandler: CleanTextHandler = (node, parent, state, info) => {
     const value = node.value;
     if (/^[^*_\\]*\s+$/.test(value)) return value;
@@ -104,31 +103,25 @@ export const cleanTextHandler: CleanTextHandler = (node, parent, state, info) =>
     }
 };
 
-
 export function preserveTableBreakStyle(source: string, serialized: string): string {
     const sourceStyle = source.match(/<br\s*\/?>/i)?.[0];
     if (!sourceStyle) return serialized;
     return serialized.replace(/<br\s*\/?>/gi, sourceStyle);
 }
 
-
 export interface ListMarkerStyle {
     bullet: "*" | "-" | "+";
     ordered: "." | ")";
 }
 
-
 const LIST_ITEM_BREAK_PLACEHOLDER_RE =
     /^([ \t]*(?:[-*+]|\d{1,9}[.)])(?:[ \t]+\[[ xX]\])?[ \t]*)<br\s*\/?>[ \t]*$/gim;
-
 
 export function stripListItemBreakPlaceholder(markdown: string): string {
     return markdown.replace(LIST_ITEM_BREAK_PLACEHOLDER_RE, "$1");
 }
 
-
 export type LineEnding = "\r\n" | "\n";
-
 
 export function detectLineEnding(source: string): LineEnding {
     const crlf = (source.match(/\r\n/g) ?? []).length;
@@ -136,19 +129,15 @@ export function detectLineEnding(source: string): LineEnding {
     return crlf > lf ? "\r\n" : "\n";
 }
 
-
 export function toLf(text: string): string {
     return text.replace(/\r\n?/g, "\n");
 }
-
 
 export function withLineEnding(text: string, eol: LineEnding): string {
     return eol === "\n" ? text : text.replace(/\r\n?|\n/g, "\r\n");
 }
 
-
 const ENTITY_LIKE_AFTER_AMPERSAND_RE = /^(?:[A-Za-z][A-Za-z0-9]*|#[0-9]+|#[xX][0-9A-Fa-f]+);/;
-
 
 export function dropRedundantAmpersandEscapes(markdown: string): string {
     return markdown.replace(/\\&/g, (match, offset: number, whole: string) =>
@@ -156,9 +145,7 @@ export function dropRedundantAmpersandEscapes(markdown: string): string {
     );
 }
 
-
 const LIST_MARKER_LINE_RE = /^[ \t]*([-*+]|\d{1,9}([.)]))[ \t]+/;
-
 
 export function detectListMarkerStyle(source: string): ListMarkerStyle {
     const bullets: Array<"*" | "-" | "+"> = ["*", "-", "+"];
@@ -181,7 +168,6 @@ export function detectListMarkerStyle(source: string): ListMarkerStyle {
     };
 }
 
-
 function mostFrequent<T extends string>(candidates: readonly T[], counts: Map<string, number>): T {
     let best = candidates[0];
     let bestCount = counts.get(best) ?? 0;
@@ -194,7 +180,6 @@ function mostFrequent<T extends string>(candidates: readonly T[], counts: Map<st
     }
     return best;
 }
-
 
 export function withTableBreakHandler<T extends { handlers?: unknown }>(options: T): T {
     const handlers = (options.handlers ?? {}) as Record<string, unknown>;
@@ -223,7 +208,6 @@ export function withTableBreakHandler<T extends { handlers?: unknown }>(options:
                 return fallback ? fallback(node, parent, state, info) : "";
             },
 
-
             text: (
                 node: { value?: string },
                 parent: unknown,
@@ -247,7 +231,6 @@ export function withTableBreakHandler<T extends { handlers?: unknown }>(options:
                 if (state.stack.includes("tableCell") && /^<br\s*\/?>$/i.test(value.trim())) {
                     return "";
                 }
-
 
                 return value;
             },

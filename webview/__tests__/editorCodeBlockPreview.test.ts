@@ -35,7 +35,6 @@ async function openEditor(markdown: string): Promise<Editor> {
     return createEditor(root, markdown, () => {  });
 }
 
-
 function codeBlockPreview(editor: Editor): CodeBlockConfig["renderPreview"] {
     let config: CodeBlockConfig | null = null;
     editor.action((ctx) => {

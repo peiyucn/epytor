@@ -24,7 +24,6 @@ const headingCss = readFileSync(
     "utf-8",
 );
 
-
 function stripComments(css: string): string {
     return css.replace(/\/\*[\s\S]*?\*\//g, "");
 }
@@ -33,7 +32,6 @@ interface CssRule {
     selectors: string[];
     body: string;
 }
-
 
 function allRules(): CssRule[] {
     const rules: CssRule[] = [];
@@ -46,11 +44,9 @@ function allRules(): CssRule[] {
     return rules;
 }
 
-
 function rulesUnderSelector(prefix: string): CssRule[] {
     return allRules().filter((rule) => rule.selectors.some((s) => s.startsWith(prefix)));
 }
-
 
 function findRule(selector: string, bodyIncludes?: string): CssRule | null {
     for (const rule of allRules()) {
@@ -113,7 +109,6 @@ describe("WebView 样式", () => {
         const [hiddenSticky, visibleSticky] =
             document.querySelectorAll<HTMLElement>(".heading-sticky-title");
 
-
         expect(getComputedStyle(hiddenSticky).display).toBe("none");
         expect(getComputedStyle(visibleSticky).display).toBe("flex");
     });
@@ -153,12 +148,10 @@ describe("WebView 样式", () => {
         expect(styleCss).toContain(`html[${HOST_COLLAPSED_ATTRIBUTE}] body {`);
         expect(styleCss).toContain("var(--epytor-last-body-width, 100%)");
 
-
         expect(styleCss).not.toContain("@media (width: 300px) and (height: 150px)");
     });
 
     it("折叠期 应该 关闭顶栏/目录/浮动工具栏模糊（回归：合成器重建图层推迟首帧，小画面偶发可见）", () => {
-
 
         const withBlur = rulesUnderSelector(`html[${HOST_COLLAPSED_ATTRIBUTE}]`)
             .filter((rule) => /backdrop-filter:/.test(rule.body));
@@ -174,7 +167,6 @@ describe("WebView 样式", () => {
         expect(rule!.body).toContain("width: var(--epytor-last-body-width, 100%)");
         expect(rule!.body).toContain("overflow-x: clip");
     });
-
 
     it("折叠期 应该 不画固定 UI（回归：顶栏那排按钮被裁成半块，最像「坏掉的小框」）", () => {
         const rule = findRule(`html[${HOST_COLLAPSED_ATTRIBUTE}] .milkdown-top-bar`, "visibility: hidden");
@@ -203,7 +195,6 @@ describe("WebView 样式", () => {
         expect(styleCss).not.toContain("epytor-dot-chase");
     });
 
-
     it("所有块级元素 应该 共用同一个块间距（回归：列表项 2.8px / 引用块 4px / 表格 4px / 代码块 4px / 段落 18.2px / 分隔线 21px 各不相同）", () => {
         const rule = findRule(".milkdown .ProseMirror p", "margin: 0 0 var(--epytor-block-gap)");
         expect(rule).not.toBeNull();
@@ -221,7 +212,6 @@ describe("WebView 样式", () => {
             expect(rule!.selectors).toContain(sel);
         }
     });
-
 
     it("分割线 应该 只有 1px 粗：不沿用上游「背景色 + 内容盒」画线机制", () => {
         const rule = findRule(".milkdown .ProseMirror hr", "border-top: 1px solid");
@@ -350,7 +340,6 @@ describe("WebView 样式", () => {
     it("折叠期 应该 把正文归成纯背景（回归：那 300×150 里残留「孤零零一个目录面板」像渲染坏了）", () => {
         const rule = findRule(`html[${HOST_COLLAPSED_ATTRIBUTE}] body`, "visibility: hidden");
         expect(rule).not.toBeNull();
-
 
         expect(rule!.body).toMatch(/opacity:\s*0\b/);
 

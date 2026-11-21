@@ -9,9 +9,6 @@ import {
 } from "../../src/utils/contentTransform";
 import { computeLineRanges, computeDisplayLineRanges } from "../../src/utils/lineMap";
 
-
-
-
 describe("extractFrontmatter", () => {
     it("标准 frontmatter 正确分离", () => {
         const content = "---\ntitle: Test\ndate: 2024-01-01\n---\n# Hello";
@@ -34,7 +31,6 @@ describe("extractFrontmatter", () => {
     });
 
     it("frontmatter 仅含分隔符（无键值对）时不识别（正则要求至少一行内容）", () => {
-
 
         const content = "---\n---\n# Body";
         const { frontmatter, body } = extractFrontmatter(content);
@@ -71,9 +67,6 @@ describe("extractFrontmatter", () => {
         expect(body).toBe(content);
     });
 });
-
-
-
 
 describe("restoreContentForSave", () => {
     it("将 webviewUri 替换为相对路径", () => {
@@ -119,7 +112,6 @@ describe("restoreContentForSave", () => {
         expect(result).toBe("![1](./img.png) ![2](./img.png)");
     });
 
-
     it("代码围栏内的裸 webviewUri 字符串 应该 不被改写（回归：此前全文 split/join 会把代码块内容改掉）", () => {
         const uriMap = new Map([["vscode-resource://host/a.png", "./a.png"]]);
         const content = "```text\nvscode-resource://host/a.png\n```\n\n![alt](vscode-resource://host/a.png)";
@@ -146,9 +138,6 @@ describe("restoreContentForSave", () => {
         expect(restoreContentForSave(serialized, "", uriMap)).toBe("![alt](my file.png)");
     });
 });
-
-
-
 
 describe("computeLineRanges", () => {
     it("空内容 应该 返回空数组", () => {
@@ -195,9 +184,6 @@ describe("computeLineRanges", () => {
     it("前导空行 应该 不计入行号", () => {
         expect(computeLineRanges("\n\n# Heading")).toEqual([{ start: 3, end: 3 }]);
     });
-
-
-
 
     it("空行分隔的列表项 应该 合并为一个列表块（与渲染块结构一致）", () => {
         const content = [
@@ -253,9 +239,6 @@ describe("computeLineRanges", () => {
 
     it("大文档（200 块）应该 逐块给出范围，且块数与输入无关地线性成立", () => {
 
-
-
-
         const build = (headings: number): string =>
             Array.from({ length: headings }, (_, i) => `## Heading ${i}\n\nContent ${i}`).join("\n\n");
         for (const headings of [100, 200]) {
@@ -278,9 +261,6 @@ describe("computeLineRanges", () => {
         expect(second).toBe(first);
     });
 });
-
-
-
 
 describe("computeDisplayLineRanges", () => {
     it("无 frontmatter 时 应该 与 computeLineRanges 一致", () => {
@@ -311,9 +291,6 @@ describe("computeDisplayLineRanges", () => {
         ]);
     });
 });
-
-
-
 
 describe("convertTableBrForDisplay", () => {
     it("表格行内 <br> 应该 转为 &#10; 实体（GFM 合法、解析渲染换行）", () => {
@@ -351,9 +328,6 @@ describe("convertTableBrForDisplay", () => {
     });
 });
 
-
-
-
 describe("buildContentWithFrontmatter", () => {
     it("新增 frontmatter 行 应该 替换 YAML 头且正文不变", () => {
         const current = "---\ntitle: A\n---\n# Body\n";
@@ -381,9 +355,6 @@ describe("buildContentWithFrontmatter", () => {
         expect(result).toBe("---\ntitle: A\n---\n![alt](img.png)\n");
     });
 });
-
-
-
 
 describe("rewriteImageSources", () => {
     const replaceWith = (target: string, newSrc: string) => (src: string) =>

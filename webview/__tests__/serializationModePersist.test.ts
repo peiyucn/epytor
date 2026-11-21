@@ -43,7 +43,6 @@ describe("序列化模式持久性（F1）", () => {
         setSerializationMode("compatible");
         expect(getSerializationMode()).toBe("compatible");
 
-
         destroyEditor();
         root1.remove();
         const root2 = document.createElement("div");

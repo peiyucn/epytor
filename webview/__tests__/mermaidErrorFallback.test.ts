@@ -12,7 +12,6 @@ describe("mermaid 错误渲染策略", () => {
 
     it("统一配置函数 应该 开启 suppressErrorRendering（两个 initialize 调用点共用它）", () => {
 
-
         expect(mermaidInitConfig(false)).toEqual({
             startOnLoad: false,
             theme: "default",
@@ -26,7 +25,6 @@ describe("mermaid 错误渲染策略", () => {
     });
 
     it("开启后 应该 抛错而不是画图，且不在 body 里留下错误 SVG", async () => {
-
 
         const bodyChildrenBefore = document.body.children.length;
 

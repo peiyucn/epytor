@@ -18,7 +18,6 @@ export function createFrontmatterPanel(
     const parsed = parseFrontmatter(frontmatter);
     if (!parsed.some((entry) => entry.type === "kv")) return null;
 
-
     const entries: (FrontmatterEntry | null)[] = [...parsed];
 
     const panel = document.createElement("div");
@@ -40,7 +39,6 @@ export function createFrontmatterPanel(
         }
     };
 
-
     const collectRows = (): FrontmatterRow[] => {
         const rows: FrontmatterRow[] = [];
         tbody.querySelectorAll<HTMLTableRowElement>("tr.fm-row").forEach((tr) => {
@@ -61,7 +59,6 @@ export function createFrontmatterPanel(
         const valid = entries.filter((entry): entry is FrontmatterEntry => entry !== null);
         return serializeFrontmatter(valid);
     };
-
 
     const validateRows = (rows: FrontmatterRow[]): boolean => {
         let valid = true;
@@ -91,7 +88,6 @@ export function createFrontmatterPanel(
             onChange(serializeEntries());
         }, SAVE_DEBOUNCE_MS);
     };
-
 
     const flushSave = () => {
         if (disposed) return;
@@ -153,7 +149,6 @@ export function createFrontmatterPanel(
         });
     };
 
-
     const appendRow = (): void => {
         entries.push({ type: "kv", key: "", value: "" });
         addRow("", "", entries.length - 1);
@@ -169,7 +164,6 @@ export function createFrontmatterPanel(
     addBtn.textContent = "+";
     addBtn.setAttribute("aria-label", t("Add"));
 
-
     addBtn.addEventListener("mousedown", (event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -177,7 +171,6 @@ export function createFrontmatterPanel(
     addBtn.addEventListener("click", () => {
         appendRow();
         const keyInput = tbody.querySelector<HTMLInputElement>("tr:last-child .fm-key-input");
-
 
         keyInput?.focus();
     });

@@ -15,7 +15,6 @@ const PATH_ACTIVE_CLASS = "path-complete-item--active";
 
 type SuggestionItem = PathSuggestionItem;
 
-
 function getActiveInlineCode(): HTMLElement | null {
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) { return null; }
@@ -29,7 +28,6 @@ function getActiveInlineCode(): HTMLElement | null {
     if (code.closest("a")) { return null; }
     return code as HTMLElement;
 }
-
 
 function getCodeNodeRangeFromSelection(view: EditorView): { from: number; to: number } | null {
     const { state } = view;
@@ -52,7 +50,6 @@ function getCodeNodeRangeFromSelection(view: EditorView): { from: number; to: nu
     });
     return from !== undefined && to !== undefined ? { from, to } : null;
 }
-
 
 export function initPathComplete(getEditorViewFn: () => EditorView | null): () => void {
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -106,7 +103,6 @@ export function initPathComplete(getEditorViewFn: () => EditorView | null): () =
             return;
         }
 
-
         const handle = beginPathSuggestionRequest();
         handle.promise.then((items) => {
             const currentCode = getActiveInlineCode();
@@ -121,7 +117,6 @@ export function initPathComplete(getEditorViewFn: () => EditorView | null): () =
         }).catch(() => {  });
         notifyGetPathSuggestions(handle.id, query);
     }
-
 
     function onKeydown(e: KeyboardEvent): void {
         dropdown.handleKeydown(e);

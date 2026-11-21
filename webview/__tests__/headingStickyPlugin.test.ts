@@ -29,7 +29,6 @@ if (typeof window.matchMedia === "undefined") {
 let scrollY = 150;
 Object.defineProperty(window, "scrollY", { get: () => scrollY, configurable: true });
 
-
 function setViewport(width: number, height: number): void {
     Object.defineProperty(window, "innerWidth", { value: width, configurable: true });
     Object.defineProperty(window, "innerHeight", { value: height, configurable: true });
@@ -67,7 +66,6 @@ class FakeResizeObserver {
 }
 (window as unknown as Record<string, unknown>).ResizeObserver = FakeResizeObserver;
 
-
 function fireResize(target: Element): void {
     for (const instance of FakeResizeObserver.instances) {
         if (instance.targets.includes(target)) {
@@ -79,10 +77,8 @@ function fireResize(target: Element): void {
 const HEADING_HEIGHT = 40;
 const TOPBAR_BOTTOM = 36;
 
-
 let headingLeft = 100;
 let headingWidth = 800;
-
 
 async function mountWithStubLayout(
     lines: string[],
@@ -122,7 +118,6 @@ async function mountWithStubLayout(
     }
     return root;
 }
-
 
 async function settle(): Promise<void> {
     window.dispatchEvent(new Event("scroll"));
@@ -236,9 +231,6 @@ describe("标题吸顶完整链路", () => {
         expect(sticky!.style.left).toBe("100px");
         expect(sticky!.style.width).toBe("800px");
 
-
-
-
         headingLeft = 200;
         headingWidth = 600;
         fireResize(document.body);
@@ -258,7 +250,6 @@ describe("标题吸顶完整链路", () => {
         headingLeft = 100;
         headingWidth = 800;
 
-
         const originalBodyRect = document.body.getBoundingClientRect.bind(document.body);
         let bodyWidth = 800;
         const bodySpy = vi.spyOn(document.body, "getBoundingClientRect").mockImplementation(
@@ -271,7 +262,6 @@ describe("标题吸顶完整链路", () => {
         );
         await settle();
 
-
         const headingEls = Array.from(root.querySelectorAll("h1,h2,h3,h4,h5,h6")) as HTMLElement[];
         const readCounts = headingEls.map(() => 0);
         headingEls.forEach((el, i) => {
@@ -279,18 +269,15 @@ describe("标题吸顶完整链路", () => {
             el.getBoundingClientRect = () => { readCounts[i]++; return original(); };
         });
 
-
         setViewport(300, 150);
         bodyWidth = 285;
         fireResize(document.body);
         await new Promise((r) => requestAnimationFrame(() => r(null)));
 
-
         setViewport(1024, 768);
         bodyWidth = 800;
         fireResize(document.body);
         await new Promise((r) => requestAnimationFrame(() => r(null)));
-
 
         expect(readCounts.filter((c) => c > 0).length).toBeLessThanOrEqual(1);
 
@@ -301,8 +288,6 @@ describe("标题吸顶完整链路", () => {
     }, 60000);
 
     it("滚到文档底部时 应该 把最后一个标题当作当前章节（回归：尾部章节短，TOC 高亮与滚动到不了最下面）", async () => {
-
-
 
         setViewport(1024, 600);
         Object.defineProperty(document.documentElement, "scrollHeight", { get: () => 2000, configurable: true });
@@ -324,7 +309,6 @@ describe("标题吸顶完整链路", () => {
     }, 60000);
 
     it("离底部还远时 应该 仍是最后一个划过吸顶线的标题（阅读线还没滑到尾部那节）", async () => {
-
 
         setViewport(1024, 600);
         Object.defineProperty(document.documentElement, "scrollHeight", { get: () => 2000, configurable: true });
@@ -353,7 +337,6 @@ describe("标题吸顶完整链路", () => {
         );
         await settle();
 
-
         vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
         try {
 
@@ -362,10 +345,8 @@ describe("标题吸顶完整链路", () => {
             view!.dispatch(view!.state.tr.insertText("改", 1));
             const pendingAfterChange = vi.getTimerCount();
 
-
             window.dispatchEvent(new Event("scroll"));
             await new Promise((r) => requestAnimationFrame(() => r(null)));
-
 
             expect(vi.getTimerCount()).toBe(pendingAfterChange - 1);
 

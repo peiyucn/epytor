@@ -8,11 +8,9 @@ function isDark(): boolean {
         || document.body.classList.contains("vscode-high-contrast");
 }
 
-
 export function isDarkTheme(): boolean {
     return isDark();
 }
-
 
 export function onThemeChange(fn: ThemeListener): () => void {
     fn(isDark());
@@ -20,11 +18,9 @@ export function onThemeChange(fn: ThemeListener): () => void {
     return () => listeners.delete(fn);
 }
 
-
 export function getThemeListenerCount(): number {
     return listeners.size;
 }
-
 
 let started = false;
 function start(): void {

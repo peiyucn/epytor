@@ -1,6 +1,5 @@
 
 
-
 const RESTORE_FRAMES = 2;
 
 let lastRealScrollY = 0;
@@ -10,7 +9,6 @@ let hasRealScrollRecord = false;
 let wasCollapsed = false;
 
 let restoringScroll = false;
-
 
 export function recordScrollPosition(collapsed: boolean): void {
     if (restoringScroll || collapsed) { return; }
@@ -31,7 +29,6 @@ function restoreTo(expected: number): void {
     requestAnimationFrame(() => tick(RESTORE_FRAMES));
 }
 
-
 export function trackViewportResize(collapsed: boolean): void {
     if (wasCollapsed && !collapsed && hasRealScrollRecord) {
         restoreTo(lastRealScrollY);
@@ -41,7 +38,6 @@ export function trackViewportResize(collapsed: boolean): void {
     }
     wasCollapsed = collapsed;
 }
-
 
 export function clearCollapsedEdge(): void {
     wasCollapsed = false;

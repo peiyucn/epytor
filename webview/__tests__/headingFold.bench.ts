@@ -50,9 +50,6 @@ describe("buildFoldDecorations 性能基准（防 O(n²) 回归）", () => {
         console.log(`[bench] 2万行 buildFoldDecorations: ${elapsed.toFixed(1)}ms, decorations=${result.find().length}`);
         expect(result.find().length).toBe(8000);
 
-
-
-
         expect(elapsed).toBeLessThan(800);
     }, 120000);
 });

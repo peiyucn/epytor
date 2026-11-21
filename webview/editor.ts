@@ -60,7 +60,6 @@ import { createMermaidPreview } from "./editor/mermaidPreview";
 import { createCodeBlockPreview } from "./editor/codeBlockPreview";
 import { createCmTheme } from "./editor/cmTheme";
 
-
 const emptyTaskListItemRemark = $remark("epytorEmptyTaskListItem", () => emptyTaskListItemPlugin);
 
 const WANTED_LANGS = new Set([
@@ -86,7 +85,6 @@ codeLanguages.push(LanguageDescription.of({
     load: async () => undefined as unknown as LanguageSupport,
 }));
 
-
 const listSpreadNormalizePlugin = $prose((ctx) => {
     const schema = ctx.get(schemaCtx);
     return new Plugin({
@@ -109,7 +107,6 @@ export function getSerializationMode(): SerializationMode {
     return editorSession.getSerializationMode();
 }
 
-
 export function getMarkdownForSave(): string {
     return editorSession.getMarkdownForSave();
 }
@@ -118,11 +115,9 @@ export function getEditorView(): EditorView | null {
     return editorSession.getView();
 }
 
-
 export function adoptDiskContentAsBaseline(content: string): void {
     editorSession.adoptDiskContentAsBaseline(content);
 }
-
 
 export function destroyEditor(): void {
     editorSession.destroy();
@@ -135,7 +130,6 @@ export function captureEditorContinuity(): EditorContinuity | null {
     return view ? captureContinuity(view) : null;
 }
 
-
 export function restoreEditorContinuity(
     continuity: EditorContinuity,
     options: { isActivePanel: boolean },
@@ -143,7 +137,6 @@ export function restoreEditorContinuity(
     const view = editorSession.getView();
     return view ? restoreContinuity(view, continuity, options) : false;
 }
-
 
 export function restoreSavedSelection(selection: TextSelectionRange): boolean {
     const view = editorSession.getView();
@@ -158,11 +151,9 @@ export async function createEditor(
     onTocToggle?: () => void,
 ): Promise<Editor> {
 
-
     const interactionEpochAtCreate = getUserInteractionEpoch();
 
     let isSettled = false;
-
 
     let prevDoc: ProseNode | null = null;
     const updateNotifyPlugin = $prose(() =>
@@ -187,7 +178,6 @@ export async function createEditor(
         defaultValue: initialMarkdown,
     });
 
-
     let isDark = isDarkTheme();
 
     editorSession.setCmObserverDisconnect(null);
@@ -199,8 +189,6 @@ export async function createEditor(
         mermaidPreview.applyTheme();
         cmTheme.reconfigureAll();
     }));
-
-
 
     const renderPreview = createCodeBlockPreview({
         renderLatex: renderLatexPreview,
@@ -232,13 +220,9 @@ export async function createEditor(
         .addFeature(latexFeature)
         .addFeature(linkTooltip);
 
-
-
     crepe.editor.use(
         inlineCodeSchema.extendSchema((prev) => (ctx) => ({ ...prev(ctx), inclusive: true })),
     );
-
-
 
     crepe.editor.use(
         strongSchema.extendSchema((prev) => (ctx) => ({ ...prev(ctx), inclusive: false })),
@@ -250,12 +234,8 @@ export async function createEditor(
         strikethroughSchema.extendSchema((prev) => (ctx) => ({ ...prev(ctx), inclusive: false })),
     );
 
-
-
     crepe.editor.use(cursor);
     crepe.editor.use($prose(() => createVirtualCursor({ skipWarning: ["strong", "emphasis", "strike_through"] })));
-
-
 
     crepe.editor.use($prose(() => {
         let prevComposition: unknown = null;
@@ -276,12 +256,9 @@ export async function createEditor(
         .config((ctx) => {
             editorSession.snapshot.seedMarkdown(initialMarkdown);
 
-
-
             ctx.update(remarkStringifyOptionsCtx, (options) => {
                 const compatibleTextHandler = options.handlers?.text;
                 if (!compatibleTextHandler) return options;
-
 
                 const markers = detectListMarkerStyle(editorSession.snapshot.markdown);
 
@@ -300,7 +277,6 @@ export async function createEditor(
                     },
                 });
             });
-
 
             ctx.set(nodeViewCtx, [
                 [

@@ -3,7 +3,6 @@ import type { EditorView } from "@milkdown/kit/prose/view";
 import { VIEWPORT_PADDING } from "../../shared/constants";
 import { topbarHeight } from "../ui/topbarMetrics";
 
-
 export function getContentBlockElements(view: EditorView): HTMLElement[] {
     const elements: HTMLElement[] = [];
     view.state.doc.forEach((_node, offset) => {
@@ -13,13 +12,11 @@ export function getContentBlockElements(view: EditorView): HTMLElement[] {
     return elements;
 }
 
-
 export function stickyBarHeight(): number {
     const sticky = document.querySelector<HTMLElement>(".heading-sticky-title");
     if (!sticky || sticky.hidden) { return 0; }
     return sticky.getBoundingClientRect().height;
 }
-
 
 export function scrollToSourceLine(
     view: EditorView,
@@ -67,7 +64,6 @@ export function scrollToSourceLine(
     });
 }
 
-
 export function visibleSourceLine(
     view: EditorView,
     lineMap: number[],
@@ -90,7 +86,6 @@ export function visibleSourceLine(
     }
     return lineMap[Math.min(lineMap.length - 1, children.length - 1)] ?? 1;
 }
-
 
 export function switchTargetLine(
     view: EditorView,

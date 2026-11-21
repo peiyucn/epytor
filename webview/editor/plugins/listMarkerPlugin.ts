@@ -4,9 +4,7 @@ import { Decoration, DecorationSet } from "@milkdown/kit/prose/view";
 import type { Node as ProseNode } from "@milkdown/kit/prose/model";
 import { computeListMarker } from "../../markdown/listMarker";
 
-
 export const listMarkerPluginKey = new PluginKey("epytor-list-marker");
-
 
 export interface ListMarkerDecoration {
     from: number;
@@ -20,7 +18,6 @@ const isList = (node: ProseNode): boolean =>
 
 const isTaskItem = (node: ProseNode): boolean =>
     node.attrs.checked !== null && node.attrs.checked !== undefined;
-
 
 export function collectListMarkers(doc: ProseNode): ListMarkerDecoration[] {
     const out: ListMarkerDecoration[] = [];
@@ -36,7 +33,6 @@ export function collectListMarkers(doc: ProseNode): ListMarkerDecoration[] {
                     const itemPos = pos + 1 + itemOffset;
                     if (item.type.name === "list_item" && !isTaskItem(item)) {
                         const marker = computeListMarker(kind, depth, index, order);
-
 
                         const style = [
                             marker.text === null ? null : `--epytor-marker: "${marker.text}"`,
@@ -65,7 +61,6 @@ export function collectListMarkers(doc: ProseNode): ListMarkerDecoration[] {
 }
 
 export const listMarkerPlugin = $prose(() => {
-
 
     let cachedDoc: ProseNode | null = null;
     let cachedSet: DecorationSet | null = null;
