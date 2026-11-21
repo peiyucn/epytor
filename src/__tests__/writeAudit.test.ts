@@ -10,7 +10,7 @@ import {
 const LOG_DIR = path.join(path.sep, "logs");
 const DOC_URI_KEY = "file:///docs/note.md";
 
-/** In-memory fs: the audit log must never touch a real disk in unit tests. */
+
 class FakeWriteAuditFs implements WriteAuditFileSystem {
     readonly files = new Map<string, string>();
     readonly mkdirCalls: string[] = [];

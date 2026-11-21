@@ -9,9 +9,9 @@ import {
 } from "../../src/utils/contentTransform";
 import { computeLineRanges, computeDisplayLineRanges } from "../../src/utils/lineMap";
 
-// ─────────────────────────────────────────────────────────────
-// extractFrontmatter
-// ─────────────────────────────────────────────────────────────
+
+
+
 describe("extractFrontmatter", () => {
     it("标准 frontmatter 正确分离", () => {
         const content = "---\ntitle: Test\ndate: 2024-01-01\n---\n# Hello";
@@ -34,8 +34,8 @@ describe("extractFrontmatter", () => {
     });
 
     it("frontmatter 仅含分隔符（无键值对）时不识别（正则要求至少一行内容）", () => {
-        // 实现的正则 /^---\r?\n[\s\S]*?\r?\n---\r?\n?/ 需要两个 --- 之间至少有一个换行
-        // 纯 ---\n---\n 不满足条件，作为正文返回
+
+
         const content = "---\n---\n# Body";
         const { frontmatter, body } = extractFrontmatter(content);
         expect(frontmatter).toBe("");
@@ -57,7 +57,7 @@ describe("extractFrontmatter", () => {
     });
 
     it("frontmatter 中间含空行时正确匹配（贪婪最短）", () => {
-        // 第一个 --- 结束符即为 frontmatter 的终止
+
         const content = "---\ntitle: A\n---\n# H1\n---\nNot frontmatter\n---\n";
         const { frontmatter, body } = extractFrontmatter(content);
         expect(frontmatter).toBe("---\ntitle: A\n---\n");
@@ -72,9 +72,9 @@ describe("extractFrontmatter", () => {
     });
 });
 
-// ─────────────────────────────────────────────────────────────
-// restoreContentForSave
-// ─────────────────────────────────────────────────────────────
+
+
+
 describe("restoreContentForSave", () => {
     it("将 webviewUri 替换为相对路径", () => {
         const uriMap = new Map([["vscode-resource://host/project/images/photo.png", "./images/photo.png"]]);
@@ -119,7 +119,7 @@ describe("restoreContentForSave", () => {
         expect(result).toBe("![1](./img.png) ![2](./img.png)");
     });
 
-    // ── 回归 E7：替换域收窄到图片语法内（此前全文 split/join） ──────────────
+
     it("代码围栏内的裸 webviewUri 字符串 应该 不被改写（回归：此前全文 split/join 会把代码块内容改掉）", () => {
         const uriMap = new Map([["vscode-resource://host/a.png", "./a.png"]]);
         const content = "```text\nvscode-resource://host/a.png\n```\n\n![alt](vscode-resource://host/a.png)";
@@ -147,9 +147,9 @@ describe("restoreContentForSave", () => {
     });
 });
 
-// ─────────────────────────────────────────────────────────────
-// computeLineRanges（段落行区间：行号映射与滚动同步的共同底座）
-// ─────────────────────────────────────────────────────────────
+
+
+
 describe("computeLineRanges", () => {
     it("空内容 应该 返回空数组", () => {
         expect(computeLineRanges("")).toEqual([]);
@@ -196,9 +196,9 @@ describe("computeLineRanges", () => {
         expect(computeLineRanges("\n\n# Heading")).toEqual([{ start: 3, end: 3 }]);
     });
 
-    // 回归（用户实测「源码在 3. 保存链路，切回预览跑到 6」「预览切源码完全无法定位」）：
-    // 旧实现按空行分段，空行分隔的列表项各成一段，而 CommonMark 把它们解析成**一个**
-    // list 块——块数与块序都和渲染结果对不上，滚动同步整体偏移。
+
+
+
     it("空行分隔的列表项 应该 合并为一个列表块（与渲染块结构一致）", () => {
         const content = [
             "## 章节",
@@ -252,18 +252,18 @@ describe("computeLineRanges", () => {
     });
 
     it("大文档（200 块）应该 逐块给出范围，且块数与输入无关地线性成立", () => {
-        // Perf does NOT belong in the unit suite: every wall-clock variant flaked under parallel
-        // load (300ms absolute, then a 3× ratio at 3.5×). Scaling is measured in
-        // `webview/__tests__/scale.bench.ts`; here we only assert the structural contract that
-        // the old O(n²) regression also violated — one range per block, in order, no gaps.
+
+
+
+
         const build = (headings: number): string =>
             Array.from({ length: headings }, (_, i) => `## Heading ${i}\n\nContent ${i}`).join("\n\n");
         for (const headings of [100, 200]) {
             const ranges = computeLineRanges(build(headings));
-            // Each heading and each paragraph is its own block.
+
             expect(ranges).toHaveLength(headings * 2);
             expect(ranges[0].start).toBe(1);
-            // Strictly increasing starts: each block owns its own line span.
+
             for (let i = 1; i < ranges.length; i++) {
                 expect(ranges[i].start).toBeGreaterThan(ranges[i - 1].start);
                 expect(ranges[i].end).toBeGreaterThanOrEqual(ranges[i].start);
@@ -279,9 +279,9 @@ describe("computeLineRanges", () => {
     });
 });
 
-// ─────────────────────────────────────────────────────────────
-// computeDisplayLineRanges（回归：源码/预览切换光标总回 1 行 1 列）
-// ─────────────────────────────────────────────────────────────
+
+
+
 describe("computeDisplayLineRanges", () => {
     it("无 frontmatter 时 应该 与 computeLineRanges 一致", () => {
         const content = "# 标题\n\n段落一\n\n段落二\n";
@@ -290,9 +290,9 @@ describe("computeDisplayLineRanges", () => {
 
     it("有 frontmatter 时 应该 跳过 frontmatter 块、行号仍指向完整源码", () => {
         const content = "---\ntitle: A\ndate: 2026-01-01\n---\n# 标题\n\n段落一\n\n段落二\n";
-        // 正文块：H1（源码第 5 行）、段落一（7）、段落二（9）
+
         expect(computeDisplayLineRanges(content).map((r) => r.start)).toEqual([5, 7, 9]);
-        // 对照：正文口径把 frontmatter（与紧随的标题同块）算成第 0 块，正文块索引整体错位
+
         expect(computeLineRanges(content)[0].start).toBe(1);
     });
 
@@ -312,9 +312,9 @@ describe("computeDisplayLineRanges", () => {
     });
 });
 
-// ─────────────────────────────────────────────────────────────
-// convertTableBrForDisplay
-// ─────────────────────────────────────────────────────────────
+
+
+
 describe("convertTableBrForDisplay", () => {
     it("表格行内 <br> 应该 转为 &#10; 实体（GFM 合法、解析渲染换行）", () => {
         expect(convertTableBrForDisplay("| A |\n| --- |\n| x<br>z |")).toBe(
@@ -331,7 +331,7 @@ describe("convertTableBrForDisplay", () => {
     it("代码围栏内的 |...<br>... 行 应该 不转换", () => {
         const input = "```html\n| a<br>b |\n```\n\n| x<br>y |\n";
         const output = convertTableBrForDisplay(input);
-        // 围栏内保持原样；围栏外的表格行转换
+
         expect(output).toBe("```html\n| a<br>b |\n```\n\n| x&#10;y |\n");
     });
 
@@ -351,9 +351,9 @@ describe("convertTableBrForDisplay", () => {
     });
 });
 
-// ─────────────────────────────────────────────────────────────
-// buildContentWithFrontmatter
-// ─────────────────────────────────────────────────────────────
+
+
+
 describe("buildContentWithFrontmatter", () => {
     it("新增 frontmatter 行 应该 替换 YAML 头且正文不变", () => {
         const current = "---\ntitle: A\n---\n# Body\n";
@@ -382,9 +382,9 @@ describe("buildContentWithFrontmatter", () => {
     });
 });
 
-// ─────────────────────────────────────────────────────────────
-// rewriteImageSources（显示侧与保存侧共用的唯一图片替换域）
-// ─────────────────────────────────────────────────────────────
+
+
+
 describe("rewriteImageSources", () => {
     const replaceWith = (target: string, newSrc: string) => (src: string) =>
         src === target ? newSrc : undefined;

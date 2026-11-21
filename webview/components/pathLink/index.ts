@@ -2,7 +2,7 @@ import "./pathLink.css";
 import { notifyOpenFile } from "@/messaging";
 import { isModifierActive, onModifierChange } from "@/ui/modifierKeys";
 
-// Matches @/path, ./path, ../path, dir/file and file.ext (with an optional :line / :line-range).
+
 const PATH_REGEX =
     /^(@\/[^\s]+|\.{1,2}\/[^\s]+|[a-zA-Z0-9_-][a-zA-Z0-9._-]*\/[^\s]+|[a-zA-Z0-9_-][a-zA-Z0-9._-]*\.[a-zA-Z][a-zA-Z0-9]*(#\d+(-\d+)?)?)$/;
 
@@ -10,7 +10,7 @@ function isPathLike(text: string): boolean {
     return PATH_REGEX.test(text.trim());
 }
 
-// Eligible: a <code> that is not inside a code block or an existing link and looks like a path.
+
 function isEligibleCode(el: Element): boolean {
     if (el.tagName !== "CODE") return false;
     if (el.closest("pre")) return false;
@@ -35,14 +35,14 @@ export function setupPathLink(container: HTMLElement): void {
         activeCode = null;
     }
 
-    // Ctrl/Meta tracking is shared with the CSS body class (ui/modifierKeys); page-lifecycle
-    // setup, so the subscription is never torn down.
+
+
     onModifierChange((held) => {
         if (!held) {
             unhighlight();
             return;
         }
-        // Modifier pressed while already hovering: highlight immediately.
+
         if (lastHoveredCode && isEligibleCode(lastHoveredCode)) {
             highlight(lastHoveredCode);
         }
@@ -61,7 +61,7 @@ export function setupPathLink(container: HTMLElement): void {
 
     container.addEventListener("mouseout", (e) => {
         const related = e.relatedTarget as Node | null;
-        // Moving into a child keeps the code element highlighted.
+
         if (activeCode && related && activeCode.contains(related)) return;
         lastHoveredCode = null;
         if (isModifierActive()) unhighlight();

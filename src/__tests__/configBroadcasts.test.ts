@@ -5,7 +5,7 @@ import {
     DEFAULT_EDITOR_MAX_WIDTH,
 } from "../../src/utils/webviewConfigSanitize";
 
-/** 取某个配置段的广播项（表驱动，未登记即 fail） */
+
 function broadcastFor(section: string) {
     const item = CONFIG_BROADCASTS.find((entry) => entry.section === section);
     if (!item) { throw new Error(`未登记的广播项：${section}`); }

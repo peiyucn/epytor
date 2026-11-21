@@ -1,28 +1,22 @@
-/**
- * 上游版本回归验证：Milkdown 升级后对上游修复项的可自动化断言。
- *
- * 对应 AGENTS「上游限制」维护规则：升级依赖时逐项验证。可自动化部分固化在此：
- * - #2451（7.22.1）：行内代码 mark 改为非 inclusive —— 影响上游限制 #2413（行内样式尾部退出）
- * - syncListOrderPlugin（preset-commonmark）：单个列表内部删除项后编号自动重排
- */
+
 import { afterEach, describe, expect, it } from "vitest";
 import { CrepeBuilder } from "@milkdown/crepe";
 import { editorViewCtx } from "@milkdown/kit/core";
 import type { EditorView } from "@milkdown/kit/prose/view";
 
-// jsdom 缺这些 API，Crepe feature 可能用到
+
 if (typeof (window as unknown as Record<string, unknown>).ResizeObserver === "undefined") {
     (window as unknown as Record<string, unknown>).ResizeObserver = class {
-        observe() { /* noop */ }
-        unobserve() { /* noop */ }
-        disconnect() { /* noop */ }
+        observe() {  }
+        unobserve() {  }
+        disconnect() {  }
     };
 }
 if (typeof window.matchMedia === "undefined") {
     window.matchMedia = (() => ({
         matches: false, media: "", onchange: null,
-        addListener() { /* noop */ }, removeListener() { /* noop */ },
-        addEventListener() { /* noop */ }, removeEventListener() { /* noop */ },
+        addListener() {  }, removeListener() {  },
+        addEventListener() {  }, removeEventListener() {  },
         dispatchEvent() { return false; },
     })) as typeof window.matchMedia;
 }
@@ -57,7 +51,7 @@ describe("Milkdown 上游版本回归（7.22.1）", () => {
         const view = getView(editor);
         const inlineCode = view.state.schema.marks["inlineCode"];
         expect(inlineCode).toBeDefined();
-        // #2451 make the inline code mark not inclusive；若上游回退为 inclusive，此处会失败提醒验证 #2413
+
         expect(inlineCode!.spec.inclusive).toBe(false);
     });
 
@@ -80,7 +74,7 @@ describe("Milkdown 上游版本回归（7.22.1）", () => {
     it("行内代码输入规则 mark 应参与 schema 输入规则（上游 #2445 相关）", async () => {
         const { editor } = await makeEditor();
         const view = getView(editor);
-        // 只断言 mark 与 schema 结构完好，输入规则行为由手测清单覆盖
+
         expect(view.state.schema.marks["inlineCode"]).toBeDefined();
         expect(view.state.schema.marks["strong"]).toBeDefined();
         expect(view.state.schema.marks["emphasis"]).toBeDefined();

@@ -1,16 +1,10 @@
-/**
- * Table grid picker: the top-bar "insert table" button opens an 8×8 grid; hover previews,
- * click inserts. Pure math lives in `webview/table/tableGrid.ts`.
- *
- * The panel is an anchored overlay: dismissal (Escape / outside mousedown / scroll) and the
- * viewport clamp come from `ui/anchoredOverlay` instead of a local listener bag.
- */
+
 import "./tableGridPicker.css";
 import { TABLE_GRID_SIZE, gridIndexToCell, isCellHighlighted } from "@/table/tableGrid";
 import { t } from "@/i18n";
 import { openAnchoredOverlay, type AnchoredOverlay } from "@/ui/anchoredOverlay";
 
-/** Mirrors tableGridPicker.css: 8 cells of 18px, 2px gaps, panel padding 16 / 40. */
+
 const CELL_SIZE_PX = 18;
 const CELL_GAP_PX = 2;
 const PANEL_PADDING_X_PX = 16;
@@ -22,7 +16,7 @@ const GAP_PX = 6;
 
 let _activePanel: AnchoredOverlay | null = null;
 
-/** Close the picker if it is open (rebuild path: its listeners target the old document/window). */
+
 export function closeTableGridPicker(): void {
     closeActivePanel();
 }
@@ -36,7 +30,7 @@ export function openTableGridPicker(
     anchor: HTMLElement,
     onPick: (rows: number, cols: number) => void,
 ): void {
-    // Idempotent: opening again closes the previous panel first.
+
     closeActivePanel();
 
     const panel = document.createElement("div");
@@ -95,8 +89,8 @@ export function openTableGridPicker(
         gap: GAP_PX,
         viewportMargin: VIEWPORT_MARGIN_PX,
         viewportRightMargin: VIEWPORT_MARGIN_PX,
-        // The grid historically clamped against window.innerWidth (scrollbar included),
-        // not the scaffold's default layout viewport; keep the exact old numbers.
+
+
         viewportWidth: () => window.innerWidth,
         size: { width: PANEL_WIDTH_PX, height: PANEL_HEIGHT_PX },
     });

@@ -1,8 +1,4 @@
-/**
- * 性能基准（探针）：1 万行文档 buildFoldDecorations 耗时。
- * 修复前预期 O(n²)（每标题 findHeadingFoldRange 全量扫描）；
- * 修复后单遍 O(n)，用于量化改善。
- */
+
 import { describe, expect, it } from "vitest";
 import { CrepeBuilder } from "@milkdown/crepe";
 import { editorViewCtx } from "@milkdown/kit/core";
@@ -11,14 +7,14 @@ import { buildFoldDecorations } from "../editor/plugins/headingFoldPlugin";
 
 if (typeof (window as unknown as Record<string, unknown>).ResizeObserver === "undefined") {
     (window as unknown as Record<string, unknown>).ResizeObserver = class {
-        observe() { /* noop */ } unobserve() { /* noop */ } disconnect() { /* noop */ }
+        observe() {  } unobserve() {  } disconnect() {  }
     };
 }
 if (typeof window.matchMedia === "undefined") {
     window.matchMedia = (() => ({
         matches: false, media: "", onchange: null,
-        addListener() { /* noop */ }, removeListener() { /* noop */ },
-        addEventListener() { /* noop */ }, removeEventListener() { /* noop */ },
+        addListener() {  }, removeListener() {  },
+        addEventListener() {  }, removeEventListener() {  },
         dispatchEvent() { return false; },
     })) as typeof window.matchMedia;
 }
@@ -50,13 +46,13 @@ describe("buildFoldDecorations 性能基准（防 O(n²) 回归）", () => {
         const t0 = performance.now();
         const result = buildFoldDecorations(view.state.doc, new Set());
         const elapsed = performance.now() - t0;
-        // eslint-disable-next-line no-console
+
         console.log(`[bench] 2万行 buildFoldDecorations: ${elapsed.toFixed(1)}ms, decorations=${result.find().length}`);
         expect(result.find().length).toBe(8000);
-        // Threshold is a wall-clock guard against the O(n²) regression (~1.2s), not a target:
-        // the same O(n) path measured 475-565ms across runs on the dev box depending on CPU
-        // load, so 500ms was inside the noise band. 800ms still leaves <50% of the regression
-        // reference as headroom. Bench files are excluded from verify/CI.
+
+
+
+
         expect(elapsed).toBeLessThan(800);
     }, 120000);
 });

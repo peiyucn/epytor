@@ -6,17 +6,9 @@ import { Plugin, TextSelection, type EditorState, type Transaction } from "@milk
 import { canJoin } from "@milkdown/kit/prose/transform";
 import { liftListItem } from "@milkdown/kit/prose/schema-list";
 
-/**
- * Backspace at the start of a list item.
- *
- * Top-level items become plain paragraphs; nested items move up one level. Nested items are
- * handled manually because ProseMirror's `liftListItem` pulls the following siblings into
- * the lifted item, which changes the level of every item below it. Empty nested items are
- * removed instead of being promoted; adjacent top-level lists are merged so the Markdown
- * round-trip keeps the same structure, and ordered-list continuations keep their number.
- */
 
-/** Depth of the enclosing list_item, or -1. */
+
+
 function listItemDepth($from: ResolvedPos, listItem: NodeType): number {
     for (let depth = $from.depth; depth > 0; depth--) {
         if ($from.node(depth).type === listItem) { return depth; }
@@ -24,15 +16,12 @@ function listItemDepth($from: ResolvedPos, listItem: NodeType): number {
     return -1;
 }
 
-/** True when the list at `depth` is itself inside a list item (i.e. a nested list). */
+
 function isNestedList($from: ResolvedPos, listDepth: number, listItem: NodeType): boolean {
     return listDepth >= 1 && $from.node(listDepth - 1).type === listItem;
 }
 
-/**
- * After lifting a top-level item, set the continuation ordered list's start number if the
- * split created one. Position is read from the lifted paragraph's next sibling.
- */
+
 function withContinuationOrder(tr: Transaction, order: number): Transaction {
     const { $from } = tr.selection;
     if (!$from.parent.isTextblock || $from.depth < 1) { return tr; }
@@ -45,11 +34,7 @@ function withContinuationOrder(tr: Transaction, order: number): Transaction {
     return tr.setNodeMarkup($from.after($from.depth), undefined, { ...next.attrs, order });
 }
 
-/**
- * Merge adjacent top-level lists of the same type. Lifting a top-level item with a nested
- * list can leave two lists next to each other; the serializer separates them with a blank
- * line, which Markdown reopens as one loose list.
- */
+
 function mergeAdjacentTopLevelLists(tr: Transaction): void {
     const positions: number[] = [];
     tr.doc.forEach((node, offset) => {
@@ -57,7 +42,7 @@ function mergeAdjacentTopLevelLists(tr: Transaction): void {
             positions.push(offset);
         }
     });
-    // Join from the end so earlier positions stay valid.
+
     for (let i = positions.length - 2; i >= 0; i--) {
         const pos = positions[i];
         const left = tr.doc.nodeAt(pos);
@@ -70,11 +55,7 @@ function mergeAdjacentTopLevelLists(tr: Transaction): void {
     }
 }
 
-/**
- * Delete an empty nested item instead of promoting it one level. An item with no content
- * and no children has nothing to lift; repeated Backspace would otherwise walk it up to the
- * top level. The parent list is removed too when this was its only child.
- */
+
 function deleteEmptyNestedItem(
     state: EditorState,
     $from: ResolvedPos,
@@ -103,16 +84,7 @@ function deleteEmptyNestedItem(
     return tr;
 }
 
-/**
- * Move a nested list item up one level without dragging its following siblings into it.
- *
- * Before:  parentItem > parentList [.., item, following..]
- * After:   parentItem > parentList [..] ; grandList [.., parentItem, item, following..]
- *
- * `item` keeps its own child list. `following` stays in `parentList`; when the item is
- * the first child that list simply loses its head, when it is in the middle the list
- * keeps its remaining items.
- */
+
 function liftNestedItem(state: EditorState, $from: ResolvedPos, itemDepth: number): Transaction | null {
     const parentListDepth = itemDepth - 1;
     const parentItemDepth = itemDepth - 2;
@@ -128,7 +100,7 @@ function liftNestedItem(state: EditorState, $from: ResolvedPos, itemDepth: numbe
     const parentListIndex = $from.index(parentItemDepth);
     const parentItemIndex = $from.index(grandListDepth);
 
-    // The original parent list keeps every child except the lifted item.
+
     const remaining: Node[] = [];
     parentList.forEach((child, _offset, index) => {
         if (index !== itemIndex) { remaining.push(child); }
@@ -137,7 +109,7 @@ function liftNestedItem(state: EditorState, $from: ResolvedPos, itemDepth: numbe
         ? parentList.copy(Fragment.fromArray(remaining))
         : null;
 
-    // Rebuild the parent item with the reduced (or removed) child list.
+
     const parentChildren: Node[] = [];
     parentItem.forEach((child, _offset, index) => {
         if (index === parentListIndex) {
@@ -148,7 +120,7 @@ function liftNestedItem(state: EditorState, $from: ResolvedPos, itemDepth: numbe
     });
     const newParentItem = parentItem.copy(Fragment.fromArray(parentChildren));
 
-    // Rebuild the grand list: parent item stays in place, lifted item follows it.
+
     const grandChildren: Node[] = [];
     grandList.forEach((child, _offset, index) => {
         if (index === parentItemIndex) {
@@ -162,14 +134,14 @@ function liftNestedItem(state: EditorState, $from: ResolvedPos, itemDepth: numbe
     const grandListPos = $from.before(grandListDepth);
     const tr = state.tr.replaceWith(grandListPos, grandListPos + grandList.nodeSize, newGrandList);
 
-    // Place the caret at the start of the lifted item's first paragraph. The item is a
-    // direct child of the rebuilt grand list, so the position is computed from node sizes.
+
+
     let liftedItemPos = grandListPos + 1;
     for (let index = 0; index < parentItemIndex; index++) {
         liftedItemPos += grandList.child(index).nodeSize;
     }
     liftedItemPos += newParentItem.nodeSize;
-    const caret = liftedItemPos + 2; // list_item → paragraph → text start
+    const caret = liftedItemPos + 2;
     tr.setSelection(TextSelection.create(tr.doc, caret));
     return tr;
 }
@@ -187,13 +159,13 @@ export const listBackspacePlugin = $prose((ctx) => {
             if ($from.parentOffset !== 0 || !$from.parent.isTextblock) { return false; }
             const itemDepth = listItemDepth($from, listItem);
             if (itemDepth < 0) { return false; }
-            // Only the first text block of the item; later blocks keep the default behavior.
+
             if ($from.index(itemDepth) !== 0) { return false; }
 
-            // Nested item: custom lift (see file header); keeps the following siblings in place.
+
             if (isNestedList($from, itemDepth - 1, listItem)) {
-                // An empty item has no content to lift; Backspace should remove it rather than
-                // walk an empty row up to the top level.
+
+
                 const empty = deleteEmptyNestedItem(state, $from, itemDepth);
                 if (empty) {
                     if (dispatch) { dispatch(empty.scrollIntoView()); }

@@ -1,14 +1,4 @@
-/**
- * 任务项回车新建项未勾选（回归：owner 手测 2026-10-16）。
- *
- * 现象：`- [x] 已完成` 里回车，新出现的项也是勾选态。
- * 根因：官方 `splitListItem(listItem)`（commonmark preset 把回车绑到它）分裂时原样复制
- * 被分裂节点的 attrs，任务项的 `checked` 因此被带进新项；官方 `splitListItem(itemType, itemAttrs)`
- * 的 `itemAttrs` 只在「光标在项末尾」分支生效。实现见 `webview/markdown/taskListItemEnter.ts`。
- *
- * 本文件锁定**修复后语义**：回车新建的项一律未勾选，原项保持原状；未勾选任务项与
- * 普通列表项不受影响。
- */
+
 import { afterEach, describe, expect, it } from "vitest";
 import { CrepeBuilder } from "@milkdown/crepe";
 import { editorViewCtx } from "@milkdown/kit/core";
@@ -19,16 +9,16 @@ import { taskListItemEnterPlugin } from "../markdown/taskListItemEnter";
 
 if (typeof (window as unknown as Record<string, unknown>).ResizeObserver === "undefined") {
     (window as unknown as Record<string, unknown>).ResizeObserver = class {
-        observe() { /* noop */ }
-        unobserve() { /* noop */ }
-        disconnect() { /* noop */ }
+        observe() {  }
+        unobserve() {  }
+        disconnect() {  }
     };
 }
 if (typeof window.matchMedia === "undefined") {
     window.matchMedia = (() => ({
         matches: false, media: "", onchange: null,
-        addListener() { /* noop */ }, removeListener() { /* noop */ },
-        addEventListener() { /* noop */ }, removeEventListener() { /* noop */ },
+        addListener() {  }, removeListener() {  },
+        addEventListener() {  }, removeEventListener() {  },
         dispatchEvent() { return false; },
     })) as typeof window.matchMedia;
 }
@@ -49,8 +39,8 @@ function pressEnter(view: EditorView): boolean {
     let handled = false;
     const event = {
         key: "Enter",
-        preventDefault() { /* noop */ },
-        stopPropagation() { /* noop */ },
+        preventDefault() {  },
+        stopPropagation() {  },
     } as unknown as KeyboardEvent;
     view.someProp("handleKeyDown", (f) => {
         if (f(view, event)) { handled = true; return true; }
@@ -59,7 +49,7 @@ function pressEnter(view: EditorView): boolean {
     return handled;
 }
 
-/** 全部 list_item 的 `checked`（文档顺序）：true / false = 任务项，null = 普通列表项 */
+
 function checkedFlags(view: EditorView): Array<boolean | null> {
     const out: Array<boolean | null> = [];
     view.state.doc.descendants((node) => {
@@ -68,7 +58,7 @@ function checkedFlags(view: EditorView): Array<boolean | null> {
     return out;
 }
 
-/** 每个 list_item 首块（段落）的文本 */
+
 function itemTexts(view: EditorView): string[] {
     const out: string[] = [];
     view.state.doc.descendants((node) => {
@@ -77,7 +67,7 @@ function itemTexts(view: EditorView): string[] {
     return out;
 }
 
-/** 项内文本起点在文档里的位置（item 位置 + 1 段 + 1 文本） */
+
 function textStart(view: EditorView, itemIndex: number): number {
     const positions: number[] = [];
     view.state.doc.descendants((node, pos) => {
@@ -102,8 +92,8 @@ describe("任务项回车：新建项一律未勾选", () => {
 
         expect(itemTexts(view)).toEqual(["done", ""]);
         expect(checkedFlags(view)).toEqual([true, false]);
-        // 存盘同样保持「原项勾选、新项空复选框」（标记符与空项 `<br />` 占位是序列化层的另一条路径，
-        // 本用例只锁复选框标记）
+
+
         const md = serialize(editor);
         expect(md).toContain("[x] done");
         expect(md).toContain("[ ]");
@@ -165,20 +155,20 @@ describe("任务项回车：新建项一律未勾选", () => {
     });
 
     it("嵌套任务列表：内层空项回车 应该 提升一级、不产生圆点项", async () => {
-        // 回归（2026-10-18，owner 反馈）：任务项连续回车时，空任务项变成普通圆点项、再按一次才退出。
-        // 根因：上游 splitListItem 的**空项分支**用 createAndFill() 造新项（attrs 取默认值），
-        // 任务项因此丢了 checked → 变圆点；顶层空项会因 depth 判断走 liftEmptyBlock 而侥幸正确。
+
+
+
         const editor = await makeEditor("- [ ] outer\n  - [ ] inner\n");
         const view = getView(editor);
         setCursor(view, textStart(view, 1) + "inner".length);
 
-        expect(pressEnter(view)).toBe(true); // 新建一个空的嵌套任务项
+        expect(pressEnter(view)).toBe(true);
         expect(checkedFlags(view)).toEqual([false, false, false]);
 
-        expect(pressEnter(view)).toBe(true); // 空项回车 → 提升一级（不是变圆点）
+        expect(pressEnter(view)).toBe(true);
         expect(checkedFlags(view).every((checked) => checked === false)).toBe(true);
         expect(itemTexts(view)).toEqual(["outer", "inner", ""]);
-        // 提升后落到外层列表：顶层列表 2 项（外层项 + 被提升的项）
+
         expect(view.state.doc.firstChild?.type.name).toBe("bullet_list");
         expect(view.state.doc.firstChild?.childCount).toBe(2);
     });
@@ -188,10 +178,10 @@ describe("任务项回车：新建项一律未勾选", () => {
         const view = getView(editor);
         setCursor(view, textStart(view, 0) + "todo".length);
 
-        expect(pressEnter(view)).toBe(true); // 新空任务项
+        expect(pressEnter(view)).toBe(true);
         expect(checkedFlags(view)).toEqual([false, false]);
 
-        expect(pressEnter(view)).toBe(true); // 空项回车 → 退出列表
+        expect(pressEnter(view)).toBe(true);
 
         const topKinds: string[] = [];
         view.state.doc.forEach((node) => { topKinds.push(node.type.name); });

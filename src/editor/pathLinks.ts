@@ -1,10 +1,4 @@
-/**
- * "Open this path link" handling for `Ctrl+click` in the editor.
- *
- * `.md` targets open in the WYSIWYG editor, other files in the text editor, and a numeric
- * `#<line>` fragment positions the target. Extracted from the provider so the workspace
- * containment guard sits next to the resolution it protects.
- */
+
 import * as path from "path";
 import * as vscode from "vscode";
 import { resolveDocPath } from "../utils/docPath";
@@ -12,13 +6,13 @@ import { fireAndLog } from "../utils/fireAndLog";
 import { isPathWithinBase } from "../utils/pathGuard";
 
 export interface PathLinkHost {
-    /** WYSIWYG custom-editor view type for markdown targets. */
+
     readonly viewType: string;
-    /** Stash a pending scroll target for a markdown document. */
+
     setPendingNavigation(fsPath: string, line: number): void;
 }
 
-/** Open a path link; `pathLink` is the raw link target as written in the document. */
+
 export async function openPathLink(
     documentFsPath: string,
     pathLink: string,
@@ -30,22 +24,22 @@ export async function openPathLink(
     const lineMatch = fragment?.match(/^(\d+)(-\d+)?$/);
     const lineNumber = lineMatch ? parseInt(lineMatch[1], 10) : undefined;
 
-    // Path links must stay inside the workspace root.
-    // Regression: absolute and ../ paths could open any local file from a malicious repo.
+
+
     const containingFolder = vscode.workspace.workspaceFolders?.find(
         f => documentFsPath.startsWith(f.uri.fsPath + path.sep),
     );
-    // A file opened from outside the workspace must not borrow another folder's root:
-    // its `@/` falls back to the document directory (same rule as resolveDocPath).
+
+
     const workspaceRootForDoc = containingFolder?.uri.fsPath ?? null;
-    // `@/` is the workspace root alias; without a workspace it falls back to the document
-    // directory, the same rule image display and save use (see resolveDocPath).
+
+
     const absPath = resolveDocPath(
         filePath,
         { docFsPath: documentFsPath, workspaceRoot: workspaceRootForDoc },
     );
 
-    // Validate after resolution; standalone files (no workspace root) are not restricted.
+
     if (containingFolder && !isPathWithinBase(absPath, containingFolder.uri.fsPath)) {
         return;
     }

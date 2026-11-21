@@ -65,10 +65,10 @@ describe("findMatches：正则模式", () => {
     });
 
     it("零宽正则（.*）应该 快速返回且不死循环", () => {
-        // 挂钟断言对机器负载与覆盖率插桩敏感：改为「多轮取最小值 + 宽松上限」。
-        // 真回归（零宽匹配死循环）会让 vitest 自身超时，仍会被抓住。
+
+
         const text = "a\n".repeat(500);
-        findMatches(text, ".*", { caseSensitive: false, useRegex: true }); // 预热
+        findMatches(text, ".*", { caseSensitive: false, useRegex: true });
         let best = Number.POSITIVE_INFINITY;
         for (let round = 0; round < 3; round++) {
             const start = performance.now();

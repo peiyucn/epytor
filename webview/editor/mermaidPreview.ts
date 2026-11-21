@@ -1,13 +1,4 @@
-/**
- * Mermaid code-block preview: lazy module load, keyed block registry and theme re-render.
- *
- * Mermaid (~1.3 MB minified) would dominate the entry chunk, so the module is imported on the
- * first block render. Rendered blocks are tracked by `data-mermaid-key`; the attribute is the
- * ownership token, which lets a theme switch redraw only blocks that still exist and lets
- * stale keys be pruned. The current theme is injected so this factory never owns theme state.
- *
- * Extracted from `createEditor` (audit F2) with the lazy-load and key behaviour unchanged.
- */
+
 import { mermaidInitConfig } from "./mermaid";
 import { enhanceMermaidPreview } from "../components/mermaidZoom";
 
@@ -15,17 +6,14 @@ type MermaidModule = typeof import("mermaid").default;
 export type PreviewApply = (value: null | string | HTMLElement) => void;
 
 export interface MermaidPreview {
-    /**
-     * Async code-block preview: applies the placeholder through `apply` synchronously and
-     * returns `undefined` (Crepe keeps its loading state until the rendered SVG arrives).
-     */
+
     renderPreview(code: string, apply: PreviewApply): undefined;
-    /** Theme changed: re-initialize and redraw every live block (no-op before the first render). */
+
     applyTheme(): void;
 }
 
 export interface MermaidPreviewOptions {
-    /** Loader seam for tests; production lazy-loads the ~1.3 MB mermaid chunk on first render. */
+
     loadMermaidModule?: () => Promise<MermaidModule>;
 }
 
@@ -73,14 +61,14 @@ export function createMermaidPreview(
             if (el) {
                 renderMermaid(code).then((svg) => {
                     enhance(el, svg);
-                }).catch(() => { /* one failed diagram must not block the others */ });
+                }).catch(() => {  });
             }
         });
     }
 
     function renderPreview(code: string, apply: PreviewApply): undefined {
         const key = `m-${++seq}`;
-        // Reclaim keys whose node is gone; stale keys made every theme switch query the DOM.
+
         for (const oldKey of codeMap.keys()) {
             if (oldKey !== key && !document.querySelector(`[data-mermaid-key="${oldKey}"]`)) {
                 codeMap.delete(oldKey);

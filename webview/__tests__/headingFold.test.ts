@@ -7,16 +7,16 @@ import { normalizeFoldPositions } from "../editor/plugins/headingFoldPlugin";
 
 if (typeof (window as unknown as Record<string, unknown>).ResizeObserver === "undefined") {
     (window as unknown as Record<string, unknown>).ResizeObserver = class {
-        observe() { /* noop */ }
-        unobserve() { /* noop */ }
-        disconnect() { /* noop */ }
+        observe() {  }
+        unobserve() {  }
+        disconnect() {  }
     };
 }
 if (typeof window.matchMedia === "undefined") {
     window.matchMedia = (() => ({
         matches: false, media: "", onchange: null,
-        addListener() { /* noop */ }, removeListener() { /* noop */ },
-        addEventListener() { /* noop */ }, removeEventListener() { /* noop */ },
+        addListener() {  }, removeListener() {  },
+        addEventListener() {  }, removeEventListener() {  },
         dispatchEvent() { return false; },
     })) as typeof window.matchMedia;
 }
@@ -55,10 +55,10 @@ describe("findHeadingFoldRange", () => {
         expect(headings).toHaveLength(2);
         const range = findHeadingFoldRange(view.state.doc, headings[0].pos, 2)!;
         expect(range).not.toBeNull();
-        // 范围应覆盖 A 的 content，止于 B 之前
+
         expect(range.to).toBeLessThanOrEqual(headings[1].pos);
         expect(range.from).toBeGreaterThan(headings[0].pos);
-        // B 的 content 不在范围内
+
         expect(view.state.doc.textBetween(range.from, range.to)).toContain("content A");
         expect(view.state.doc.textBetween(range.from, range.to)).not.toContain("content B");
     });
@@ -106,11 +106,11 @@ describe("computeAllHeadingFoldRanges（单遍 O(n)，与 findHeadingFoldRange �
         const headings = headingPositions(view);
         const all = computeAllHeadingFoldRanges(doc);
 
-        // 每个标题的 ranges 都应与旧实现一致
+
         for (const { pos, level } of headings) {
             expect(all.get(pos)).toEqual(findHeadingFoldRange(doc, pos, level));
         }
-        // 全部标题都在 map 中
+
         expect(all.size).toBe(headings.length);
     });
 
@@ -133,8 +133,8 @@ describe("buildHeadingIndex（折叠 / 吸顶 / TOC 共享索引，回归 P1）"
         expect(index.every((e) => e.topLevel)).toBe(true);
         expect(index[0]).toMatchObject({ level: 2, text: "A" });
         expect(index[0].foldRange).not.toBeNull();
-        expect(index[1].foldRange).toBeNull(); // 末尾标题无后续内容
-        // pos 与 doc.forEach 的 offset 同口径（顶层判定不得引入 ±1 偏移）
+        expect(index[1].foldRange).toBeNull();
+
         expect(index.map((e) => e.pos)).toEqual(headingPositions(view).map((h) => h.pos));
     });
 

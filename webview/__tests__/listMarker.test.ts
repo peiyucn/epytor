@@ -1,7 +1,4 @@
-/**
- * Word 式多级列表标记（见 docs/specs/2026-09-12-word-style-multilevel-markers.md）。
- * 纯计算部分：层级 3 档循环，有序 1./a)/i.，无序 ●/■/◆。
- */
+
 import { describe, expect, it } from "vitest";
 import { computeListMarker, toLowerAlpha, toLowerRoman } from "../markdown/listMarker";
 
@@ -29,7 +26,7 @@ describe("多级列表标记：层级循环", () => {
         expect(text(1)).toBe("1.");
         expect(text(2)).toBe("a)");
         expect(text(3)).toBe("i.");
-        expect(text(4)).toBe("1.");   // 第 4 层回到十进制
+        expect(text(4)).toBe("1.");
         expect(text(5)).toBe("a)");
         expect(text(6)).toBe("i.");
     });
@@ -44,7 +41,7 @@ describe("多级列表标记：层级循环", () => {
     it("同层第 n 项 应该 接续序号（按列表起始号 order）", () => {
         expect(computeListMarker("ordered", 1, 0, 1).text).toBe("1.");
         expect(computeListMarker("ordered", 1, 2, 1).text).toBe("3.");
-        // 退格断开列表后从 3 续号（order=3）：第 3 项 = 3 + 2 = 5
+
         expect(computeListMarker("ordered", 1, 0, 3).text).toBe("3.");
         expect(computeListMarker("ordered", 1, 2, 3).text).toBe("5.");
         expect(computeListMarker("ordered", 2, 2, 3).text).toBe("e)");

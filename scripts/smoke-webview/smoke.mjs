@@ -1,15 +1,15 @@
-// End-to-end smoke test for the built webview bundle, using the local Edge (no downloads).
-//
-// It serves `dist/` over a tiny HTTP server, loads the real production `webview.js` in headless
-// Edge with a mocked `acquireVsCodeApi`, then drives it through the real VS Code message
-// protocol and asserts user-visible state (render, save round-trip, typing, config, scroll,
-// revert, lazy code-block chunk). This covers the wiring that jsdom cannot: real layout,
-// real module loading and real input events.
-//
-// Usage: pnpm run smoke            (requires `pnpm run vscode:prepublish` first)
-// Env:   EPYTOR_EDGE=<path to msedge.exe>, SMOKE_PORT, SMOKE_CDP_PORT
-//
-// Exit code 0 = all checks passed, 1 = a check failed, 2 = environment/harness failure.
+
+
+
+
+
+
+
+
+
+
+
+
 
 import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -47,7 +47,7 @@ async function waitForResponse(url, timeoutMs = 20000) {
         try {
             const res = await fetch(url);
             if (res.ok) return res;
-        } catch { /* not up yet */ }
+        } catch {  }
         await sleep(200);
     }
     throw new Error(`timeout waiting for ${url}`);
@@ -90,7 +90,7 @@ class Cdp {
         if (!this.listeners.has(method)) this.listeners.set(method, []);
         this.listeners.get(method).push(handler);
     }
-    close() { try { this.ws.close(); } catch { /* already closed */ } }
+    close() { try { this.ws.close(); } catch {  } }
 }
 
 function killTree(child) {
@@ -101,11 +101,11 @@ function killTree(child) {
         } else {
             child.kill();
         }
-    } catch { /* already gone */ }
+    } catch {  }
 }
 
 function removeProfile() {
-    // Edge may still hold files right after kill (Windows); a leftover profile is harmless.
+
     try {
         fs.rmSync(PROFILE, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
     } catch (error) {
@@ -218,18 +218,18 @@ async function main() {
             while (Date.now() - start < timeoutMs) {
                 try {
                     if (await evaluate(expression)) return true;
-                } catch { /* page still loading */ }
+                } catch {  }
                 await sleep(100);
             }
             throw new Error(`timeout waiting for ${label}`);
         };
 
-        // 1) Bundle boots and announces itself.
+
         await waitForExpr("document.readyState === 'complete'", 30000, "page load");
         await waitForExpr("Array.isArray(window.__posted) && window.__posted.some(m => m.type === 'ready')", 30000, "ready message");
         check("webview bundle boots and posts ready", true);
 
-        // 2) init message renders the document.
+
         const blocks = 28;
         const lines = ["# Smoke heading", ""];
         for (let i = 1; i <= blocks; i += 1) {
@@ -266,13 +266,13 @@ async function main() {
         const wordCount = await evaluate("window.__posted.filter(m => m.type === 'wordCount').pop()");
         check("word count posted", wordCount.lines >= blocks, JSON.stringify({ lines: wordCount.lines, words: wordCount.words }));
 
-        // 3) Unedited save round-trips byte-for-byte.
+
         await evaluate("window.postMessage({type:'requestContent'}, '*'); true");
         await waitForExpr("window.__posted.some(m => m.type === 'contentResponse')", 10000, "contentResponse");
         const unedited = await evaluate("window.__posted.filter(m => m.type === 'contentResponse').pop().content");
         check("unedited save is byte-identical", unedited === markdown, `${unedited.length} vs ${markdown.length} chars`);
 
-        // 4) Real keyboard input reaches the ProseMirror doc and the serializer.
+
         await evaluate("document.querySelector('#editor .ProseMirror').focus(); true");
         await cdp.send("Input.insertText", { text: " SMOKE-TYPED" });
         await sleep(500);
@@ -281,7 +281,7 @@ async function main() {
         const typed = await evaluate("window.__posted.filter(m => m.type === 'contentResponse').pop().content");
         check("typed text is serialized", typed.includes("SMOKE-TYPED"), typed.slice(0, 80));
 
-        // 5) Runtime config messages apply CSS variables immediately.
+
         await evaluate("window.postMessage({type:'tableWrapModeChanged', mode:'nowrap'}, '*'); true");
         await evaluate("window.postMessage({type:'editorMaxWidthChanged', value:1234}, '*'); true");
         await evaluate("window.postMessage({type:'codeBlockMaxHeightChanged', value:777}, '*'); true");
@@ -298,7 +298,7 @@ async function main() {
         check("editor max width applied", vars.maxWidth === "1234px", vars.maxWidth);
         check("code block max height applied", vars.codeHeight === "777px", vars.codeHeight);
 
-        // 6) scrollToLine navigates in the real layout engine and persists the offset.
+
         await evaluate(`window.postMessage(${JSON.stringify({ type: "scrollToLine", line: 41 })}, "*"); true`);
         await sleep(3000);
         const scrollY = await evaluate("window.scrollY");
@@ -306,8 +306,8 @@ async function main() {
         const persisted = await evaluate("window.__webviewState");
         check("scroll position persisted to webview state", persisted !== null && Number(persisted.scrollY) > 0, JSON.stringify(persisted));
 
-        // 7) revert rebuilds the editor with disk content, then a fenced block mounts CodeMirror
-        //    (the language/CM chunks are loaded on demand, so this tests the real splitting).
+
+
         await evaluate(`window.postMessage(${JSON.stringify({
             type: "revert",
             content: "# Reverted heading\n\n```js\nconst x = 1;\n```\n\nfresh content\n",
@@ -321,9 +321,9 @@ async function main() {
         await waitForExpr("document.querySelector('.milkdown-code-block') !== null", 30000, "code block mounted");
         check("fenced code block mounts in the real bundle", true);
 
-        // 8) A plain-language block has no preview: Crepe treats `undefined` as "async preview
-        //    pending" and `null` as "no preview", so unhandled languages must answer `null` —
-        //    otherwise every plain code block keeps a stuck "Loading..." preview panel.
+
+
+
         const plainBlockState = await evaluate(`(() => {
             const block = document.querySelector('.milkdown-code-block');
             return {
@@ -337,7 +337,7 @@ async function main() {
             JSON.stringify(plainBlockState),
         );
 
-        // 9) No uncaught page errors (network favicon noise filtered above).
+
         check("no page errors", pageErrors.length === 0, pageErrors.slice(0, 3).join(" | "));
 
         const screenshot = await cdp.send("Page.captureScreenshot", { format: "png" });

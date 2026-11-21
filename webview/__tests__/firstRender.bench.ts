@@ -1,28 +1,24 @@
-/**
- * 首次渲染基准（探针）：打开 md 文件时的 createEditor（全功能栈：
- * Crepe 原生 feature + 自定义插件 + CodeMirror NodeView + 图片 NodeView）耗时。
- * 规模与内容构成分档：典型文档 / 代码块密集 / 万行级，找首次渲染的规模敏感热点。
- */
+
 import { describe, it } from "vitest";
 import { createEditor, destroyEditor } from "../editor";
 import { editorViewCtx } from "@milkdown/kit/core";
 
 if (typeof (window as unknown as Record<string, unknown>).ResizeObserver === "undefined") {
     (window as unknown as Record<string, unknown>).ResizeObserver = class {
-        observe() { /* noop */ } unobserve() { /* noop */ } disconnect() { /* noop */ }
+        observe() {  } unobserve() {  } disconnect() {  }
     };
 }
 if (typeof window.matchMedia === "undefined") {
     window.matchMedia = (() => ({
         matches: false, media: "", onchange: null,
-        addListener() { /* noop */ }, removeListener() { /* noop */ },
-        addEventListener() { /* noop */ }, removeEventListener() { /* noop */ },
+        addListener() {  }, removeListener() {  },
+        addEventListener() {  }, removeEventListener() {  },
         dispatchEvent() { return false; },
     })) as typeof window.matchMedia;
 }
 if (typeof (window as unknown as Record<string, unknown>).IntersectionObserver === "undefined") {
     (window as unknown as Record<string, unknown>).IntersectionObserver = class {
-        observe() { /* noop */ } unobserve() { /* noop */ } disconnect() { /* noop */ } takeRecords() { return []; }
+        observe() {  } unobserve() {  } disconnect() {  } takeRecords() { return []; }
     };
 }
 (window as unknown as Record<string, unknown>).__i18n = {
@@ -31,7 +27,7 @@ if (typeof (window as unknown as Record<string, unknown>).IntersectionObserver =
     serializationMode: "clean",
 };
 
-/** 典型文档：标题 + 正文 + 列表混合，n 个「章节」 */
+
 function makeTypicalDoc(chapterCount: number): string {
     const lines: string[] = [];
     for (let i = 0; i < chapterCount; i++) {
@@ -51,7 +47,7 @@ function makeTypicalDoc(chapterCount: number): string {
     return lines.join("\n");
 }
 
-/** 代码块密集：n 个带语言的围栏代码块（触发 CodeMirror NodeView） */
+
 function makeCodeDoc(blockCount: number): string {
     const lines: string[] = [];
     for (let i = 0; i < blockCount; i++) {
@@ -71,14 +67,14 @@ async function benchCreate(label: string, md: string): Promise<void> {
     const root = document.createElement("div");
     document.body.appendChild(root);
     const t0 = performance.now();
-    const editor = await createEditor(root, md, () => { /* noop */ });
+    const editor = await createEditor(root, md, () => {  });
     const createMs = performance.now() - t0;
     const view = editor.action((ctx) => ctx.get(editorViewCtx));
     const domNodes = root.querySelectorAll("*").length;
     const docSize = view.state.doc.content.size;
     destroyEditor();
     root.remove();
-    // eslint-disable-next-line no-console
+
     console.log(
         `[first-render] ${label}: create=${createMs.toFixed(1)}ms docSize=${docSize} domNodes=${domNodes}`
     );

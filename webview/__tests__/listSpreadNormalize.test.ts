@@ -22,14 +22,7 @@ async function mount(markdown: string): Promise<HTMLElement> {
     return root;
 }
 
-/**
- * 一次事务里两步：先插入拼音、再原地替换成候选词。
- * **必须放在同一个事务里**——分成两次 dispatch 时每步各自单步，区间换算的映射路径
- * 根本走不到，那样的用例在任何版本都绿（钉不住回归）。单事务里中间文档比最终文档长
- * （nihao=5 → 你好=2），旧实现把中间步的 newEnd 当最终坐标用会越过文档末尾，
- * nodesBetween 抛 TypeError，异常从 appendTransaction 冒到 applyTransaction，
- * **整条事务（含撤销）被打掉**。
- */
+
 function composeInOneTransaction(view: EditorView, at: number, pinyin: string, hanzi: string): void {
     const tr = view.state.tr.insertText(pinyin, at);
     tr.replaceWith(at, at + pinyin.length, view.state.schema.text(hanzi));
@@ -44,12 +37,12 @@ describe("列表 spread 规范化", () => {
         expect(list.type.name).toBe("bullet_list");
         const itemEnd = 2 + list.firstChild!.content.size;
 
-        // 往第一个列表项里再插一个段落 → 该项含两块（松散形态由内容本身决定，
-        // 2026-10-26 起本插件不再反向强标 spread）
+
+
         view.dispatch(view.state.tr.insert(itemEnd, view.state.schema.nodes.paragraph!.create()));
         expect(view.state.doc.firstChild!.firstChild!.childCount).toBe(2);
 
-        // 删掉该段落 → 回到单块，spread 应收回 false
+
         view.dispatch(view.state.tr.delete(itemEnd, itemEnd + 2));
         expect(view.state.doc.firstChild!.firstChild!.attrs.spread).toBe(false);
         expect(view.state.doc.firstChild!.attrs.spread).toBe(false);
@@ -58,13 +51,13 @@ describe("列表 spread 规范化", () => {
     }, 60000);
 
     it("回归（2026-10-26）：嵌套任务列表两项结构 应该 不被强标成松散（否则每项之间多出空行）", async () => {
-        // 用户手测：任务列表中间某项退格提升后「下面的层级跟着带乱」。
-        // 根因之一是本插件把「含子列表的项」当成松散项，整段列表被强标 spread=true，
-        // 序列化时每个列表项之间都插入空行。
+
+
+
         const root = await mount("- [ ] P\n  - [ ] C1\n  - [ ] C2\n  - [ ] C3");
         const view = getEditorView()!;
         expect(view.state.doc.firstChild!.attrs.spread).toBe(false);
-        // 该项有 paragraph + bullet_list 两块，但子列表不代表空行
+
         expect(view.state.doc.firstChild!.firstChild!.childCount).toBe(2);
         const tr = view.state.tr;
         normalizeListSpread(tr.doc, view.state.schema, tr, { from: 0, to: tr.doc.content.size });
@@ -104,13 +97,13 @@ describe("列表 spread 规范化", () => {
         it("列表项内 应该 不抛错", async () => {
             const root = await mount("- hello\n- b");
             const view = getEditorView()!;
-            // 位置从文档结构推导（1 列表开 + 1 项开 + 1 段落开 + 段落文本长），
-            // 保证替换范围完全落在该项段落内，不跨项边界
+
+
             const item = view.state.doc.firstChild!.firstChild!;
             const at = 3 + item.firstChild!.content.size;
             composeInOneTransaction(view, at, "nihao", "你好");
             expect(view.state.doc.textContent).toBe("hello你好b");
-            // 列表结构未被破坏：仍是两项
+
             expect(view.state.doc.firstChild!.childCount).toBe(2);
             expect(view.state.doc.firstChild!.firstChild!.textContent).toBe("hello你好");
             destroyEditor(); root.remove();

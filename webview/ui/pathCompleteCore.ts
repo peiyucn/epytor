@@ -1,11 +1,4 @@
-/**
- * Path-completion dropdown core (render + keyboard nav + click select), shared by
- * pathComplete and imgPathComplete.
- *
- * Regression: the two implementations were near line-for-line mirrors (ul/li building,
- * mouseover suppression, Escape/arrow/Enter/Tab navigation), so every keyboard fix had to be
- * made twice — and they had already drifted apart.
- */
+
 import {
     closeDropdown as closeDropdownState,
     updateActiveItem,
@@ -18,32 +11,32 @@ export interface PathDropdownOptions<T> {
     listClass: string;
     itemClass: string;
     activeClass: string;
-    /** Inner HTML for an item (icon/thumbnail + label), assembled by the caller. */
+
     renderItem: (item: T) => string;
     getTitle: (item: T) => string;
-    /** Item chosen (mousedown / Enter / Tab). */
+
     onSelect: (item: T) => void;
-    /** Extra cleanup on close (e.g. restore the saved selection range). */
+
     onClose?: () => void;
 }
 
 export interface PathDropdown<T> {
     isOpen(): boolean;
-    /** Whether the dropdown contains this node (outside-click dismissal). */
+
     contains(node: Node): boolean;
-    /** Render at absolute coordinates; the caller computes the anchor (input bottom + scroll offset). */
+
     show(anchor: { left: number; top: number }, items: T[], listMinWidth?: string): void;
     close(): void;
-    /** Keyboard nav (registered on document in capture phase): Escape closes, arrows wrap, Enter/Tab select. */
+
     handleKeydown(e: KeyboardEvent): void;
 }
 
-/** Basename of a suggestion path (trailing slash stripped, last segment kept). */
+
 export function pathLastSegment(path: string): string {
     return path.replace(/\/$/, "").split("/").pop() ?? path;
 }
 
-/** Minimal HTML escape: item labels/URIs are assembled as innerHTML strings. */
+
 function escapeHtml(text: string): string {
     return text
         .replace(/&/g, "&amp;")
@@ -53,19 +46,15 @@ function escapeHtml(text: string): string {
 }
 
 export interface PathSuggestionRenderOptions {
-    /** SVG markup for the file/dir icon (each caller keeps its own icon source). */
+
     iconHtml: string;
     iconClass: string;
     labelClass: string;
-    /** Image completion only: render a thumbnail instead of the icon. */
+
     thumbnail?: { className: string; webviewUri: string };
 }
 
-/**
- * One suggestion row: either a thumbnail + label (image completion, host-resolved URI) or an
- * icon + label. The two completion flows had assembled this row with different class names but
- * identical structure and escape rules.
- */
+
 export function renderPathSuggestionItem(
     item: PathSuggestionItem,
     opts: PathSuggestionRenderOptions,
@@ -78,10 +67,7 @@ export function renderPathSuggestionItem(
     return `<span class="${opts.iconClass}">${opts.iconHtml}</span><span class="${opts.labelClass}">${label}</span>`;
 }
 
-/**
- * After picking a directory the value ends with `/`, so the debounced "type-to-complete" flow
- * will not fire on its own: close the list and re-trigger completion once the new value is in.
- */
+
 export function retriggerCompletionAfterDirectoryPick(
     dropdown: { close(): void },
     retrigger: () => void,
@@ -92,24 +78,20 @@ export function retriggerCompletionAfterDirectoryPick(
 }
 
 export interface CompletionTeardownOptions {
-    /** Cancel the debounce timer (and any other in-flight timer). */
+
     clearTimer: () => void;
     closeDropdown: () => void;
-    /** Remove the listeners the caller registered. */
+
     removeListeners: () => void;
 }
 
 export interface CompletionTeardown {
-    /** True once dispose() ran: async responses must never render after this. */
+
     readonly disposed: boolean;
     dispose(): void;
 }
 
-/**
- * Shared teardown envelope for a completion session: mark destroyed first (async guards read
- * `disposed`), then drop timers, close the dropdown and remove listeners — in that order and
- * exactly once. Both completions must survive a second dispose (destroy after confirm).
- */
+
 export function createCompletionTeardown(options: CompletionTeardownOptions): CompletionTeardown {
     let disposed = false;
     return {

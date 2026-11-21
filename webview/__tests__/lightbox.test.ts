@@ -1,10 +1,4 @@
-/**
- * `ui/lightbox`：全屏灯箱的生命周期契约。
- *
- * 原先图片灯箱与代码块全屏各自维护一个模块级「当前灯箱」单例：Esc 监听、遮罩点击、
- * 关闭按钮、cleanup 幂等各写一遍，且 NodeView.destroy / 重建路径会二次触发 cleanup。
- * 收敛后这些语义必须逐条钉住，否则「灯箱关不掉」或「关两次抛错」会静默回归。
- */
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLightboxHost, type Lightbox, type LightboxOptions } from "../ui/lightbox";
 import { closeCodeBlockLightbox, enhanceCodeBlocks } from "../components/codeBlockEnhance";
@@ -142,7 +136,7 @@ describe("lightbox 关闭契约", () => {
         closeButton.dispatchEvent(event);
 
         expect(event.defaultPrevented).toBe(true);
-        expect(onDocumentMousedown).not.toHaveBeenCalled(); // stopPropagation
+        expect(onDocumentMousedown).not.toHaveBeenCalled();
         expect(lightbox.isOpen()).toBe(false);
         document.removeEventListener("mousedown", onDocumentMousedown);
     });
@@ -216,10 +210,7 @@ describe("lightbox 关闭契约", () => {
     });
 });
 
-/**
- * 组件接线：灯箱外壳换成 `createLightboxHost` 之后，两个组件的「打开内容 / 关闭还原」
- * 仍必须由组件自身完成，因此这里验的是组件层行为而不是外壳本身。
- */
+
 describe("组件接线：图片灯箱与代码块全屏", () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -268,7 +259,7 @@ describe("组件接线：图片灯箱与代码块全屏", () => {
         container.appendChild(block);
 
         enhanceCodeBlocks(container);
-        // scanBlocks 在 rAF 里给新块补全屏按钮
+
         await new Promise<void>((resolve) => { requestAnimationFrame(() => resolve()); });
         const fsBtn = block.querySelector<HTMLElement>(".epytor-fullscreen-btn");
         expect(fsBtn).not.toBeNull();

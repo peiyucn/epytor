@@ -8,7 +8,7 @@ type OnUrl = (url: string) => void;
 
 let activePickerClose: (() => void) | null = null;
 
-/** Close the picker overlay if it is open (rebuild path: the overlay lives on document.body). */
+
 export function closeImagePicker(): void {
     activePickerClose?.();
 }
@@ -60,8 +60,8 @@ export function showImagePicker(
     const fileInput = document.createElement("input");
     fileInput.type = "file"; fileInput.accept = "image/*";
     fileInput.style.display = "none";
-    // Keep the input outside dropZone: dropZone.click() forwards to fileInput.click(), and a
-    // nested input would bubble the synthetic click back → unbounded recursion (RangeError).
+
+
     panelUpload.appendChild(fileInput);
     panelUpload.appendChild(dropZone);
     const uploadStatus = document.createElement("div");
@@ -86,8 +86,8 @@ export function showImagePicker(
     urlInput.addEventListener("keydown", (e) => { if (e.key === "Enter") urlInsertBtn.click(); });
     panelUrl.appendChild(urlInput);
     panelUrl.appendChild(urlInsertBtn);
-    // Keep the detach handle and drop it on close: a leaked document mousedown listener let the
-    // debounced suggestion re-open a stray dropdown after the dialog was gone.
+
+
     const detachComplete = attachImgPathComplete(urlInput);
 
     const panelProject = document.createElement("div");
@@ -107,7 +107,7 @@ export function showImagePicker(
     dialog.appendChild(panelProject);
     overlay.appendChild(dialog);
 
-    // Detach autocomplete listeners before removing the overlay.
+
     const close = () => {
         if (activePickerClose === close) { activePickerClose = null; }
         detachComplete();
@@ -116,8 +116,8 @@ export function showImagePicker(
     activePickerClose = close;
     overlay.addEventListener("mousedown", (e) => { if (e.target === overlay) close(); });
 
-    // Keep the dialog open until the upload succeeds; on failure show the error and allow a
-    // retry (regression: closing immediately + a host-side empty catch made failures silent).
+
+
     async function submitFile(file: File): Promise<void> {
         dropZone.style.pointerEvents = "none";
         uploadStatus.style.display = "";
@@ -142,7 +142,7 @@ export function showImagePicker(
     });
     fileInput.addEventListener("change", () => {
         const f = fileInput.files?.[0];
-        fileInput.value = ""; // Allow re-picking the same file on retry.
+        fileInput.value = "";
         if (f) { void submitFile(f); }
     });
 

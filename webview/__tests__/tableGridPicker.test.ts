@@ -1,9 +1,4 @@
-/**
- * 表格网格选择器：打开 / 悬停预览 / 选中 / 关闭的行为契约。
- *
- * 收敛到 `ui/anchoredOverlay` 之前，这组交互没有任何测试（只有纯函数 tableGrid.test.ts），
- * 定位与关闭改为共用外壳后，回调与浮层生命周期必须由行为用例钉住。
- */
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { openTableGridPicker, closeTableGridPicker } from "../components/tableGridPicker";
 
@@ -41,7 +36,7 @@ describe("tableGridPicker", () => {
         openTableGridPicker(anchor, vi.fn());
         const cells = document.querySelectorAll<HTMLElement>(".epytor-grid-picker__cell");
 
-        // 下标 = (row-1)*8 + (col-1) = 1*8 + 2 = 10 → 2 × 3
+
         cells[10].dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
 
         const label = document.querySelector(".epytor-grid-picker__label");

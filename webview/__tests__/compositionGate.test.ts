@@ -87,7 +87,7 @@ describe("createCompositionGate IME 组合门", () => {
         gate.dispose();
         await waiting;
         expect(passed).toBe(true);
-        // 监听已移除：再来 compositionend 不会报错、也不会影响状态
+
         fire("compositionend");
         expect(gate.isComposing()).toBe(false);
     });

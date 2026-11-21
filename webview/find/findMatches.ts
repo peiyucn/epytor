@@ -1,8 +1,4 @@
-/**
- * Text matching for the find bar (pure, unit-testable).
- * Plain mode: literal matching with an optional case-insensitive fold. Regex mode:
- * JavaScript RegExp (g / gi) with zero-width protection and invalid-pattern feedback.
- */
+
 export interface TextMatch {
     start: number;
     end: number;
@@ -15,13 +11,13 @@ export interface FindMatchesOptions {
 
 export interface FindMatchesResult {
     matches: TextMatch[];
-    /** True when regex mode got an unparsable pattern (always false in plain mode). */
+
     invalidRegex: boolean;
-    /** Hit the cap and stopped early (real match count >= cap). */
+
     truncated: boolean;
 }
 
-/** Collection cap per search; prevents pathological regexes from freezing the main thread. */
+
 export const MAX_MATCHES = 5000;
 
 export function findMatches(
@@ -49,7 +45,7 @@ export function findMatches(
                 truncated = true;
                 break;
             }
-            // Zero-width match (`.*`, `a*`): advance manually or exec loops forever.
+
             if (m[0].length === 0) {
                 re.lastIndex = m.index + 1;
             }

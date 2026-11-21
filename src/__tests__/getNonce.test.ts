@@ -7,7 +7,7 @@ describe("getNonce", () => {
     });
 
     it("返回 16 字节的 base64 编码（长度 24）", () => {
-        // 16 字节的 base64 编码固定为 24 个字符（含填充 =）
+
         expect(getNonce()).toHaveLength(24);
     });
 
@@ -19,7 +19,7 @@ describe("getNonce", () => {
     it("连续两次调用生成不同的 nonce（唯一性）", () => {
         const n1 = getNonce();
         const n2 = getNonce();
-        // 随机性保证极低概率相同；若碰撞则说明随机性失效
+
         expect(n1).not.toBe(n2);
     });
 

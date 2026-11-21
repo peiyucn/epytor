@@ -1,8 +1,4 @@
-/**
- * 链接点击与锚点滚动行为（覆盖 app/linkBehavior.ts）。
- * 拆分自 index.ts（audit F1）；用例锁住：锚点在原地平滑滚动、Ctrl/Cmd+Click 走注入的
- * 打开回调、URL scheme 走白名单、非 Ctrl 点击不打开任何东西、捕获阶段先于下游监听。
- */
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { initLinkBehavior } from "../app/linkBehavior";
 
@@ -55,7 +51,7 @@ describe("锚点链接", () => {
         } as DOMRect);
         document.body.appendChild(heading);
         const anchor = addAnchor("#intro");
-        const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => { /* 断言调用即可 */ });
+        const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {  });
 
         const event = click(anchor);
         expect(event.defaultPrevented).toBe(true);
@@ -69,7 +65,7 @@ describe("锚点链接", () => {
 
     it("点击 #id 但目标不存在 应该 只拦截默认行为（不滚动、不打开）", () => {
         const anchor = addAnchor("#missing");
-        const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => { /* noop */ });
+        const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {  });
         click(anchor);
         expect(scrollTo).not.toHaveBeenCalled();
         expect(openFile).not.toHaveBeenCalled();
@@ -105,7 +101,7 @@ describe("Ctrl/Cmd + 点击", () => {
 
     it("普通点击（无修饰键）外链 应该 既不滚动也不打开任何东西", () => {
         const anchor = addAnchor("https://example.com/");
-        const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => { /* noop */ });
+        const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {  });
         click(anchor);
         expect(openUrl).not.toHaveBeenCalled();
         expect(openFile).not.toHaveBeenCalled();

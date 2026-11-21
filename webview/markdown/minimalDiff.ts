@@ -3,7 +3,7 @@ type Anchor = { savedIndex: number; serializedIndex: number };
 
 const SEP_ROW_RE = /^\|[\s\-:|]+\|$/;
 const TABLE_ROW_RE = /^\|.*\|$/;
-/** LCS cell budget: past this the segment is treated as fully rewritten (no O(n*m) blowup). */
+
 const MAX_LCS_CELLS = 40_000;
 
 function normalizeSepRow(line: string): string {
@@ -40,10 +40,10 @@ function normalizeFenceOpen(line: string): string {
 }
 
 function normalizeLine(line: string, listLine: ListLineParts | null, indentRank: number | undefined): string {
-    // List markers and indent width are spelling, not content: upstream always writes `*`
-    // and 3-space nesting, so without normalizing, saves rewrite `- item` and 4-space
-    // nesting. The rank comes from the enclosing list run, so a real level change still
-    // changes the signature and is saved as such.
+
+
+
+
     if (listLine && indentRank !== undefined) {
         return `\u0000list\u0000${indentRank}\u0000${listLine.canonicalMarker}\u0000${normalizeSplitStrong(listLine.rest)}`;
     }
@@ -66,14 +66,14 @@ function signatureLines(markdown: string): SigLine[] {
     }, []);
 }
 
-/** List line split: indent width (tabs = 4 spaces), canonical marker, and the rest. */
+
 interface ListLineParts {
     indent: number;
     canonicalMarker: string;
     rest: string;
 }
 
-/** Leading list marker (needs a space after it or an empty item; `---` and setext `-` do not match). */
+
 const LIST_LINE_RE = /^([ \t]*)([-*+]|\d{1,9})([.)]?)([ \t]+|$)(.*)$/;
 
 function listLineParts(line: string): ListLineParts | null {
@@ -81,27 +81,15 @@ function listLineParts(line: string): ListLineParts | null {
     if (!match) return null;
     const [, rawIndent, numberOrBullet, delimiter, , rest] = match;
     const indent = [...rawIndent].reduce((sum, ch) => sum + (ch === "\t" ? 4 : 1), 0);
-    // Bullet characters are interchangeable; ordered numbers are content, only the
-    // `.` / `)` delimiter is spelling.
+
+
     const canonicalMarker = delimiter
         ? `${numberOrBullet}|`
         : "\u2022";
     return { indent, canonicalMarker, rest };
 }
 
-/**
- * Indent rank per list line (`Map<line index, rank>`).
- *
- * Rank must reflect structure, not width inside one contiguous run: a blank line
- * between a parent item and its child list splits the run, ranking the child 0, while
- * the serialized form ranks it 1. An indentation the user just applied then looked like
- * "spelling unchanged" and was silently reverted (regression: nesting scrambled after
- * backspacing a task item).
- *
- * Rank = (indent - minIndent) / step, step being the smallest indent above the minimum.
- * This normalizes 2-space, 4-space and tab styles while any real level change still
- * changes the rank.
- */
+
 function listIndentRanks(listLines: Array<ListLineParts | null>): Map<number, number> {
     const ranks = new Map<number, number>();
     let minIndent = Number.POSITIVE_INFINITY;
@@ -109,8 +97,8 @@ function listIndentRanks(listLines: Array<ListLineParts | null>): Map<number, nu
         if (parts && parts.indent < minIndent) minIndent = parts.indent;
     }
     if (!Number.isFinite(minIndent)) return ranks;
-    // Width of one level: the smallest indent above the minimum, falling back to the
-    // minimum itself. A step (not an ordinal) maps 2-space and 4-space nesting alike.
+
+
     let step = Number.POSITIVE_INFINITY;
     for (const parts of listLines) {
         if (parts && parts.indent > minIndent && parts.indent - minIndent < step) {
@@ -213,7 +201,7 @@ function uniqueSignaturePositions(
     return positions;
 }
 
-/** LCS match inside one segment; segments over the cell budget are left unmatched. */
+
 function addBoundedLcsMatches(
     saved: SigLine[],
     savedStart: number,

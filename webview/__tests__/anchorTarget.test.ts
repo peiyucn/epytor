@@ -1,24 +1,18 @@
-/**
- * 锚点链接目标解析（回归 2026-09-17 探针实测）：编辑器给标题挂的 id 是**标题原文**
- * （`## 中文 标题（含括号）` → `id="中文-标题（含括号）"`），而链接片段有两种写法：
- *   - 原文 `#中文-标题（含括号）` → 直接命中；
- *   - 百分号编码 `#%E4%B8%AD%E6%96%87...`（非 ASCII 锚点复制链接时的常见形态）
- *     → 用编码串直查**永远查不到**，点了没反应。
- */
+
 import { afterEach, describe, expect, it } from "vitest";
 import { CrepeBuilder } from "@milkdown/crepe";
 import { anchorIdCandidates } from "../shell/anchorTarget";
 
 if (typeof (window as unknown as Record<string, unknown>).ResizeObserver === "undefined") {
     (window as unknown as Record<string, unknown>).ResizeObserver = class {
-        observe() { /* noop */ } unobserve() { /* noop */ } disconnect() { /* noop */ }
+        observe() {  } unobserve() {  } disconnect() {  }
     };
 }
 if (typeof window.matchMedia === "undefined") {
     window.matchMedia = (() => ({
         matches: false, media: "", onchange: null,
-        addListener() { /* noop */ }, removeListener() { /* noop */ },
-        addEventListener() { /* noop */ }, removeEventListener() { /* noop */ },
+        addListener() {  }, removeListener() {  },
+        addEventListener() {  }, removeEventListener() {  },
         dispatchEvent() { return false; },
     })) as typeof window.matchMedia;
 }
@@ -48,8 +42,8 @@ describe("anchorIdCandidates（锚点片段 → 候选 id）", () => {
     });
 
     it("非法转义 不应该 抛错，退回原文候选", () => {
-        // `%E4` 是不完整的多字节转义、`100%` 是裸百分号：decodeURIComponent 会抛，
-        // 必须兜住（否则点击链接直接抛进事件回调）
+
+
         expect(() => anchorIdCandidates("%E4")).not.toThrow();
         expect(anchorIdCandidates("%E4")).toEqual(["%E4"]);
         expect(anchorIdCandidates("100%")).toEqual(["100%"]);
@@ -60,14 +54,14 @@ describe("anchorIdCandidates（锚点片段 → 候选 id）", () => {
     });
 
     it("不做 slug 归一化：GitHub 风格 slug 与编辑器实际 id 不一致时不硬猜", () => {
-        // 编辑器给 `Hello World!` 挂的 id 是 `hello-world!`，而 GitHub slug 是 `hello-world`；
-        // 本函数只处理编码差异，不猜 slug（交给调用方查不到就什么都不做）
+
+
         expect(anchorIdCandidates("hello-world")).toEqual(["hello-world"]);
     });
 });
 
 describe("与真实编辑器 DOM 对接（回归：编码锚点点了没反应）", () => {
-    /** 复刻 webview/index.ts 的解析：按候选顺序查 id，取第一个命中的 */
+
     function resolveAnchor(fragment: string): HTMLElement | null {
         return anchorIdCandidates(fragment)
             .map((id) => document.getElementById(id))
@@ -90,7 +84,7 @@ describe("与真实编辑器 DOM 对接（回归：编码锚点点了没反应�
         await mount("# 中文 标题\n\n正文\n");
         const encoded = encodeURIComponent("中文-标题");
 
-        expect(document.getElementById(encoded)).toBeNull(); // 直查确实查不到（回归成因）
+        expect(document.getElementById(encoded)).toBeNull();
         expect(resolveAnchor(encoded)).toBe(document.getElementById("中文-标题"));
     });
 

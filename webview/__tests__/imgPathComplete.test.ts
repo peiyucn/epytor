@@ -6,13 +6,13 @@ import type { PathSuggestionItem } from "../../shared/messages";
 
 const item = (path: string, isDir = false, webviewUri?: string): PathSuggestionItem => ({ path, isDir, webviewUri });
 
-/** 补全回包经 PendingRequestRegistry 结算，回调在微任务里执行 */
+
 const flush = () => new Promise<void>((resolve) => { queueMicrotask(resolve); });
 
-// jsdom 未实现 scrollIntoView（dropdownComplete 激活项时调用），补 no-op 桩
+
 HTMLElement.prototype.scrollIntoView = HTMLElement.prototype.scrollIntoView ?? (() => {});
 
-/** 输入并触发防抖后的补全请求，返回本次请求 id */
+
 function typeAndGetRequestId(input: HTMLInputElement, value: string): string {
     input.value = value;
     input.dispatchEvent(new Event("input"));
@@ -45,12 +45,12 @@ describe("imgPathComplete 补全竞态防护", () => {
         const idB = typeAndGetRequestId(input, "@/b");
         expect(idA).not.toBe(idB);
 
-        // 旧请求 A 晚回：下拉不得出现
+
         resolvePathSuggestionRequest(idA, [item("a.md"), item("a-dir", true)]);
         await flush();
         expect(document.querySelector(".img-path-complete-list")).toBeNull();
 
-        // 新请求 B 回包：正常渲染（无 webviewUri 的普通文件被过滤，仅目录项渲染）
+
         resolvePathSuggestionRequest(idB, [item("b.md"), item("b-dir", true)]);
         await flush();
         expect(document.querySelector(".img-path-complete-list")).not.toBeNull();
@@ -63,7 +63,7 @@ describe("imgPathComplete 补全竞态防护", () => {
         attachImgPathComplete(input);
 
         const id = typeAndGetRequestId(input, "@/a");
-        // 用户清空输入：触发一次防抖后的 triggerSuggest（非匹配 → 关闭 + 失效）
+
         typeAndGetRequestId(input, "");
         resolvePathSuggestionRequest(id, [item("a.md"), item("a-dir", true)]);
         await flush();
@@ -77,7 +77,7 @@ describe("imgPathComplete 补全竞态防护", () => {
 
         const id = typeAndGetRequestId(input, "@/a");
         detach();
-        input.remove(); // 宿主关闭对话框
+        input.remove();
         resolvePathSuggestionRequest(id, [item("a.md"), item("a-dir", true)]);
         await flush();
         expect(document.querySelector(".img-path-complete-list")).toBeNull();
@@ -89,7 +89,7 @@ describe("imgPathComplete 补全竞态防护", () => {
         attachImgPathComplete(input);
 
         const id = typeAndGetRequestId(input, "@/a");
-        input.remove(); // 未 detach（模拟宿主异常路径）但输入框已脱离文档
+        input.remove();
         resolvePathSuggestionRequest(id, [item("a.md"), item("a-dir", true)]);
         await flush();
         expect(document.querySelector(".img-path-complete-list")).toBeNull();

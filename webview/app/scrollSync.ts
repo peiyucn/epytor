@@ -1,16 +1,9 @@
-/**
- * Source-line ↔ viewport geometry.
- *
- * The webview shows one ProseMirror block per markdown source line range, so mapping a
- * line to a scroll offset needs the block elements in document order plus the line map
- * the extension sends (see `lineMapUpdate`).
- */
+
 import type { EditorView } from "@milkdown/kit/prose/view";
 import { VIEWPORT_PADDING } from "../../shared/constants";
 import { topbarHeight } from "../ui/topbarMetrics";
 
-/** Content blocks in order, 1:1 with the line map. Not `view.dom.children`: widget
- *  decorations shift them (the first child is an empty widget). */
+
 export function getContentBlockElements(view: EditorView): HTMLElement[] {
     const elements: HTMLElement[] = [];
     view.state.doc.forEach((_node, offset) => {
@@ -20,15 +13,14 @@ export function getContentBlockElements(view: EditorView): HTMLElement[] {
     return elements;
 }
 
-/** Sticky heading bar height (0 when unstuck); subtract it or the target hides underneath. */
+
 export function stickyBarHeight(): number {
     const sticky = document.querySelector<HTMLElement>(".heading-sticky-title");
     if (!sticky || sticky.hidden) { return 0; }
     return sticky.getBoundingClientRect().height;
 }
 
-/** Scroll the 1-indexed source line to the viewport top, interpolating inside blocks like
- *  VS Code's preview so a long block lands on the right line. */
+
 export function scrollToSourceLine(
     view: EditorView,
     lineMap: number[],
@@ -69,13 +61,13 @@ export function scrollToSourceLine(
 
     const place = () => window.scrollTo({ top: target - topbarH - stickyBarHeight() - VIEWPORT_PADDING });
     place();
-    // Sticky height is only known after scrolling; correct once the plugin updates it.
+
     requestAnimationFrame(() => {
         if (stickyBarHeight() > 0) { place(); }
     });
 }
 
-/** First source line visible under the top bar, interpolated within the block it lands in. */
+
 export function visibleSourceLine(
     view: EditorView,
     lineMap: number[],
@@ -99,8 +91,7 @@ export function visibleSourceLine(
     return lineMap[Math.min(lineMap.length - 1, children.length - 1)] ?? 1;
 }
 
-/** Prefer the nav line the extension asked for while the viewport still sits on its block,
- *  else the visible line — otherwise switching modes drifts by a line each round trip. */
+
 export function switchTargetLine(
     view: EditorView,
     lineMap: number[],

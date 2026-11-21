@@ -1,8 +1,4 @@
-/**
- * Request/response correlation (pure, unit-testable): pending map, settled double-guard
- * and timeout settlement, replacing three hand-rolled copies that disagreed (one had no
- * timeout, ids lacked a random suffix and collided within the same millisecond).
- */
+
 
 export interface PendingCallbacks<T> {
     resolve: (value: T) => void;
@@ -16,7 +12,7 @@ export type PendingTimeout<T> =
 export interface PendingHandle<T> {
     id: string;
     promise: Promise<T>;
-    /** Settle as cancelled (default reason "Cancelled"); the promise always settles. */
+
     cancel: (reason?: string) => void;
 }
 
@@ -25,7 +21,7 @@ export class PendingRequestRegistry<T> {
 
     constructor(private readonly idPrefix: string) {}
 
-    /** Register an in-flight request (callbacks + timeout); the caller then sends the message. */
+
     begin(opts: { timeoutMs: number; timeout: PendingTimeout<T> }): PendingHandle<T> {
         const id = `${this.idPrefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
         let settled = false;
@@ -73,7 +69,7 @@ export class PendingRequestRegistry<T> {
         };
     }
 
-    /** Settle successfully: drop the slot and resolve. */
+
     resolve(id: string, value: T): void {
         const cb = this._pending.get(id);
         if (cb) {
@@ -82,7 +78,7 @@ export class PendingRequestRegistry<T> {
         }
     }
 
-    /** Settle with failure: drop the slot and reject (message is user-facing). */
+
     reject(id: string, error: string): void {
         const cb = this._pending.get(id);
         if (cb) {

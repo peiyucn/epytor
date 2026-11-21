@@ -1,30 +1,18 @@
-/**
- * 回归（owner 手测 2026-09-17）：「输入文字的时候，TOC 里的内容总一下一下闪」。
- *
- * 根因：TOC 刷新判据用的是**带文档位置**的标题签名（`computeAllHeadingSignature` 逐标题拼
- * `pos:…`）。正文里每敲一个字，其后所有标题的 pos 都平移 → 签名必变 → 每条输入停顿都全量
- * 重建目录（`list.innerHTML = ""` 再逐个造 item + tooltip + 监听器、并重置列表滚动），
- * 用户看到的就是「目录内容一下一下闪」。
- *
- * 契约（本测试锁死 `refresh()` 的行为）：
- *   1. 标题结构未变的输入（最常见的正文打字）**不得**改动 `.toc-list` 的 DOM；
- *   2. 但「目录项 ↔ 标题当前位置」的绑定必须跟着更新——否则高亮与折叠会指向旧位置；
- *   3. 标题结构真的变了（改名/增删/层级变化）才重建，且重建后内容正确。
- */
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createEditor, destroyEditor, getEditorView } from "../editor";
 import { initToc } from "../components/toc";
 
 if (typeof (window as unknown as Record<string, unknown>).IntersectionObserver === "undefined") {
     (window as unknown as Record<string, unknown>).IntersectionObserver = class {
-        observe() { /* noop */ } unobserve() { /* noop */ } disconnect() { /* noop */ } takeRecords() { return []; }
+        observe() {  } unobserve() {  } disconnect() {  } takeRecords() { return []; }
     };
 }
 if (typeof window.matchMedia === "undefined") {
     window.matchMedia = (() => ({
         matches: false, media: "", onchange: null,
-        addListener() { /* noop */ }, removeListener() { /* noop */ },
-        addEventListener() { /* noop */ }, removeEventListener() { /* noop */ },
+        addListener() {  }, removeListener() {  },
+        addEventListener() {  }, removeEventListener() {  },
         dispatchEvent() { return false; },
     })) as typeof window.matchMedia;
 }
@@ -35,7 +23,7 @@ if (typeof window.matchMedia === "undefined") {
 };
 if (typeof (window as unknown as Record<string, unknown>).ResizeObserver === "undefined") {
     (window as unknown as Record<string, unknown>).ResizeObserver = class {
-        observe() { /* noop */ } unobserve() { /* noop */ } disconnect() { /* noop */ }
+        observe() {  } unobserve() {  } disconnect() {  }
     };
 }
 
@@ -56,14 +44,14 @@ const MD = [
     "正文三",
 ].join("\n");
 
-/** 视口尺寸（只读属性需 defineProperty），让自动展开判据成立 */
+
 function setViewport(width: number, height: number): void {
     Object.defineProperty(window, "innerWidth", { value: width, configurable: true });
     Object.defineProperty(window, "innerHeight", { value: height, configurable: true });
     Object.defineProperty(document.documentElement, "clientWidth", { value: width, configurable: true });
 }
 
-/** 建编辑器 + 桩测布局（jsdom 无布局：标题 rect 由 index 决定，随 scrollY 换算为视口坐标） */
+
 async function mount(): Promise<{ list: HTMLElement; refresh: () => void }> {
     const root = document.createElement("div");
     root.id = "editor";
@@ -95,13 +83,13 @@ async function mount(): Promise<{ list: HTMLElement; refresh: () => void }> {
 
     const toc = initToc(() => getEditorView());
     document.body.appendChild(toc.panel);
-    toc.toggle(); // 打开：关闭态下 refresh 是 no-op，测不到行为
+    toc.toggle();
     await new Promise((r) => requestAnimationFrame(() => r(null)));
 
     return { list: document.querySelector<HTMLElement>(".toc-list")!, refresh: toc.refresh };
 }
 
-/** 「正文一」这段文本在文档里的起始位置（用 includes：连续输入后文本已被改写） */
+
 function bodyTextPos(): number {
     const view = getEditorView()!;
     let pos = -1;
@@ -111,7 +99,7 @@ function bodyTextPos(): number {
     return pos;
 }
 
-/** 复刻 index.ts 的刷新节奏：正文里逐字输入 + 每次停顿刷新一次目录 */
+
 async function typeAndRefresh(refresh: () => void, count: number): Promise<void> {
     const view = getEditorView()!;
     for (let i = 0; i < count; i++) {
@@ -155,7 +143,7 @@ describe("输入正文时 TOC 不重建（回归：目录内容一下一下闪�
 
         await typeAndRefresh(refresh, 5);
 
-        // 滚动触发吸顶插件重算「当前章节」→ 发布 → 目录高亮跟随
+
         window.dispatchEvent(new Event("scroll"));
         await new Promise((r) => setTimeout(r, 500));
         await new Promise((r) => requestAnimationFrame(() => r(null)));
@@ -170,14 +158,14 @@ describe("输入正文时 TOC 不重建（回归：目录内容一下一下闪�
         Object.defineProperty(document.documentElement, "scrollHeight", { get: () => 5000, configurable: true });
         const { list } = await mount();
 
-        // 先建立高亮：scrollY=400 时「1.1 小节」已划过阅读线
+
         window.dispatchEvent(new Event("scroll"));
         await new Promise((r) => setTimeout(r, 500));
         await new Promise((r) => requestAnimationFrame(() => r(null)));
         expect(list.querySelectorAll(".toc-item--active")).toHaveLength(1);
 
-        // 正文里打字：标题 pos 整体平移，吸顶插件按新位置发布；但 TOC 的防抖刷新还没到点。
-        // 此时绑定若仍是旧位置，高亮会先被清空、等刷新后才回来 —— 用户看到「闪一下」。
+
+
         const view = getEditorView()!;
         view.dispatch(view.state.tr.insertText("字", bodyTextPos()));
         window.dispatchEvent(new Event("scroll"));
@@ -193,7 +181,7 @@ describe("输入正文时 TOC 不重建（回归：目录内容一下一下闪�
         const { list, refresh } = await mount();
 
         const view = getEditorView()!;
-        // 第一章 的标题节点起始 pos 为 0，其文字从 1 开始
+
         view.dispatch(view.state.tr.insertText("改", 1));
         refresh();
         await new Promise((r) => setTimeout(r, 0));
@@ -226,7 +214,7 @@ describe("输入正文时 TOC 不重建（回归：目录内容一下一下闪�
         Object.defineProperty(document.documentElement, "scrollHeight", { get: () => 5000, configurable: true });
         const { list } = await mount();
 
-        // 瞬时滚动：模拟 smooth 的终点，并让吸顶插件按新位置重算当前章节
+
         const originalScrollTo = window.scrollTo;
         window.scrollTo = ((arg: unknown) => {
             scrollY = Number((arg as { top?: number } | undefined)?.top ?? 0);
@@ -270,8 +258,8 @@ describe("输入正文时 TOC 不重建（回归：目录内容一下一下闪�
             await new Promise((r) => setTimeout(r, 400));
 
             const items = Array.from(list.querySelectorAll<HTMLElement>(".toc-item"));
-            // 直接派发在**行**上：行的上下 padding 与文字右侧空白都不属于 label，
-            // 之前点击这些区域没有任何反应
+
+
             items[1].dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
             await new Promise((r) => requestAnimationFrame(() => r(null)));
 
@@ -294,7 +282,7 @@ describe("输入正文时 TOC 不重建（回归：目录内容一下一下闪�
         try {
             await new Promise((r) => setTimeout(r, 400));
 
-            // 第一个项有子标题 → 是折叠开关
+
             const toggle = list.querySelector<HTMLElement>(".toc-collapse-toggle")!;
             toggle.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
             await new Promise((r) => setTimeout(r, 0));

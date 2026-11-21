@@ -3,10 +3,10 @@ import * as path from "path";
 import * as https from "https";
 import * as http from "http";
 
-// 从 vscode mock 导入（alias 已在 vitest.config.ts 中配置）
+
 import * as vscode from "vscode";
 
-// 模块级 mock（Vitest 自动 hoist 至 import 之前）
+
 vi.mock("https", () => ({ request: vi.fn() }));
 vi.mock("http", () => ({ request: vi.fn() }));
 const mockFs = vscode.workspace.fs as unknown as {
@@ -27,9 +27,9 @@ import {
     uploadImageToServer,
 } from "../../src/utils/imageService";
 
-// ─────────────────────────────────────────────────────────────
-// mimeToExt
-// ─────────────────────────────────────────────────────────────
+
+
+
 describe("mimeToExt", () => {
     it.each([
         ["image/png", "png"],
@@ -53,9 +53,9 @@ describe("mimeToExt", () => {
     });
 });
 
-// ─────────────────────────────────────────────────────────────
-// generateFilename
-// ─────────────────────────────────────────────────────────────
+
+
+
 describe("generateFilename", () => {
     it("返回的文件名以正确扩展名结尾", () => {
         const name = generateFilename("photo", "image/png");
@@ -98,15 +98,15 @@ describe("generateFilename", () => {
     it("相同 altText 连续调用生成不同文件名", () => {
         const n1 = generateFilename("test", "image/png");
         const n2 = generateFilename("test", "image/png");
-        // 名称含时间戳 + 随机段；冲突概率 ~1/168 万，可直接断言不等
-        // （回归：此前只断言 typeof string，标题承诺的唯一性从未被验证）
+
+
         expect(n1).not.toBe(n2);
     });
 });
 
-// ─────────────────────────────────────────────────────────────
-// buildRelPath
-// ─────────────────────────────────────────────────────────────
+
+
+
 describe("buildRelPath", () => {
     it("同目录下文件返回 ./filename", () => {
         const docUri = vscode.Uri.file("/project/docs/note.md");
@@ -137,9 +137,9 @@ describe("buildRelPath", () => {
     });
 });
 
-// ─────────────────────────────────────────────────────────────
-// getByPath
-// ─────────────────────────────────────────────────────────────
+
+
+
 describe("getByPath", () => {
     it("顶层属性正确提取", () => {
         expect(getByPath({ url: "https://example.com" }, "url")).toBe("https://example.com");
@@ -164,12 +164,12 @@ describe("getByPath", () => {
     });
 });
 
-// ─────────────────────────────────────────────────────────────
-// saveImageLocally — MD5 去重逻辑
-// ─────────────────────────────────────────────────────────────
+
+
+
 describe("saveImageLocally — MD5 去重", () => {
     const docUri = vscode.Uri.file("/project/docs/note.md");
-    const imageData = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]); // PNG 魔数
+    const imageData = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
 
     function makeCfg(overrides: Record<string, unknown> = {}) {
         return {
@@ -179,7 +179,7 @@ describe("saveImageLocally — MD5 去重", () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        // 默认 stat 抛出（目录不存在，触发创建）
+
         mockFs.stat.mockRejectedValue(new Error("ENOENT"));
         mockFs.createDirectory.mockResolvedValue(undefined);
         mockFs.readDirectory.mockResolvedValue([]);
@@ -195,8 +195,8 @@ describe("saveImageLocally — MD5 去重", () => {
     });
 
     it("工作区级 imageLocalPath 越界时 应该 标 downgraded（上层据此提示用户）", async () => {
-        // Workspace-level settings may not escape the workspace: the plan downgrades to
-        // <docDir>/images. Without the flag the user would believe the configured dir was used.
+
+
         const cfg = {
             get: vi.fn((key: string, def?: unknown) => (key === "imageLocalPath" ? "../../outside" : def)),
             inspect: vi.fn(() => ({ workspaceValue: "../../outside" })),
@@ -213,11 +213,11 @@ describe("saveImageLocally — MD5 去重", () => {
     });
 
     it("目录中存在相同 MD5 的同扩展名文件时复用，不重复写入", async () => {
-        // 模拟目录中已有一个 .png 文件
+
         const existingName = "photo_abc123_def4.png";
         mockFs.stat.mockResolvedValue({ type: vscode.FileType.Directory });
         mockFs.readDirectory.mockResolvedValue([[existingName, vscode.FileType.File]]);
-        mockFs.readFile.mockResolvedValue(imageData); // 相同内容 → 相同 MD5
+        mockFs.readFile.mockResolvedValue(imageData);
 
         const cfg = makeCfg();
         const result = await saveImageLocally(docUri, cfg as never, imageData, "image/png", "photo");
@@ -231,7 +231,7 @@ describe("saveImageLocally — MD5 去重", () => {
         const differentData = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7]);
         mockFs.stat.mockResolvedValue({ type: vscode.FileType.Directory });
         mockFs.readDirectory.mockResolvedValue([[existingName, vscode.FileType.File]]);
-        mockFs.readFile.mockResolvedValue(differentData); // 不同内容 → 不同 MD5
+        mockFs.readFile.mockResolvedValue(differentData);
 
         const cfg = makeCfg();
         await saveImageLocally(docUri, cfg as never, imageData, "image/png", "photo");
@@ -240,7 +240,7 @@ describe("saveImageLocally — MD5 去重", () => {
     });
 
     it("不比较不同扩展名的已有文件（只比对同扩展名）", async () => {
-        // 目录中只有 .jpg 文件，上传的是 .png
+
         const existingName = "photo_abc_def.jpg";
         mockFs.stat.mockResolvedValue({ type: vscode.FileType.Directory });
         mockFs.readDirectory.mockResolvedValue([[existingName, vscode.FileType.File]]);
@@ -249,7 +249,7 @@ describe("saveImageLocally — MD5 去重", () => {
         const cfg = makeCfg();
         await saveImageLocally(docUri, cfg as never, imageData, "image/png", "photo");
 
-        // readFile 不应被调用（因为扩展名不匹配，跳过比对）
+
         expect(mockFs.readFile).not.toHaveBeenCalled();
         expect(mockFs.writeFile).toHaveBeenCalledOnce();
     });
@@ -277,9 +277,9 @@ describe("saveImageLocally — MD5 去重", () => {
     });
 });
 
-// ─────────────────────────────────────────────────────────────
-// saveImageLocally — 目录选择优先级
-// ─────────────────────────────────────────────────────────────
+
+
+
 describe("saveImageLocally — 目录选择", () => {
     const docUri = vscode.Uri.file("/project/docs/note.md");
     const imageData = new Uint8Array([1, 2, 3]);
@@ -300,13 +300,13 @@ describe("saveImageLocally — 目录选择", () => {
         mockFs.stat.mockResolvedValue({ type: vscode.FileType.Directory });
         const cfg = makeCfg({ imageLocalPath: customPath });
         await saveImageLocally(docUri, cfg as never, imageData, "image/png", "x");
-        // writeFile 应被调用，且路径包含 customPath
+
         const [callUri] = mockFs.writeFile.mock.calls[0] as [{ fsPath: string }];
         expect(callUri.fsPath.startsWith(customPath)).toBe(true);
     });
 
     it("无配置时且所有候选目录不存在则创建 images/ 目录", async () => {
-        // stat 始终抛出（所有目录不存在）
+
         mockFs.stat.mockRejectedValue(new Error("ENOENT"));
         const cfg = makeCfg();
         await saveImageLocally(docUri, cfg as never, imageData, "image/png", "x");
@@ -316,9 +316,9 @@ describe("saveImageLocally — 目录选择", () => {
     });
 });
 
-// ─────────────────────────────────────────────────────────────
-// saveImageLocally — 额外路径分支
-// ─────────────────────────────────────────────────────────────
+
+
+
 describe("saveImageLocally — 额外路径分支", () => {
     const imageData = new Uint8Array([1, 2, 3]);
 
@@ -416,9 +416,9 @@ describe("saveImageLocally — 额外路径分支", () => {
     });
 });
 
-// ─────────────────────────────────────────────────────────────
-// uploadImageToServer
-// ─────────────────────────────────────────────────────────────
+
+
+
 
 function createSuccessMockTransport(responseBody: string) {
     const dataHandlers: Array<(chunk: Buffer) => void> = [];
@@ -462,7 +462,7 @@ function createErrorMockTransport(error: Error) {
 describe("uploadImageToServer", () => {
     const imageData = new Uint8Array([1, 2, 3, 4]);
 
-    /** 已解析的图床设置；解析/兜底/白名单行为由 imageServerConfig.test.ts 覆盖 */
+
     function makeSettings(overrides: Partial<ImageServerSettings> = {}): ImageServerSettings {
         return { url: "", fieldName: "file", extraParams: {}, responsePath: "url", ...overrides };
     }

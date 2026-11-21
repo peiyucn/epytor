@@ -24,7 +24,7 @@ const headingCss = readFileSync(
     "utf-8",
 );
 
-/** 去掉 CSS 注释（规则匹配必须跳过注释里的花括号/逗号） */
+
 function stripComments(css: string): string {
     return css.replace(/\/\*[\s\S]*?\*\//g, "");
 }
@@ -34,7 +34,7 @@ interface CssRule {
     body: string;
 }
 
-/** 解析出全部规则（选择器集合 + 声明体），供按结构断言使用 */
+
 function allRules(): CssRule[] {
     const rules: CssRule[] = [];
     for (const m of stripComments(styleCss).matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
@@ -46,16 +46,12 @@ function allRules(): CssRule[] {
     return rules;
 }
 
-/** 选择器集合里任何一个以指定选择器开头的规则 */
+
 function rulesUnderSelector(prefix: string): CssRule[] {
     return allRules().filter((rule) => rule.selectors.some((s) => s.startsWith(prefix)));
 }
 
-/**
- * 找出满足条件的规则（选择器列表包含给定选择器），返回完整选择器集合与声明体。
- * 让断言看行为（覆盖了哪些元素、声明了什么），而不是在整段 CSS 里找字符串。
- * `bodyIncludes` 用于在多个同选择器规则中挑出目标那条（例如钉宽度 vs 隐藏）。
- */
+
 function findRule(selector: string, bodyIncludes?: string): CssRule | null {
     for (const rule of allRules()) {
         if (!rule.selectors.includes(selector)) { continue; }
@@ -116,8 +112,8 @@ describe("WebView 样式", () => {
         `;
         const [hiddenSticky, visibleSticky] =
             document.querySelectorAll<HTMLElement>(".heading-sticky-title");
-        // 根因回归：.heading-sticky-title 声明了 display:flex，
-        // 若没有 [hidden] 兜底规则，hidden 属性会被 flex 覆盖导致吸顶条无法消失
+
+
         expect(getComputedStyle(hiddenSticky).display).toBe("none");
         expect(getComputedStyle(visibleSticky).display).toBe("flex");
     });
@@ -134,36 +130,36 @@ describe("WebView 样式", () => {
     });
 
     it("表格整行/整列选中工具栏 应该 有 VSCode 变量主题适配规则（回归：官方浅色/独立配色未适配）", () => {
-        // cell-handle 是 Vue overlay，祖先链含 .milkdown-table-block；与官方同前缀靠后覆盖
+
         expect(styleCss).toContain(".milkdown-table-block .cell-handle .button-group");
         expect(styleCss).toContain("--vscode-editorWidget-background");
         expect(styleCss).toContain("--vscode-toolbar-hoverBackground");
     });
 
     it("表格单元格内自动链接 应该 强制任意处断行（回归：inline 元素 break-word 不强制断，长 URL 撑宽页面）", () => {
-        // 7.22.1 真实 DOM：table 直接在 .ProseMirror 下
+
         expect(styleCss).toContain(".milkdown .ProseMirror table td a");
         expect(styleCss).toContain("overflow-wrap: anywhere");
     });
 
     it("codeBlockMaxHeight 注入的 CSS 变量 应该 有消费规则（回归：零消费方=死配置）", () => {
-        // The consuming rule moved with the code-block styles into the component sheet.
+
         expect(codeBlockEnhanceCss).toContain("var(--code-block-max-height)");
     });
 
     it("折叠期守卫 应该 由 JS 记账属性驱动，而不是精确尺寸媒体查询（回归：窗口缩放让媒体查询失效）", () => {
-        // 判据与 JS 常量同源：viewportLedger 改属性名时这条会红
+
         expect(styleCss).toContain(`html[${HOST_COLLAPSED_ATTRIBUTE}] .milkdown-top-bar`);
         expect(styleCss).toContain(`html[${HOST_COLLAPSED_ATTRIBUTE}] body {`);
         expect(styleCss).toContain("var(--epytor-last-body-width, 100%)");
-        // 精确尺寸的媒体查询在 window.zoomLevel ≠ 0 时不匹配（实测 innerWidth=300 却 mq=false），
-        // 会让整块守卫静默失效——禁止再退回这种写法
+
+
         expect(styleCss).not.toContain("@media (width: 300px) and (height: 150px)");
     });
 
     it("折叠期 应该 关闭顶栏/目录/浮动工具栏模糊（回归：合成器重建图层推迟首帧，小画面偶发可见）", () => {
-        // Structural, not string-in-a-slice: every collapsed-state rule that owns a
-        // backdrop-filter must turn it off.
+
+
         const withBlur = rulesUnderSelector(`html[${HOST_COLLAPSED_ATTRIBUTE}]`)
             .filter((rule) => /backdrop-filter:/.test(rule.body));
         expect(withBlur.length).toBeGreaterThan(0);
@@ -179,18 +175,14 @@ describe("WebView 样式", () => {
         expect(rule!.body).toContain("overflow-x: clip");
     });
 
-    /**
-     * 折叠期「不画固定 UI」的行为级断言：解析出该规则的**选择器集合与声明体**，
-     * 断言覆盖哪些元素、声明了什么——而不是在整段 CSS 里找字符串
-     * （字符串断言删掉整条规则也会绿，且改换行/顺序就误红）。
-     */
+
     it("折叠期 应该 不画固定 UI（回归：顶栏那排按钮被裁成半块，最像「坏掉的小框」）", () => {
         const rule = findRule(`html[${HOST_COLLAPSED_ATTRIBUTE}] .milkdown-top-bar`, "visibility: hidden");
         expect(rule).not.toBeNull();
-        // 声明体：隐藏但保留布局（display:none 会真的重排并破坏滚动位置）
+
         expect(rule!.body).toContain("visibility: hidden");
         expect(rule!.body).not.toMatch(/display:\s*none/);
-        // 选择器集合：顶栏、浮动工具栏、目录、以及挂 body 的固定浮层都要覆盖
+
         for (const sel of [
             ".milkdown-top-bar",
             ".milkdown-toolbar",
@@ -211,14 +203,11 @@ describe("WebView 样式", () => {
         expect(styleCss).not.toContain("epytor-dot-chase");
     });
 
-    /**
-     * 排版尺度：全文垂直间距只允许有一个来源（行高 + 块间距两档）。
-     * 量测口径见各条注释（真实 dist 产物 + Chromium 实测，2026-09-11）。
-     */
+
     it("所有块级元素 应该 共用同一个块间距（回归：列表项 2.8px / 引用块 4px / 表格 4px / 代码块 4px / 段落 18.2px / 分隔线 21px 各不相同）", () => {
         const rule = findRule(".milkdown .ProseMirror p", "margin: 0 0 var(--epytor-block-gap)");
         expect(rule).not.toBeNull();
-        // 同一个块间距必须覆盖全部块级元素，不能只给段落
+
         for (const sel of [
             ".milkdown .ProseMirror ul",
             ".milkdown .ProseMirror ol",
@@ -233,22 +222,15 @@ describe("WebView 样式", () => {
         }
     });
 
-    /**
-     * 分割线粗细（回归 2026-10-26，owner：「分割线好像特别粗」）。
-     *
-     * 上游 reset.css 用 `height: 13px` + `padding: 6px 0` + `background-color` +
-     * `background-clip: content-box` 画线：靠 border-box 下 13-6×2 = 1px 的内容盒
-     * 露出那 1px 色块。我们只覆盖了 border 并把 padding 归零，内容盒随即撑满 13px，
-     * 背景色铺满 → 渲染成一根 13px 粗的灰条（真实产物实测 rect.height = 13）。
-     */
+
     it("分割线 应该 只有 1px 粗：不沿用上游「背景色 + 内容盒」画线机制", () => {
         const rule = findRule(".milkdown .ProseMirror hr", "border-top: 1px solid");
         expect(rule).not.toBeNull();
-        // 上游那套靠内容盒露出的机制必须被清掉，否则高度会撑到 13px
+
         expect(rule!.body).toContain("background: none");
         expect(rule!.body).toContain("height: 0");
         expect(rule!.body).toContain("padding: 0");
-        // 不能残留任何会加粗的声明
+
         expect(rule!.body).not.toMatch(/padding:\s*[1-9]/);
         expect(rule!.body).not.toMatch(/height:\s*[1-9]\d*px/);
     });
@@ -266,7 +248,7 @@ describe("WebView 样式", () => {
     it("行距 应该 单一口径：正文、列表项、标记盒取同一个行高（回归：body 1.6 与上游给 p 的 1.5 各管一段）", () => {
         const root = findRule(".milkdown .ProseMirror", "line-height: var(--epytor-line-height)");
         expect(root).not.toBeNull();
-        // 列表项段落与标记盒都从同一个变量取行高，改一处即可统一
+
         const item = findRule(".milkdown .ProseMirror .milkdown-list-item-block p");
         expect(item).not.toBeNull();
         expect(item!.body).toContain("line-height: var(--epytor-line-height)");
@@ -283,7 +265,7 @@ describe("WebView 样式", () => {
     it("段落 应该 上下内边距都为 0（回归：上游主题的 4px 上内边距顶开首行，让容器上下留白处处不等）", () => {
         const rule = findRule(".milkdown .ProseMirror p", "padding: 0");
         expect(rule).not.toBeNull();
-        // 上内边距是「标记不对齐 / 引用块上下不等 / 单元格上下不等」的共同根因
+
         expect(rule!.body).not.toContain("padding-top");
         expect(rule!.body).not.toContain("padding-bottom");
     });
@@ -297,7 +279,7 @@ describe("WebView 样式", () => {
         for (const tag of ["h2", "h3", "h4", "h5", "h6"]) {
             expect(rule!.selectors).toContain(`.milkdown .ProseMirror ${tag}`);
         }
-        // 上游的 padding:2px 0 必须被清掉，否则标题上下又各多 2px
+
         expect(rule!.body).toMatch(/padding:\s*0\b/);
     });
 
@@ -308,7 +290,7 @@ describe("WebView 样式", () => {
         expect(first).not.toBeNull();
         expect(last!.body).toMatch(/margin-bottom:\s*0\b/);
         expect(first!.body).toMatch(/margin-top:\s*0\b/);
-        // 表格单元格同一口径
+
         expect(last!.selectors).toContain(".milkdown .ProseMirror td > *:last-child");
         expect(last!.selectors).toContain(".milkdown .ProseMirror th > *:last-child");
     });
@@ -328,7 +310,7 @@ describe("WebView 样式", () => {
     it("列表项 应该 用块间距排（回归：0.2em 叠在段落 1em 上，相邻项净空 20.8px ≈ 一整行）", () => {
         const rule = findRule(".milkdown .milkdown-list-item-block", "margin: 0 0 var(--epytor-block-gap)");
         expect(rule).not.toBeNull();
-        // 最后一项不再自带一份，避免列表与下文出现双倍间距
+
         const last = findRule(".milkdown .ProseMirror ul > .milkdown-list-item-block:last-child");
         expect(last).not.toBeNull();
         expect(last!.body).toMatch(/margin-bottom:\s*0\b/);
@@ -368,30 +350,30 @@ describe("WebView 样式", () => {
     it("折叠期 应该 把正文归成纯背景（回归：那 300×150 里残留「孤零零一个目录面板」像渲染坏了）", () => {
         const rule = findRule(`html[${HOST_COLLAPSED_ATTRIBUTE}] body`, "visibility: hidden");
         expect(rule).not.toBeNull();
-        // 光靠 visibility 骗不住：子元素自己的 visibility:visible 会翻回来（实测目录面板就是这么
-        // 活下来的），必须再压一层 opacity
+
+
         expect(rule!.body).toMatch(/opacity:\s*0\b/);
-        // body 归空后画布底色由 <html> 提供，所以 html 必须自己有底色
+
         expect(stripComments(styleCss)).toMatch(/html,\s*body\s*\{[^}]*background-color/);
-        // 反面：不允许再出现「失焦/失活即归空」——那会让点侧边栏、点当前标签都闪一下（回归实测）
+
         expect(styleCss).not.toContain("data-epytor-content-blank");
     });
 
     it("标题折叠按钮 应该 悬挑在正文列外、且与标题留出间距（回归：常规占位把 H 标题右推；靠右对齐让按钮贴住文字）", () => {
         const body = stripComments(headingCss).match(/\.heading-fold-gutter\s*\{([^}]*)\}/)?.[1] ?? "";
         expect(body).not.toBe("");
-        // 负 margin + 等宽：按钮整体挂到正文左缘之外
+
         expect(body).toMatch(/margin-left:\s*-\d+px/);
         const width = Number(body.match(/width:\s*(\d+)px/)?.[1] ?? 0);
         const buttonWidth = Number(
             stripComments(headingCss).match(/\.heading-fold-toggle\s*\{[^}]*width:\s*(\d+)px/)?.[1] ?? 0,
         );
-        // 宽度要大于按钮自身，差额就是按钮与标题文字之间的间距（相等 = 贴在一起）
+
         expect(buttonWidth).toBeGreaterThan(0);
         expect(width).toBeGreaterThan(buttonWidth);
-        // 按钮靠左，把间距留在右侧
+
         expect(body).toContain("justify-content: flex-start");
-        // 反面：不能再留右外边距（那正是把标题文字推右的元凶）
+
         expect(body).not.toMatch(/margin-right:\s*[1-9]/);
     });
 });

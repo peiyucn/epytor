@@ -3,7 +3,7 @@ import { computeTooltipHorizontal } from "../ui/tooltip";
 
 describe("computeTooltipHorizontal", () => {
     it("右半屏按钮 应该 右缘对齐按钮右缘（回归：findBar 末位按钮 tooltip 超出画面被遮挡）", () => {
-        // 视口 800，按钮在右缘（right=792），tooltip 右缘 = 按钮右缘 → 不可能超屏
+
         const pos = computeTooltipHorizontal({ left: 766, right: 792 }, 800);
         expect(pos.left).toBeUndefined();
         expect(pos.right).toBe(`${800 - 792}px`);
@@ -26,7 +26,7 @@ describe("computeTooltipHorizontal", () => {
     });
 
     it("正中偏左按钮 应该 按左缘对齐（向右伸展）", () => {
-        // right=400 恰好不超视口中线（400）→ 走左半屏分支
+
         const pos = computeTooltipHorizontal({ left: 375, right: 400 }, 800);
         expect(pos.left).toBe("375px");
         expect(pos.right).toBeUndefined();

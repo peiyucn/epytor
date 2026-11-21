@@ -1,12 +1,4 @@
-/**
- * isPathWithinBase 路径边界判断。
- *
- * 平台无关写法（回归 2026-09-13）：原用例写死 `C:\ws\...`，CI 在 ubuntu 上把这类字符串当
- * 相对路径，2 个用例假红、`dev` 的 CI 红了 8 天。现在三组：
- * - 当前平台语义：用 `path.resolve` 造真实绝对路径（两个平台都成立）；
- * - Windows 语义：注入 `path.win32`（盘符、反斜杠、大小写不敏感）——在 Linux CI 上也执行；
- * - POSIX 语义：注入 `path.posix`。
- */
+
 import * as path from "path";
 import { describe, expect, it } from "vitest";
 import { isPathWithinBase } from "../utils/pathGuard";
@@ -39,7 +31,7 @@ describe("isPathWithinBase（当前平台语义）", () => {
     });
 });
 
-/** Windows 与 POSIX 两套语义都显式覆盖：CI 是 Linux，但用户主要在 Windows */
+
 const WIN = path.win32;
 const POSIX = path.posix;
 

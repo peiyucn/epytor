@@ -14,24 +14,24 @@ import {
     shouldSkipViewportWork,
 } from "../scroll/viewportLedger";
 
-/** 改写 jsdom 视口尺寸（只读属性需 defineProperty） */
+
 function setViewport(width: number, height: number): void {
     Object.defineProperty(window, "innerWidth", { value: width, configurable: true });
     Object.defineProperty(window, "innerHeight", { value: height, configurable: true });
 }
 
-/** jsdom 不做布局，getBoundingClientRect 恒为 0——直接给出 body 实测宽度 */
+
 function stubBodyWidth(width: number): void {
     vi.spyOn(document.body, "getBoundingClientRect")
         .mockReturnValue({ width } as unknown as DOMRect);
 }
 
-/** 记进 CSS 变量的真实 body 宽度（px 字符串），未记账时为 "" */
+
 function cssVarValue(): string {
     return document.documentElement.style.getPropertyValue(LAST_BODY_WIDTH_VAR);
 }
 
-/** 可控的 ResizeObserver：jsdom 不会因布局变化回调，由测试决定何时触发 */
+
 class FakeResizeObserver {
     static instances: FakeResizeObserver[] = [];
     private readonly callback: ResizeObserverCallback;
@@ -39,32 +39,29 @@ class FakeResizeObserver {
         this.callback = callback;
         FakeResizeObserver.instances.push(this);
     }
-    observe(): void { /* noop */ }
-    unobserve(): void { /* noop */ }
-    disconnect(): void { /* noop */ }
-    /** 模拟浏览器在布局后回调 */
+    observe(): void {  }
+    unobserve(): void {  }
+    disconnect(): void {  }
+
     trigger(): void {
         this.callback([], this as unknown as ResizeObserver);
     }
 }
 
-/** 安装假 ResizeObserver（记账只创建这一个；触发时机由测试决定） */
+
 function installFakeResizeObserver(): void {
     FakeResizeObserver.instances = [];
     vi.stubGlobal("ResizeObserver", FakeResizeObserver);
 }
 
-/** 初始化时创建的那个 observer */
+
 function ledgerObserver(): FakeResizeObserver {
     const observer = FakeResizeObserver.instances[0];
     if (!observer) { throw new Error("initViewportLedger 未创建 ResizeObserver"); }
     return observer;
 }
 
-/**
- * 宿主折叠态判定（回归：切到非 webview 标签时宿主把 webview 摘出布局，iframe 回落到
- * Chromium 默认尺寸 300×150，正文按 300px 重排再排回来 → 用户看到页面闪一下）。
- */
+
 describe("isCollapsedViewport", () => {
     it("恰好 300×150 应该 判定为折叠", () => {
         expect(isCollapsedViewport(IFRAME_DEFAULT_WIDTH, IFRAME_DEFAULT_HEIGHT)).toBe(true);
@@ -80,7 +77,7 @@ describe("isCollapsedViewport", () => {
     });
 });
 
-/** 折叠期视口读数是假值：此刻的测量会让顶栏收按钮、目录误判、吸顶条错位 */
+
 describe("shouldSkipViewportWork", () => {
     afterEach(() => { setViewport(1024, 768); });
 
@@ -95,7 +92,7 @@ describe("shouldSkipViewportWork", () => {
     });
 });
 
-/** 真实几何记账（纯函数）：折叠期外实测到的 body 宽度才入账 */
+
 describe("nextLastBodyWidth", () => {
     const real = { width: 846, height: 677 };
 
@@ -121,10 +118,7 @@ describe("nextLastBodyWidth", () => {
     });
 });
 
-/**
- * 「真实小窗口」判定（纯函数，回归 A6）：折叠读数下的用户输入 = 用户真在这个尺寸下用。
- * **不看计时**——宿主折叠态会一直持续到用户切回来，任何时间阈值都会在折叠期就打上标记。
- */
+
 describe("nextTinyReal", () => {
     const tiny = { width: IFRAME_DEFAULT_WIDTH, height: IFRAME_DEFAULT_HEIGHT };
     const real = { width: 846, height: 677 };
@@ -144,10 +138,7 @@ describe("nextTinyReal", () => {
     });
 });
 
-/**
- * 接线：初始化即建立基准，此后由 ResizeObserver 跟踪（窗口缩放、滚动条出现/消失）。
- * 记账结果写进 CSS 变量 --epytor-last-body-width，供折叠期守卫钉顶栏与正文宽度。
- */
+
 describe("initViewportLedger", () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -187,14 +178,14 @@ describe("initViewportLedger", () => {
         );
 
         initViewportLedger();
-        window.dispatchEvent(new Event("resize")); // 真实读数：记录 500
+        window.dispatchEvent(new Event("resize"));
 
         setViewport(IFRAME_DEFAULT_WIDTH, IFRAME_DEFAULT_HEIGHT);
-        window.dispatchEvent(new Event("resize")); // 进入折叠：不更新记录
+        window.dispatchEvent(new Event("resize"));
 
-        scrollY = 700; // 折叠/恢复布局时浏览器滚动锚定把位置挪走
+        scrollY = 700;
         setViewport(846, 677);
-        window.dispatchEvent(new Event("resize")); // 恢复：校正回折叠前
+        window.dispatchEvent(new Event("resize"));
         await new Promise((r) => requestAnimationFrame(() => r(null)));
         await new Promise((r) => requestAnimationFrame(() => r(null)));
 
@@ -223,28 +214,19 @@ describe("initViewportLedger", () => {
         expect(cssVarValue()).toBe("");
     });
 
-    /**
-     * 折叠判据必须是 JS 记账属性（style.css 几何守卫的唯一真源）。
-     * 回归：此前用 `@media (width: 300px) and (height: 150px)`，Chromium 按窗口缩放后的尺寸
-     * 求值媒体查询，用户 window.zoomLevel = 0.17 的机器上 innerWidth=300 却 mq=false，
-     * 整块守卫静默失效（折叠期照样按 300px 重排 → 切回时「小框」始终可见）。
-     */
-    /**
-     * 折叠读数下用户真的操作了（= 真实小窗口）→ 属性必须立刻消失、并按真实宽度记账。
-     * 这条覆盖属性与「真实小窗口」判定的耦合：两者同时成立会把真实可见的 300px 编辑区
-     * 的固定 UI 藏起来（用户真缩到 300×150 时顶栏会消失）。
-     */
+
+
     it("折叠读数下用户操作（真实小窗口） 应该 立刻移除属性并按真实几何记账", () => {
         setViewport(IFRAME_DEFAULT_WIDTH, IFRAME_DEFAULT_HEIGHT);
         stubBodyWidth(285);
         window.dispatchEvent(new Event("resize"));
         expect(document.documentElement.hasAttribute(HOST_COLLAPSED_ATTRIBUTE)).toBe(true);
-        expect(cssVarValue()).toBe(""); // 折叠读数不入账
+        expect(cssVarValue()).toBe("");
 
         window.dispatchEvent(new MouseEvent("pointerdown"));
         expect(document.documentElement.hasAttribute(TINY_REAL_ATTRIBUTE)).toBe(true);
         expect(document.documentElement.hasAttribute(HOST_COLLAPSED_ATTRIBUTE)).toBe(false);
-        expect(cssVarValue()).toBe("285px"); // 这个 300×150 是真的，照常记账
+        expect(cssVarValue()).toBe("285px");
     });
 
     it("折叠进入/恢复 应该 同步 data-epytor-host-collapsed（含真实小窗口不置位）", () => {
@@ -268,10 +250,7 @@ describe("initViewportLedger", () => {
     });
 });
 
-/**
- * 「真实小窗口」接线（回归 A6）：宿主摘挂与用户真把编辑区缩到 300×150 读数完全相同，
- * 分界只能靠用户输入——被摘挂的 webview 收不到任何输入事件。
- */
+
 describe("真实小窗口标记接线", () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -301,8 +280,8 @@ describe("真实小窗口标记接线", () => {
             window.dispatchEvent(new Event(type));
 
             expect(isRealTinyViewport()).toBe(true);
-            // 作用范围（用户口径）：标记只影响顶栏钉定与记账——目录/吸顶共用的
-            // shouldSkipViewportWork() 仍按读数走（真实小窗口下保持原状）
+
+
             expect(isHostCollapsedViewport()).toBe(false);
             expect(shouldSkipViewportWork()).toBe(true);
             expect(cssVarValue()).toBe("285px");
@@ -324,7 +303,7 @@ describe("真实小窗口标记接线", () => {
         expect(isRealTinyViewport()).toBe(false);
         expect(isHostCollapsedViewport()).toBe(true);
         expect(shouldSkipViewportWork()).toBe(true);
-        expect(cssVarValue()).toBe("831px"); // 假读数没有入账
+        expect(cssVarValue()).toBe("831px");
     });
 
     it("离开折叠尺寸 应该 清除标记（下一次宿主折叠仍按折叠处理）", () => {

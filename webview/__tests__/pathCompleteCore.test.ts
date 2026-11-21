@@ -1,9 +1,4 @@
-/**
- * `ui/pathCompleteCore` 的共享部件：建议行渲染、目录选中后重触发、完成会话的幂等销毁。
- *
- * 这两段逻辑原先在两个补全流程里各写一遍（且已经漂移），抽到 core 后必须由用例锁住，
- * 否则「图片补全/正文补全改一处漏一处」的老问题会从别处长回来。
- */
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
     createCompletionTeardown,
@@ -59,7 +54,7 @@ describe("renderPathSuggestionItem", () => {
         });
 
         expect(html).toContain('<img class="thumb" src="https://x.test/a.png?x=1&amp;y=2" alt="">');
-        // 标签走 escapeHtml：路径里的尖括号不能变成真正的 DOM 标签
+
         expect(html).toContain("&lt;img&gt;.png</span>");
         expect(html).not.toContain("<img>.png</span>");
     });

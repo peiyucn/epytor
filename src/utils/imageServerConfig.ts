@@ -1,17 +1,10 @@
-/**
- * Image server config resolution (pure; no runtime vscode import).
- * Per field, a value in `epytor.imageServer` wins, the deprecated `epytor.imageServer*` keys fill
- * the gaps, and defaults come last. Resolution only reads settings — it never rewrites the user's
- * settings.json.
- * Security: names and values are spliced into the multipart body, so both lose CRLF and quotes,
- * and `fieldName` must match the whitelist pattern.
- */
+
 import type * as vscode from "vscode";
 
 export const DEFAULT_IMAGE_SERVER_FIELD_NAME = "file";
 export const DEFAULT_IMAGE_SERVER_RESPONSE_PATH = "url";
-/** Whitelist for the multipart `Content-Disposition` name parameter. */
-export const IMAGE_SERVER_FIELD_NAME_PATTERN = /^[A-Za-z0-9_.\-]+$/;
+
+export const IMAGE_SERVER_FIELD_NAME_PATTERN = /^[A-Za-z0-9_.-]+$/;
 
 export interface ImageServerSettings {
     url: string;
@@ -20,7 +13,7 @@ export interface ImageServerSettings {
     responsePath: string;
 }
 
-/** Raw values of the deprecated keys, unvalidated. */
+
 interface LegacyImageServerSettings {
     url?: unknown;
     fieldName?: unknown;
@@ -34,10 +27,10 @@ type ImageServerIssueKind =
     | "extraParamsInvalidJson"
     | "extraParamsUnsupportedValue";
 
-/** Every invalid value is reported here; callers must surface it, never ignore it silently. */
+
 export interface ImageServerIssue {
     kind: ImageServerIssueKind;
-    /** Ignored keys, for `extraParamsUnsupportedValue`. */
+
     keys?: string[];
 }
 
@@ -46,13 +39,13 @@ interface ImageServerResolution {
     issues: ImageServerIssue[];
 }
 
-/** A l10n-ready message: `message` is the English source string, `args` its placeholders. */
+
 interface LocalizableIssueMessage {
     message: string;
     args: string[];
 }
 
-/** Callers pass the result to `vscode.l10n.t`. */
+
 export function describeImageServerIssue(issue: ImageServerIssue): LocalizableIssueMessage {
     switch (issue.kind) {
         case "settingsNotObject":
@@ -82,12 +75,12 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-/** Strip CRLF and quotes (header injection / boundary corruption); empty means unusable. */
+
 export function sanitizeMultipartText(value: string): string {
     return value.replace(/[\r\n"]/g, "").trim();
 }
 
-/** The first candidate that normalizes to a value wins. */
+
 function firstValid<T>(
     candidates: unknown[],
     normalize: (value: unknown) => T | undefined,
@@ -112,7 +105,7 @@ function normalizeFieldName(value: unknown): string | undefined {
     return IMAGE_SERVER_FIELD_NAME_PATTERN.test(trimmed) ? trimmed : undefined;
 }
 
-/** A multipart value can only be a string, finite number or boolean. */
+
 function normalizeParamValue(value: unknown): string | undefined {
     if (typeof value === "string") { return sanitizeMultipartText(value); }
     if (typeof value === "number" && Number.isFinite(value)) { return String(value); }
@@ -146,7 +139,7 @@ function normalizeExtraParams(input: unknown): {
     };
 }
 
-/** The deprecated key holds a JSON object string; invalid JSON is reported, not thrown. */
+
 function parseLegacyExtraParams(raw: unknown): {
     params: Record<string, string>;
     issues: ImageServerIssue[];
@@ -162,7 +155,7 @@ function parseLegacyExtraParams(raw: unknown): {
     return normalizeExtraParams(parsed);
 }
 
-/** New key per field, legacy fallback, defaults last; invalid input always lands in `issues`. */
+
 export function resolveImageServerConfig(
     server: unknown,
     legacy: LegacyImageServerSettings = {},
@@ -201,20 +194,15 @@ export function resolveImageServerConfig(
     return { settings: { url, fieldName, extraParams: extra.params, responsePath }, issues };
 }
 
-/** Which config level picked the upload target. */
+
 interface ServerStorageOrigin {
-    /** imageStorage came from workspace-level config. */
+
     storageFromWorkspace: boolean;
-    /** The effective upload URL matches a workspace-level candidate (old or new key). */
+
     urlFromWorkspace: boolean;
 }
 
-/**
- * Whether a cloned repo's `.vscode/settings.json` alone can pick the upload target
- * (imageStorage=server or imageServer.url) and thus send pasted images to an attacker host.
- * User-level config is the user's own choice. Any workspace-level candidate matching the
- * effective URL counts — over-downgrading beats leaking.
- */
+
 export function readServerStorageOrigin(
     cfg: Pick<vscode.WorkspaceConfiguration, "inspect">,
     effectiveUrl: string,
@@ -243,12 +231,12 @@ export function readServerStorageOrigin(
     return { storageFromWorkspace, urlFromWorkspace };
 }
 
-/** Downgrade server storage to local when workspace-level config can steer the target. */
+
 export function shouldDowngradeServerStorage(origin: ServerStorageOrigin): boolean {
     return origin.storageFromWorkspace || origin.urlFromWorkspace;
 }
 
-/** Read from `getConfiguration("epytor", uri)`; the deprecated keys are the legacy fallbacks. */
+
 export function readImageServerConfig(
     cfg: Pick<vscode.WorkspaceConfiguration, "get">,
 ): ImageServerResolution {

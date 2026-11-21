@@ -1,14 +1,4 @@
-/**
- * 图片内联编辑的清理契约（回归：节点在路径补全打开时被销毁，document 监听泄漏）。
- *
- * 场景：编辑图片路径时节点消失（revert / undo / 外部改盘），原来的 detach 只在
- * confirm/cancel 里执行，document 上的 mousedown 监听就永久留下。现在
- * `startToolbarInlineEdit` 返回清理函数，`createImageView` 存下它并在 `destroy()` 调用。
- *
- * 两条路径的键盘归属不同，必须分开测：
- * - 纯重命名（无 `setupComplete`）：输入框自己处理 Enter/Escape；
- * - 路径编辑（有 `setupComplete`）：键盘归路径补全组件，我们只负责清理契约。
- */
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { startToolbarInlineEdit } from "../components/imageView";
 
@@ -70,8 +60,8 @@ describe("图片内联编辑的清理", () => {
 
         expect(toolbar.querySelector("input")).not.toBeNull();
 
-        cleanup();   // confirm / cancel 走的那次
-        cleanup();   // 随后节点 destroy 又调一次
+        cleanup();
+        cleanup();
 
         expect(detach).toHaveBeenCalledTimes(1);
         expect(toolbar.querySelector("input")).toBeNull();

@@ -4,9 +4,9 @@ import { computeStickyRows, STICKY_ROW_HEIGHT_PX } from "../outline/headingStick
 const TOP = 36;
 const ROW = STICKY_ROW_HEIGHT_PX;
 
-/** 构造一个顶层标题（章节延伸到文档底） */
+
 const h1 = (top: number, sectionBottom = 10000) => ({ depth: 1, top, sectionBottom });
-/** 构造一个二级标题 */
+
 const h2 = (top: number, sectionBottom = 10000) => ({ depth: 2, top, sectionBottom });
 
 describe("computeStickyRows", () => {
@@ -23,13 +23,13 @@ describe("computeStickyRows", () => {
     });
 
     it("标题部分被顶栏遮挡 应该 已经吸顶（用户口径：碰到了就进入固定状态）", () => {
-        // 标题 top = 20（在顶栏 36 下方 16px 处？不——视口坐标 20 已在顶栏内），
-        // 高 30 → 底部 50 仍可见：旧实现此时显示的是「上一个」标题
+
+
         expect(computeStickyRows([h1(-10, 200)], TOP)).toEqual([0]);
     });
 
     it("章节末尾划过吸顶行 应该 让位给下一个标题（切换发生在下一标题碰到该行时）", () => {
-        // h1 章节在 y=30 结束，下一个 h1 从 y=30 开始：行 y=36 已不在前者区间
+
         const rows = computeStickyRows([h1(-100, 30), h1(30)], TOP);
         expect(rows).toEqual([1]);
     });
@@ -45,7 +45,7 @@ describe("computeStickyRows", () => {
     });
 
     it("多级：子标题尚未碰到自己的行 应该 只显示父标题", () => {
-        // 第二行 y = 36 + 22 = 58；子标题 top = 70 还没到
+
         expect(computeStickyRows([h1(-500), h2(70)], TOP)).toEqual([0]);
     });
 

@@ -50,8 +50,8 @@ describe("WebView i18n", () => {
     });
 
     it("词典键 应该 与代码 t() 字面键一一对应（无死键/无缺键，回归：曾 41% 死键 + 4 缺键）", () => {
-        // 静态字符串级比对：读词典源码与 webview 全部生产 ts 文件（测试目录除外），
-        // 提取 t('...')/t("...") 字面量，防「改代码不删词典键 / 用新键不补词典」再次漂移
+
+
         const repoRoot = path.resolve(process.cwd());
         const dictSrc = readFileSync(
             path.join(repoRoot, "src", "i18n", "webviewTranslations.ts"),
@@ -78,7 +78,7 @@ describe("WebView i18n", () => {
     });
 });
 
-/** 递归收集目录下所有 ts 文件（跳过 __tests__）的内容 */
+
 function collectTsSources(dir: string): string[] {
     const out: string[] = [];
     for (const entry of readdirSync(dir, { withFileTypes: true })) {

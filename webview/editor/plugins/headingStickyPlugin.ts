@@ -1,9 +1,4 @@
-/**
- * Sticky heading bar: the current section path (max 3 rows) below the top bar; click to jump.
- * Geometry follows VS Code's sticky scroll: a heading sticks when its top crosses the line and
- * yields when its section bottom does. Regression: waiting until the heading fully left the
- * top bar lagged one heading height, so the bar updated after the section was already gone.
- */
+
 import { Plugin } from "@milkdown/kit/prose/state";
 import { $prose } from "@milkdown/kit/utils";
 import type { EditorView } from "@milkdown/kit/prose/view";
@@ -18,22 +13,15 @@ import { computeStickyRows, currentHeadingIndex, effectiveReadingLineY, STICKY_M
 import { headingScrollTop } from "../../outline/headingScroll";
 import { getUserInteractionEpoch } from "../../shell/userInteraction";
 
-/** Set when the plugin mounts; hides the bar until the next user interaction (TOC jump). */
+
 let _hideStickyUntilNextInteraction: (() => void) | null = null;
 
-/**
- * Page-level active-heading state. It lives outside the plugin instance because the TOC
- * subscribes once per page while the plugin is rebuilt on every revert; keeping both the
- * position and its listeners in one object gives the state a single owner (audit F10).
- */
+
 const activeHeading = {
-    /** Doc position of the current section heading, null before any; the TOC reuses it. */
+
     pos: null as number | null,
     listeners: new Set<(pos: number | null) => void>(),
-    /**
-     * Instance that currently owns `pos`. Editor teardown is async (Milkdown's destroy),
-     * so a dying plugin must not clear a newer instance's state.
-     */
+
     owner: null as object | null,
 };
 
@@ -52,10 +40,7 @@ function publishActiveHeading(pos: number | null): void {
     for (const listener of activeHeading.listeners) { listener(pos); }
 }
 
-/**
- * Hide the bar until the next user interaction (TOC jump).
- * Regression: a 400 ms timer re-showed the previous section's bar before any scroll.
- */
+
 export function hideStickyUntilNextInteraction(): void {
     _hideStickyUntilNextInteraction?.();
 }
@@ -88,8 +73,8 @@ export const headingStickyPlugin = $prose(() =>
             document.body.appendChild(sticky);
 
             let rafId: number | null = null;
-            // A jump fires a scroll event immediately; suppressing until the next interaction
-            // epoch keeps the previous section from re-sticking over the target.
+
+
             let suppressSticky = false;
             let suppressEpoch: number | null = null;
 
@@ -106,7 +91,7 @@ export const headingStickyPlugin = $prose(() =>
                 requestAnimationFrame(() => {
                     const heading = view.nodeDOM(headingPos);
                     if (!(heading instanceof HTMLElement)) return;
-                    // Same reading-line basis as currentHeadingIndex, or the highlight lags.
+
                     const top = headingScrollTop(
                         heading.getBoundingClientRect().top + window.scrollY,
                         getTopbarBottom(),
@@ -120,7 +105,7 @@ export const headingStickyPlugin = $prose(() =>
                 if (target?.closest(".heading-sticky-toggle")) return;
                 const row = target?.closest<HTMLElement>(".heading-sticky-row");
                 const pos = Number(row?.dataset["headingPos"]);
-                // Pos 0 is the first heading; Regression: a `pos > 0` check made it unclickable.
+
                 if (Number.isFinite(pos) && pos >= 0) {
                     suppressUntilNextInteraction();
                     scrollHeadingIntoStickyPosition(pos);
@@ -159,23 +144,23 @@ export const headingStickyPlugin = $prose(() =>
 
             const hideSticky = () => {
                 sticky.hidden = true;
-                // display:flex in heading.css overrides the hidden attribute.
+
                 sticky.style.display = "none";
                 lastRowSignature = "";
             };
 
-            // Doc-space cache: scroll path does pure number math.
-            // Regression: measuring every heading every frame froze 10k-line documents.
+
+
             interface CachedHeading {
                 el: HTMLElement;
                 pos: number;
                 level: number;
-                /** Nesting depth (1 = top level; h1 → h3 counts as 2). */
+
                 depth: number;
                 text: string;
                 foldable: boolean;
                 docTop: number;
-                /** Doc-space section bottom: next heading with level ≤ own, else content bottom. */
+
                 docSectionBottom: number;
             }
             let cachedHeadings: CachedHeading[] = [];
@@ -183,7 +168,7 @@ export const headingStickyPlugin = $prose(() =>
             let rebuildTimer: ReturnType<typeof setTimeout> | null = null;
             let lastRowSignature = "";
 
-            // Cancel the pending debounce. Regression: an orphan timer hit nodeDOM on a dead view.
+
             const clearRebuildTimer = () => {
                 if (rebuildTimer !== null) {
                     clearTimeout(rebuildTimer);
@@ -228,7 +213,7 @@ export const headingStickyPlugin = $prose(() =>
                 cacheDirty = false;
             };
 
-            // Body width at the last non-collapsed read; collapse restore returns to it.
+
             let lastStableBodyWidth = -1;
 
             const markCacheDirty = () => {
@@ -236,16 +221,16 @@ export const headingStickyPlugin = $prose(() =>
                 clearRebuildTimer();
                 rebuildTimer = setTimeout(() => {
                     rebuildTimer = null;
-                    // The collapsed viewport is a fake 300×150; caching now would freeze wrong
-                    // coordinates. Stay dirty and rebuild on the next real layout.
+
+
                     if (shouldSkipViewportWork()) { return; }
                     rebuildCache();
                     scheduleUpdate();
                 }, CACHE_REBUILD_DEBOUNCE_MS);
             };
 
-            // Layout-only change: refresh display geometry this frame, but rebuild the cache
-            // only when width changed (collapse restore returns to the known width).
+
+
             const onLayoutChange = () => {
                 if (shouldSkipViewportWork()) return;
                 const bodyWidth = document.body.getBoundingClientRect().width;
@@ -256,7 +241,7 @@ export const headingStickyPlugin = $prose(() =>
                 scheduleUpdate();
             };
 
-            /** At most 3 rows and 25% of the viewport (matches the built-in editor). */
+
             const maxStickyRows = (): number => Math.min(
                 STICKY_MAX_ROWS,
                 Math.max(1, Math.floor((window.innerHeight * 0.25) / STICKY_ROW_HEIGHT_PX)),
@@ -288,13 +273,13 @@ export const headingStickyPlugin = $prose(() =>
             const updateSticky = () => {
                 rafId = null;
                 const topbarBottom = getTopbarBottom();
-                // Publish before the suppression check: the TOC highlight still follows the scroll.
+
                 if (cacheDirty) { rebuildCache(); }
                 if (cachedHeadings.length > 0) {
                     const scrollY = window.scrollY;
                     const activeIndex = currentHeadingIndex(
                         cachedHeadings.map((h) => ({ depth: h.depth, top: h.docTop - scrollY, sectionBottom: 0 })),
-                        // Tapering reading line so the last sections take over in order.
+
                         effectiveReadingLineY(
                             topbarBottom,
                             window.innerHeight,
@@ -370,8 +355,8 @@ export const headingStickyPlugin = $prose(() =>
             });
             resizeObserver.observe(view.dom);
 
-            // Layout shifts only move content, so view.dom's border-box observer never fires;
-            // watch body's content-box. Regression: sticky left/width stayed stale until scroll.
+
+
             const layoutObserver = new ResizeObserver(onLayoutChange);
             layoutObserver.observe(document.body, { box: "content-box" });
 
@@ -384,7 +369,7 @@ export const headingStickyPlugin = $prose(() =>
 
             return {
                 update(view, prevState) {
-                    // Regression: caret-only transactions rebuilt the cache after 300 ms.
+
                     const docChanged = !view.state.doc.eq(prevState.doc);
                     const foldChanged =
                         headingFoldPluginKey.getState(view.state) !==
@@ -399,10 +384,10 @@ export const headingStickyPlugin = $prose(() =>
                     if (_hideStickyUntilNextInteraction === suppressUntilNextInteraction) {
                         _hideStickyUntilNextInteraction = null;
                     }
-                    // Reset ownership: the next document must not inherit this one's highlight
-                    // (regression: TOC kept highlighting a heading position of the old doc).
-                    // Only the owning instance may clear it: teardown is async, so a late destroy
-                    // must not wipe a newer instance's published position.
+
+
+
+
                     if (activeHeading.owner === instanceToken) {
                         activeHeading.owner = null;
                         publishActiveHeading(null);

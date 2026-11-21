@@ -7,7 +7,7 @@ const VAR_NAMES = {
     tableWidth: "--epytor-table-width",
 } as const;
 
-/** Write the resolved table-wrap vars to `:root`; takes effect immediately, no reload. */
+
 export function applyTableWrapVars(vars: TableWrapVars): void {
     const root = document.documentElement;
     root.style.setProperty(VAR_NAMES.wordBreak, vars.wordBreak);

@@ -1,9 +1,4 @@
-/**
- * Mermaid 预览控制器（覆盖 editor/mermaidPreview.ts）。
- * 用注入的 loader 断言懒加载、data-mermaid-key 所有权、主题切换只重渲染仍存在的块、
- * 错误降级文本，不触发真实的 1.3MB mermaid 动态导入。语言路由由
- * editor/codeBlockPreview.ts 负责（见 codeBlockPreview.test.ts），这里只渲染 mermaid。
- */
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createMermaidPreview, type MermaidPreviewOptions } from "../editor/mermaidPreview";
 import { mermaidInitConfig } from "../editor/mermaid";
@@ -35,7 +30,7 @@ function fakeMermaid(): { module: FakeMermaidModule; load: () => Promise<FakeMer
     };
 }
 
-/** 把 apply 的 HTML 挂进 body（真实调用方是代码块预览区）。 */
+
 function mountApply(): { apply: (value: null | string | HTMLElement) => void; host: HTMLElement } {
     const host = document.createElement("div");
     document.body.appendChild(host);
@@ -66,7 +61,7 @@ describe("createMermaidPreview", () => {
         expect(loadCount()).toBe(0);
         const result = preview.renderPreview("graph TD; A-->B", apply);
 
-        // 异步预览：返回 undefined 让组件保留 Loading 占位，apply 同步挂上块占位。
+
         expect(result).toBeUndefined();
         const block = host.querySelector<HTMLElement>("[data-mermaid-key]");
         expect(block).not.toBeNull();
@@ -92,7 +87,7 @@ describe("createMermaidPreview", () => {
         await flushAsync();
         expect(module.render).toHaveBeenCalledTimes(2);
 
-        // 第一个块的节点被编辑器重建移除；主题切换时不应再为它查询/渲染。
+
         first.host.remove();
         const renderCallsBefore = module.render.mock.calls.length;
         dark = true;
@@ -118,7 +113,7 @@ describe("createMermaidPreview", () => {
         };
         const preview = createMermaidPreview(() => false, { loadMermaidModule: asLoader(() => Promise.resolve(module)) });
         const { apply, host } = mountApply();
-        const warn = vi.spyOn(console, "warn").mockImplementation(() => { /* expected */ });
+        const warn = vi.spyOn(console, "warn").mockImplementation(() => {  });
 
         preview.renderPreview("((( bad", apply);
         await flushAsync();

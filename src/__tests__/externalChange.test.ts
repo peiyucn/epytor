@@ -65,7 +65,7 @@ describe("ExternalChangeCoordinator 外部变更采纳", () => {
 
     it("回归（B1 defer-before-revert）：无法读取 webview 且无未保存编辑时 应该 不改模型、不推 revert、不警告", async () => {
         const document = await makeDocument("C1");
-        setDiskContent("C2"); // 磁盘已被外部改成 C2
+        setDiskContent("C2");
         const { host, panel } = makeHost({
             requestContentDetailed: vi.fn(async () => ({ content: "C1", authoritative: false })),
             getLastSavedContent: vi.fn(() => "C1"),
@@ -74,11 +74,11 @@ describe("ExternalChangeCoordinator 外部变更采纳", () => {
 
         await coordinator.handle(document, URI_KEY);
 
-        // 旧实现先 document.revert() 再把磁盘内容留在模型里，defer 期间重建会把磁盘内容喂给编辑器。
+
         expect(document.getText()).toBe("C1");
         expect(panel.webview.postMessage).not.toHaveBeenCalled();
         expect(coordinator.isDeferred(URI_KEY)).toBe(true);
-        // 没有未保存编辑时「内容已保留」是假告警：激活后复查会静默采纳盘上内容。
+
         expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
     });
 
@@ -140,7 +140,7 @@ describe("ExternalChangeCoordinator 外部变更采纳", () => {
         expect(host.markDirty).toHaveBeenCalledWith(document);
         expect(host.setWebviewDirty).toHaveBeenCalledWith(URI_KEY, true);
         expect(panel.webview.postMessage).not.toHaveBeenCalled();
-        // 外部写入方在跟用户抢同一个文件是常态（AI 写作会话），弹窗太吵；冲突只进日志。
+
         expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
         expect(console.warn).toHaveBeenCalledWith("[epytor] external change kept the editor buffer (unsaved edits)");
     });
@@ -186,7 +186,7 @@ describe("ExternalChangeCoordinator 外部变更采纳", () => {
         await new ExternalChangeCoordinator(host).handle(document, URI_KEY);
 
         expect(requestMock).not.toHaveBeenCalled();
-        expect(readFileMock()).toHaveBeenCalledTimes(1); // 只有打开文档那一次
+        expect(readFileMock()).toHaveBeenCalledTimes(1);
         expect(document.getText()).toBe("C1");
     });
 

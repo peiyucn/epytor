@@ -1,9 +1,4 @@
-/**
- * 代码块预览回调装配回归（editor.ts 把分发器交给 Crepe code-block）。
- *
- * 组件契约见 editor/codeBlockPreview.ts；这里用真实 createEditor 取回装配后的回调，
- * 锁住「普通语言回 null、不出现预览」这条链路（回归：曾回 undefined，预览永远 Loading）。
- */
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createEditor, destroyEditor } from "../editor";
 import { codeBlockConfig } from "@milkdown/kit/component/code-block";
@@ -12,14 +7,14 @@ import type { Editor } from "@milkdown/kit/core";
 
 if (typeof (window as unknown as Record<string, unknown>).ResizeObserver === "undefined") {
     (window as unknown as Record<string, unknown>).ResizeObserver = class {
-        observe() { /* noop */ } unobserve() { /* noop */ } disconnect() { /* noop */ }
+        observe() {  } unobserve() {  } disconnect() {  }
     };
 }
 if (typeof window.matchMedia === "undefined") {
     window.matchMedia = (() => ({
         matches: false, media: "", onchange: null,
-        addListener() { /* noop */ }, removeListener() { /* noop */ },
-        addEventListener() { /* noop */ }, removeEventListener() { /* noop */ },
+        addListener() {  }, removeListener() {  },
+        addEventListener() {  }, removeEventListener() {  },
         dispatchEvent() { return false; },
     })) as typeof window.matchMedia;
 }
@@ -37,10 +32,10 @@ afterEach(() => {
 async function openEditor(markdown: string): Promise<Editor> {
     const root = document.createElement("div");
     document.body.appendChild(root);
-    return createEditor(root, markdown, () => { /* noop */ });
+    return createEditor(root, markdown, () => {  });
 }
 
-/** 装配后的代码块预览回调（editor.ts 传给 codeMirror feature 的那一个）。 */
+
 function codeBlockPreview(editor: Editor): CodeBlockConfig["renderPreview"] {
     let config: CodeBlockConfig | null = null;
     editor.action((ctx) => {

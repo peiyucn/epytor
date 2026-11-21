@@ -1,10 +1,4 @@
-/**
- * 文档相对路径解析（A4：原来 4 处各写一份，且「无工作区时 `@/` 回退到哪」并不一致）。
- *
- * 这些用例同时是「口径」的文档：`@/` = 工作区根；其余（含 `./`、`../`、裸名）相对文档目录；
- * 无工作区时 `@/` 统一回退文档目录（原 openFile 的父目录口径已按 owner 决定统一，见 task B4）。
- * 期望值用 `path` 自身构造，避免 Windows 盘符/分隔符导致的平台差异。
- */
+
 import * as path from "path";
 import { describe, expect, it, vi } from "vitest";
 import * as vscode from "vscode";

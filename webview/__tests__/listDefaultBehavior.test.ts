@@ -1,9 +1,4 @@
-/**
- * 列表默认行为回归测试（官方 commonmark keymap，无自定义列表插件）。
- * 覆盖手测反馈「有序列表中间删除一行后编号重新开始」：
- * - 空项行首 Backspace → 删除该项，编号重排 1..n
- * - 非空项行首 Backspace → joinBackward 并入上一项，编号重排 1..n
- */
+
 import { afterEach, describe, expect, it } from "vitest";
 import { CrepeBuilder } from "@milkdown/crepe";
 import { editorViewCtx } from "@milkdown/kit/core";
@@ -13,16 +8,16 @@ import type { EditorView } from "@milkdown/kit/prose/view";
 
 if (typeof (window as unknown as Record<string, unknown>).ResizeObserver === "undefined") {
     (window as unknown as Record<string, unknown>).ResizeObserver = class {
-        observe() { /* noop */ }
-        unobserve() { /* noop */ }
-        disconnect() { /* noop */ }
+        observe() {  }
+        unobserve() {  }
+        disconnect() {  }
     };
 }
 if (typeof window.matchMedia === "undefined") {
     window.matchMedia = (() => ({
         matches: false, media: "", onchange: null,
-        addListener() { /* noop */ }, removeListener() { /* noop */ },
-        addEventListener() { /* noop */ }, removeEventListener() { /* noop */ },
+        addListener() {  }, removeListener() {  },
+        addEventListener() {  }, removeEventListener() {  },
         dispatchEvent() { return false; },
     })) as typeof window.matchMedia;
 }
@@ -47,8 +42,8 @@ function pressBackspace(view: EditorView): boolean {
     let handled = false;
     const event = {
         key: "Backspace",
-        preventDefault() { /* noop */ },
-        stopPropagation() { /* noop */ },
+        preventDefault() {  },
+        stopPropagation() {  },
     } as unknown as KeyboardEvent;
     view.someProp("handleKeyDown", (f) => {
         if (f(view, event)) {
@@ -129,8 +124,8 @@ describe("列表官方默认行为", () => {
         const event = {
             key: "Tab",
             shiftKey: true,
-            preventDefault() { /* noop */ },
-            stopPropagation() { /* noop */ },
+            preventDefault() {  },
+            stopPropagation() {  },
         } as unknown as KeyboardEvent;
         view.someProp("handleKeyDown", (f) => {
             if (f(view, event)) { handled = true; return true; }
@@ -138,7 +133,7 @@ describe("列表官方默认行为", () => {
         });
         expect(handled).toBe(true);
         expect(itemPositions(view)).toHaveLength(3);
-        // b 提升为顶层项：顶层列表 3 项
+
         const md = serialize(editor);
         expect(md).toContain("* a");
         expect(md).toContain("* b");

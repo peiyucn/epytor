@@ -12,7 +12,7 @@ describe("ContentRequestCoordinator 拉取协调", () => {
         const p1 = coord.request("doc", "stale1");
         const p2 = coord.request("doc", "stale2");
 
-        // 单飞：只发一次请求
+
         expect(send).toHaveBeenCalledTimes(1);
 
         coord.resolve("doc", "fresh");

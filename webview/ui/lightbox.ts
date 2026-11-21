@@ -1,57 +1,35 @@
-/**
- * Fullscreen lightbox scaffold: a body-level overlay with Escape/backdrop dismissal and one
- * active lightbox per host.
- *
- * Extracted from the image lightbox and the code-block fullscreen view. Both had their own
- * module-level "active lightbox" singleton, their own Escape listener and their own
- * hand-written cleanup that had to stay idempotent (rebuild path + NodeView.destroy can both
- * fire). The host keeps that lifecycle; callers only build content and restore whatever DOM
- * they moved into the overlay.
- */
+
 
 export interface LightboxBuildResult {
-    /**
-     * Button that closes the lightbox. The scaffold wires its mousedown to
-     * preventDefault + stopPropagation + close, matching both previous implementations.
-     */
+
     closeButton?: HTMLElement;
 }
 
 export interface LightboxOptions {
-    /** Root overlay class; position/background live in the caller's component sheet. */
+
     className: string;
-    /** Build the overlay content into `root` (not in the document yet). */
+
     build: (root: HTMLElement) => LightboxBuildResult | void;
-    /**
-     * Run after the root is attached to the document, e.g. to move an editor DOM node into the
-     * overlay. Keeping the move post-attach preserves the ordering the code-block lightbox had
-     * (overlay in the document first) so CodeMirror is never detached from the document.
-     */
+
     onOpen?: (root: HTMLElement) => void;
-    /**
-     * Run after the overlay is removed, e.g. to move an editor DOM node back to its original
-     * parent. Runs exactly once, and only after the overlay is gone.
-     */
+
     onDispose?: () => void;
 }
 
 export interface Lightbox {
     readonly el: HTMLElement;
-    /** Remove the overlay and its listeners. Idempotent. */
+
     close(): void;
     isOpen(): boolean;
 }
 
 export interface LightboxHost {
-    /** The open lightbox, or null. Lets an owner close only the lightbox it cares about. */
+
     active(): Lightbox | null;
     isOpen(): boolean;
-    /**
-     * Open a lightbox. Returns null when one is already open: both previous implementations
-     * were singletons and must not stack overlays.
-     */
+
     open(options: LightboxOptions): Lightbox | null;
-    /** Close the active lightbox if any. Idempotent. */
+
     close(): void;
 }
 

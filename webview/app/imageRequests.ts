@@ -1,11 +1,4 @@
-/**
- * Image request orchestration and image insertion wiring.
- *
- * Upload / project-gallery / rename requests are correlated by per-kind registries; the
- * rename reply also rewrites image nodes in the open document, so the module takes an
- * editor accessor instead of importing editor.ts (which would be a cycle via index).
- * Extracted from index.ts (audit F1) so the registries and the remap logic have one owner.
- */
+
 import type { Editor } from "@milkdown/kit/core";
 import { editorViewCtx } from "@milkdown/kit/core";
 import type { ProjectImage, ToWebviewMessage } from "../../shared/messages";
@@ -22,21 +15,21 @@ const RENAME_IMAGE_TIMEOUT_MS = 15000;
 const UPLOAD_IMAGE_TIMEOUT_MS = 30000;
 const GET_PROJECT_IMAGES_TIMEOUT_MS = 10000;
 
-/** The editor instance is owned by the entry; this module only reads it when inserting. */
+
 export interface ImageRequestDeps {
     getEditor(): Editor | null;
 }
 
 export interface ImageRequestController {
-    /** Inline path edit renamed a file; resolves when the extension confirms, rejects on error/timeout. */
+
     renameImage(webviewUri: string, newBasename: string): Promise<void>;
-    /** Read the file, send it for upload, resolve with the resulting src (rejects on error/timeout). */
+
     uploadImageFile(file: File, altText: string): Promise<string>;
-    /** Insert an image node at the current selection and refocus the editor. */
+
     insertImageNode(src: string, alt: string): void;
-    /** Ask the extension for the project gallery; resolves null when it does not answer in time. */
+
     requestProjectImages(): Promise<ProjectImage[] | null>;
-    /** Route an extension reply here; false means "not an image message" (caller keeps routing). */
+
     handleMessage(msg: ToWebviewMessage): boolean;
 }
 
@@ -90,19 +83,19 @@ export function createImageRequestController(deps: ImageRequestDeps): ImageReque
     function requestProjectImages(): Promise<ProjectImage[] | null> {
         const { id, promise } = getImagesRequests.begin({
             timeoutMs: GET_PROJECT_IMAGES_TIMEOUT_MS,
-            // Regression: without a resolve(null) fallback the picker hung on "Loading".
+
             timeout: { kind: "resolve", value: null },
         });
         notifyGetProjectImages(id);
         return promise;
     }
 
-    /** The map must be remapped and the open nodes rewritten here: index.ts no longer owns it. */
+
     function handleImageRenamed(
         msg: Extract<ToWebviewMessage, { type: "imageRenamed" }>,
     ): void {
         renameRequests.resolve(msg.id);
-        // Regression: the map refreshed only on init, so path edits showed encoded URI tails.
+
         remapImageUri(msg.oldWebviewUri, msg.newWebviewUri, msg.newRelPath);
         const editor = deps.getEditor();
         if (!editor) { return; }
@@ -160,12 +153,12 @@ export function createImageRequestController(deps: ImageRequestDeps): ImageReque
     };
 }
 
-/** Wire the toolbar image picker custom event (`epytor:insertImage`). */
+
 export function initImagePickerInsertion(controller: ImageRequestController): void {
     document.addEventListener("epytor:insertImage", () => {
         showImagePicker(
             (file) => {
-                // Regression: an empty catch swallowed upload failures; let the picker show them.
+
                 return controller.uploadImageFile(file, "").then((url) => controller.insertImageNode(url, ""));
             },
             (relPath) => {
@@ -179,7 +172,7 @@ export function initImagePickerInsertion(controller: ImageRequestController): vo
     });
 }
 
-/** Drag/drop and paste insertion of local image files. */
+
 export function initImageDropPaste(
     container: HTMLElement,
     controller: ImageRequestController,

@@ -2,7 +2,7 @@ import type { ToExtensionMessage, ToWebviewMessage, ProjectImage } from "../shar
 
 export type { ProjectImage };
 
-/** Message shape delivered to `onMessage`; not exported (no external consumer). */
+
 type IncomingMessage = ToWebviewMessage;
 
 declare function acquireVsCodeApi(): {
@@ -11,7 +11,7 @@ declare function acquireVsCodeApi(): {
     setState(state: unknown): void;
 };
 
-// acquireVsCodeApi may only be called once.
+
 const vscode = acquireVsCodeApi();
 
 export function notifyReady(): void {
@@ -46,7 +46,7 @@ export function notifySwitchToTextEditor(line?: number): void {
     vscode.postMessage({ type: "switchToTextEditor", ...(line !== undefined ? { line } : {}) });
 }
 
-/** Top visible source line (sent after the scroll debounce; used to position the text editor on switch-back). */
+
 export function notifyViewportLine(line: number): void {
     vscode.postMessage({ type: "viewportLine", line });
 }
@@ -95,8 +95,8 @@ export function notifyWordCount(
 
 export function onMessage(handler: (msg: IncomingMessage) => void): void {
     window.addEventListener("message", (event: MessageEvent) => {
-        // Minimal payload-shape guard. Do NOT check event.source: in a VS Code webview the
-        // Extension's postMessage arrives with the parent window as source, so it drops all messages.
+
+
         const data = event.data as unknown;
         if (data === null || typeof data !== "object") {
             return;

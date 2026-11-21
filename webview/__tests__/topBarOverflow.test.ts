@@ -3,7 +3,7 @@ import { computeOverflow, type TopBarMeasuredItem } from "../shell/topBarOverflo
 import { initTopBarOverflow, setTopBarButtonMeta } from "../components/topBarOverflow";
 import { IFRAME_DEFAULT_HEIGHT, IFRAME_DEFAULT_WIDTH, TINY_REAL_ATTRIBUTE } from "../scroll/viewportLedger";
 
-/** 改写 jsdom 视口尺寸（只读属性需 defineProperty） */
+
 function setViewport(width: number, height: number): void {
     Object.defineProperty(window, "innerWidth", { value: width, configurable: true });
     Object.defineProperty(window, "innerHeight", { value: height, configurable: true });
@@ -39,7 +39,7 @@ describe("computeOverflow", () => {
             { key: "c", width: 40 },
             { key: "d", width: 40 },
         ];
-        // 预算 130-30=100：heading(60)+b(40) 可容纳，d/c 收起
+
         const hidden = computeOverflow({
             items,
             containerWidth: 130,
@@ -51,23 +51,16 @@ describe("computeOverflow", () => {
     });
 });
 
-/**
- * 生命周期回归：dispose() 必须把 init 时注册的 window resize 监听器摘干净。
- *
- * 回归：dispose 里写的是 removeEventListener("resize", schedule)，而注册的是
- * scheduleUnlessCollapsed——不是同一引用，监听器留在 window 上。编辑器每次重建
- * （切源码再切回、revert、窗口重载）都泄漏一个，之后每次窗口缩放都会对已销毁的实例
- * 再跑一次测量（getTopBarEl / DOM 查询 / rAF）。
- */
+
 describe("initTopBarOverflow 生命周期", () => {
-    /** 可控 rAF：measure 何时执行由测试决定 */
+
     let rafQueue: FrameRequestCallback[];
-    /** dispose 里 disconnect 次数（RO 是否释放） */
+
     let observerDisconnects: number;
 
     class FakeResizeObserver {
-        observe(): void { /* noop */ }
-        unobserve(): void { /* noop */ }
+        observe(): void {  }
+        unobserve(): void {  }
         disconnect(): void { observerDisconnects++; }
     }
 
@@ -101,7 +94,7 @@ describe("initTopBarOverflow 生命周期", () => {
     it("dispose 后窗口缩放 应该 不再测量（监听器已释放）", () => {
         const getTopBarEl = vi.fn(() => null);
         const ctl = initTopBarOverflow({ getTopBarEl, runItem: vi.fn() });
-        flushRaf(); // init 末尾的首次测量
+        flushRaf();
         const measured = getTopBarEl.mock.calls.length;
         expect(measured).toBeGreaterThan(0);
 
@@ -109,8 +102,8 @@ describe("initTopBarOverflow 生命周期", () => {
         window.dispatchEvent(new Event("resize"));
         flushRaf();
 
-        // 修复前：注册的是 scheduleUnlessCollapsed、移除的是 schedule → 监听器仍在，
-        // 这次 resize 会把已 dispose 的实例再测一次
+
+
         expect(getTopBarEl).toHaveBeenCalledTimes(measured);
         expect(observerDisconnects).toBe(1);
     });
@@ -118,7 +111,7 @@ describe("initTopBarOverflow 生命周期", () => {
     it("真实小窗口（用户在 300×150 下操作过） 应该 照常测量（回归 A6）", () => {
         const getTopBarEl = vi.fn(() => null);
         setViewport(IFRAME_DEFAULT_WIDTH, IFRAME_DEFAULT_HEIGHT);
-        // 折叠读数 + 用户输入标记 = 用户真把编辑区缩到了这个尺寸
+
         document.documentElement.setAttribute(TINY_REAL_ATTRIBUTE, "");
 
         const ctl = initTopBarOverflow({ getTopBarEl, runItem: vi.fn() });
@@ -129,7 +122,7 @@ describe("initTopBarOverflow 生命周期", () => {
         window.dispatchEvent(new Event("resize"));
         flushRaf();
 
-        // 不测量的话按钮会保持上一次真实宽度的排版，在实际 285px 宽的顶栏里溢出
+
         expect(getTopBarEl).toHaveBeenCalledTimes(measured + 1);
         ctl.dispose();
     });
@@ -164,18 +157,14 @@ describe("initTopBarOverflow 生命周期", () => {
     });
 });
 
-/**
- * 溢出菜单本体：收敛到 `ui/anchoredOverlay` 之后，菜单的展开/执行/关闭链路
- * 从「无测试覆盖」变成必须由行为用例钉住——隐藏按钮的元数据、菜单项回调与
- * Esc 关闭都经由新的浮层外壳。
- */
+
 describe("溢出菜单（anchoredOverlay 接线）", () => {
     let rafQueue: FrameRequestCallback[];
 
     class FakeResizeObserver {
-        observe(): void { /* noop */ }
-        unobserve(): void { /* noop */ }
-        disconnect(): void { /* noop */ }
+        observe(): void {  }
+        unobserve(): void {  }
+        disconnect(): void {  }
     }
 
     const flushRaf = (): void => {
@@ -204,7 +193,7 @@ describe("溢出菜单（anchoredOverlay 接线）", () => {
         document.body.innerHTML = "";
     });
 
-    /** 顶栏只有「撑满」行为：jsdom 容器宽 0 → 非 pinned 项全部进菜单。 */
+
     function makeTopBar(keys: string[]): HTMLElement {
         const topBar = document.createElement("div");
         topBar.className = "milkdown-top-bar";
@@ -245,7 +234,7 @@ describe("溢出菜单（anchoredOverlay 接线）", () => {
         const items = Array.from(menu!.querySelectorAll<HTMLElement>(".epytor-topbar-overflow-item"));
         expect(items.map((item) => item.querySelector(".epytor-topbar-overflow-label")!.textContent))
             .toEqual(["Heading", "Insert Image", "Settings"]);
-        // 隐藏 class 由测量施加（含 settings：它恒在菜单里）
+
         const hidden = Array.from(topBar.querySelectorAll(".top-bar-item--overflow-hidden, .top-bar-heading-selector.top-bar-item--overflow-hidden"));
         expect(hidden).toHaveLength(3);
         dispose();

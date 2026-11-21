@@ -1,13 +1,7 @@
-/**
- * Path containment for opening local files from document links: a malicious markdown link
- * (absolute path or `../`) must not reach outside the workspace.
- */
+
 import * as path from "path";
 
-/**
- * Injectable path primitives so tests can pin Windows/POSIX semantics on Linux CI, where
- * `resolve` treats a `C:\...` path as relative.
- */
+
 type PathPrimitives = Pick<typeof path, "resolve" | "relative" | "isAbsolute" | "sep">;
 
 export function isPathWithinBase(

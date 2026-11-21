@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildWebviewHtml, type WebviewHtmlOptions } from "../utils/webviewHtml";
 
-/** 主题背景内联声明的断言串（html 与 body 都必须自带，见下方用例注释） */
+
 const EDITOR_BACKGROUND_DECL = "background-color: var(--vscode-editor-background)";
 
 const OPTIONS: WebviewHtmlOptions = {
@@ -17,7 +17,7 @@ const OPTIONS: WebviewHtmlOptions = {
     },
 };
 
-/** 取标签自身的属性文本（首个匹配），用于断言内联 style 落在该标签上 */
+
 function tagSource(html: string, tag: "html" | "body"): string {
     return html.match(new RegExp(`<${tag}\\b[^>]*>`))?.[0] ?? "";
 }

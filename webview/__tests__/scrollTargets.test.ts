@@ -1,13 +1,9 @@
-/**
- * 延迟滚动定位（覆盖 app/scrollTargets.ts）。
- * 拆分自 index.ts（audit F1/F10）；用例锁住 PendingScroll 的所有权语义、重试计划
- * 只在布局完成后执行一次、用户交互后放弃重试。
- */
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { EditorView } from "@milkdown/kit/prose/view";
 import { createScrollTargets, PendingScroll } from "../app/scrollTargets";
 
-/** 只有一个内容块的视图桩：块高度由 `height.value` 控制（0 = 布局未完成）。 */
+
 function fakeView(height: { value: number }): EditorView {
     const block = document.createElement("div");
     block.getBoundingClientRect = () => ({
@@ -45,7 +41,7 @@ describe("PendingScroll", () => {
         expect(pending.line).toBeNull();
         pending.set(12);
         pending.clearIf(11);
-        expect(pending.line).toBe(12); // 新目标不能被旧滚动清掉
+        expect(pending.line).toBe(12);
         pending.clearIf(12);
         expect(pending.line).toBeNull();
     });
@@ -67,7 +63,7 @@ describe("scheduleDelayedScroll", () => {
         expect(action).toHaveBeenCalledTimes(1);
 
         vi.advanceTimersByTime(2000);
-        expect(action).toHaveBeenCalledTimes(1); // 成功后不再重复执行
+        expect(action).toHaveBeenCalledTimes(1);
     });
 
     it("调度后发生用户交互 应该 放弃重试（避免 300-2000ms 后的迟到滚动抢走操作）", () => {
@@ -95,7 +91,7 @@ describe("scheduleDelayedScroll", () => {
 describe("applyPendingScrollLine", () => {
     it("布局就绪后 应该 滚动到待定位行并清空 pending", () => {
         vi.useFakeTimers();
-        const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => { /* 断言调用即可 */ });
+        const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {  });
         const targets = createTargets(fakeView({ value: 40 }));
         targets.pending.set(3);
 
@@ -110,7 +106,7 @@ describe("applyPendingScrollLine", () => {
 
     it("滚动落地前又来了新目标 应该 保留新目标（旧滚动不得清掉它）", () => {
         vi.useFakeTimers();
-        vi.spyOn(window, "scrollTo").mockImplementation(() => { /* noop */ });
+        vi.spyOn(window, "scrollTo").mockImplementation(() => {  });
         const targets = createTargets(fakeView({ value: 40 }));
         targets.pending.set(3);
         targets.applyPendingScrollLine();
@@ -122,7 +118,7 @@ describe("applyPendingScrollLine", () => {
 
     it("没有待定位行时 应该 不做任何滚动", () => {
         vi.useFakeTimers();
-        const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => { /* noop */ });
+        const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {  });
         const targets = createTargets(fakeView({ value: 40 }));
         targets.applyPendingScrollLine();
         vi.advanceTimersByTime(0);

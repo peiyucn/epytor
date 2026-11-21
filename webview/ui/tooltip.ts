@@ -13,16 +13,16 @@ function getTooltip(): HTMLElement {
 }
 
 interface TooltipOptions {
-    /** 'below' (default, used by the top bar) or 'above'. */
+
     placement?: "above" | "below";
-    /** Only show when the text is truncated (an ellipsis is rendered). */
+
     truncatedOnly?: boolean;
 }
 
 interface TooltipHandle {
-    /** Update the text without touching visibility. */
+
     setText(t: string): void;
-    /** Show right away (e.g. click feedback). */
+
     show(): void;
 }
 
@@ -31,12 +31,7 @@ export interface TooltipHorizontalPos {
     right?: string;
 }
 
-/**
- * Horizontal placement (pure, unit-tested): a button on the right half aligns the tooltip's
- * right edge to the button's, which can never overflow the viewport (regression: the findBar's
- * last button's tooltip was clipped off-screen); a button on the left half aligns left edges
- * and grows rightwards, bounded by CSS max-width.
- */
+
 export function computeTooltipHorizontal(
     el: { left: number; right: number },
     viewportWidth: number,
@@ -79,7 +74,7 @@ function position(
         y = elRect.top - tipRect.height - TOOLTIP_SPACING_PX;
         if (y < TOOLTIP_VIEWPORT_MARGIN_PX) {
             y = elRect.bottom + TOOLTIP_SPACING_PX;
-        } // Not enough room above: drop below.
+        }
     } else {
         y = elRect.bottom + TOOLTIP_SPACING_PX;
         if (y + tipRect.height > window.innerHeight - TOOLTIP_VIEWPORT_MARGIN_PX) {
@@ -88,7 +83,7 @@ function position(
     }
     tip.style.top = `${y}px`;
 
-    // Read-back guard: if measurement or CSS error still overflows the viewport, pin to an edge.
+
     const finalRect = tip.getBoundingClientRect();
     if (finalRect.width > 0 && finalRect.right > window.innerWidth - TOOLTIP_VIEWPORT_MARGIN_PX) {
         tip.style.left = "auto";
@@ -101,14 +96,14 @@ function position(
     tip.style.visibility = "visible";
 }
 
-/** Hide the visible tooltip immediately (used to clear it after a click interaction). */
+
 export function hideTooltip(): void {
     if (tooltipEl) {
         tooltipEl.style.display = "none";
     }
 }
 
-/** Imperative show next to an element, with no event binding. */
+
 export function showTooltipAt(
     el: Element,
     text: string,
@@ -119,7 +114,7 @@ export function showTooltipAt(
     position(tip, el as HTMLElement, placement);
 }
 
-/** Replace the native `title` attribute with a VS Code-style custom tooltip. */
+
 export function applyTooltip(
     el: HTMLElement,
     text: string,

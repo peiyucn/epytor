@@ -1,13 +1,4 @@
-/**
- * Fix mouse selection of inline atoms inside table cells.
- *
- * Crepe's table node view dispatches its own cell selection in a rAF after mousedown, which
- * overrides ProseMirror's atom selection. The plugin records the atom on the capture phase and
- * re-applies the correction from `appendTransaction` (see the regression notes inline).
- *
- * Extracted from editor.ts into its own module: table-cell atom selection is a self-contained
- * interaction concern, and a focused module makes the plugin plausible to test directly.
- */
+
 import { $prose } from "@milkdown/kit/utils";
 import { Plugin, NodeSelection, TextSelection } from "@milkdown/kit/prose/state";
 import { CellSelection } from "@milkdown/kit/prose/tables";
@@ -32,7 +23,7 @@ function atomPosAtEvent(view: EditorView, event: MouseEvent): number | null {
         const node = view.state.doc.nodeAt(pos);
         return node && node.isAtom ? pos : null;
     } catch {
-        return null; // DOM out of sync mid-redraw; let the browser handle it
+        return null;
     }
 }
 
@@ -49,16 +40,16 @@ export const cellClickFixPlugin = $prose(() => {
     const cell = createCellClickState();
     let capturedView: EditorView | null = null;
 
-    // Inline atom clicked on mousedown. Crepe's table node view dispatches its own cell
-    // selection in rAF, so the correction is re-applied from appendTransaction instead.
+
+
     let pendingAtomClickPos: number | null = null;
 
     return new Plugin({
         view(editorView) {
             capturedView = editorView;
 
-            // Must be a document capture listener: Crepe's table node view returns true from
-            // stopEvent() for th/td mousedown, so prosemirror-view never calls handleDOMEvents.
+
+
             const onCaptureMouseDown = (event: MouseEvent) => {
                 if (event.button !== 0 || event.detail !== 1 ||
                     event.shiftKey || event.ctrlKey || event.metaKey) {
@@ -69,8 +60,8 @@ export const cellClickFixPlugin = $prose(() => {
                 pendingAtomClickPos = atomPos;
                 if (atomPos === null) return;
 
-                // Crepe also dispatches its selection in rAF. Rather than racing it, pin the atom
-                // selection now and twice more in nested rAFs; each step re-checks isAtom.
+
+
                 const pinSelectionToAtom = () => {
                     const node = editorView.state.doc.nodeAt(atomPos);
                     if (!node?.isAtom) return;
@@ -82,7 +73,7 @@ export const cellClickFixPlugin = $prose(() => {
                                 NodeSelection.create(editorView.state.doc, atomPos),
                             ),
                         );
-                    } catch { /* node was just deleted */ }
+                    } catch {  }
                 };
 
                 pinSelectionToAtom();
@@ -90,7 +81,7 @@ export const cellClickFixPlugin = $prose(() => {
                     pinSelectionToAtom();
                     requestAnimationFrame(() => {
                         pinSelectionToAtom();
-                        // Clear only after all three pins; appendTransaction corrects the rest.
+
                         pendingAtomClickPos = null;
                     });
                 });
@@ -134,25 +125,25 @@ export const cellClickFixPlugin = $prose(() => {
             },
         },
         filterTransaction(tr, state) {
-            // Let changes through while an atom click is pending: filtering one out also skips
-            // appendTransaction, so the correction would never run.
+
+
             if (pendingAtomClickPos !== null) return true;
 
-            // Crepe's cell click selects the first cell child; turn that into a caret.
+
             if (tr.selection instanceof NodeSelection) {
-                // A directly clicked atom must keep its NodeSelection: it drives the edit bubble.
+
                 if (tr.selection.node?.isAtom) return true;
                 try {
                     const $pos = state.doc.resolve(Math.min(tr.selection.from, state.doc.content.size));
                     for (let d = $pos.depth; d >= 0; d--) {
                         const t = $pos.node(d).type.name;
                         if (t === "table_cell" || t === "table_header") {
-                            // One more rAF: we are inside Crepe's own rAF dispatch.
+
                             const clickPos = consumeCellClickTarget(cell);
                             requestAnimationFrame(() => {
                                 const v = capturedView;
                                 if (!v) return;
-                                // Atom click: a caret would hide the edit bubble.
+
                                 if (pendingAtomClickPos !== null) return;
                                 const sel = v.state.selection;
                                 if (sel instanceof TextSelection && sel.from === sel.to) return;
@@ -160,12 +151,12 @@ export const cellClickFixPlugin = $prose(() => {
                                 try {
                                     const p = Math.min(clickPos ?? tr.selection.from, v.state.doc.content.size);
                                     v.dispatch(v.state.tr.setSelection(TextSelection.near(v.state.doc.resolve(p))));
-                                } catch { /* invalid click position */ }
+                                } catch {  }
                             });
                             return false;
                         }
                     }
-                } catch { /* not inside a table */ }
+                } catch {  }
             }
             if (!cell.lastGoodCellSelection) return true;
             if (state.selection instanceof CellSelection && !(tr.selection instanceof CellSelection)) {
@@ -174,12 +165,12 @@ export const cellClickFixPlugin = $prose(() => {
             return true;
         },
         appendTransaction(_trs, _oldState, newState) {
-            // Atom click: Crepe's rAF cell selection frames the whole cell and hides the edit
-            // bubble. appendTransaction is the last gate, so it sees that transaction too.
+
+
             if (pendingAtomClickPos !== null) {
                 const atomPos = pendingAtomClickPos;
-                // Cleared by the capture handler after its rAF rounds, not here, so every
-                // transaction in between still gets corrected.
+
+
                 const node = newState.doc.nodeAt(atomPos);
                 if (node?.isAtom) {
                     const isAlreadyOnAtom =
@@ -200,7 +191,7 @@ export const cellClickFixPlugin = $prose(() => {
             if (sel.isRowSelection() || sel.isColSelection()) { return null; }
 
             const decision = decideCellSelection(cell, {
-                isRowOrCol: false, // row/column selections are excluded above
+                isRowOrCol: false,
                 anchorCellPos: sel.$anchorCell.pos,
                 headCellPos: sel.$headCell.pos,
             });
@@ -218,14 +209,14 @@ export const cellClickFixPlugin = $prose(() => {
                         const headP = Math.min(toCoords.pos, newState.doc.content.size);
                         try {
                             if (cellStartAt(newState.doc, clickPos) !== cellStartAt(newState.doc, headP)) { return null; }
-                        } catch { /* cell boundaries changed; fall back to a caret */ }
+                        } catch {  }
                         return newState.tr.setSelection(
                             TextSelection.create(newState.doc, headP, Math.min(clickPos, newState.doc.content.size)),
                         );
                     }
                 }
                 return newState.tr.setSelection(TextSelection.near($pos));
-            } catch { /* stale position */ return null; }
+            } catch {  return null; }
         },
     });
 });

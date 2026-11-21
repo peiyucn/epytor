@@ -1,13 +1,4 @@
-/**
- * `ui/anchoredOverlay`：锚点旁浮层的定位与关闭契约。
- *
- * 这些用例取代了「溢出菜单 / 表格选择器各自一套监听器 + 各自手写 clamp」时代的隐式行为：
- * 原先两处都没有定位测试，收敛后必须把「贴锚点、视口内、Esc/外部点击/滚动关闭、dispose 幂等」
- * 逐条钉住，否则外壳被改坏时 UI 会静默漂移。
- *
- * jsdom 无布局引擎：几何由用例显式给定（getBoundingClientRect / 视口尺寸全部 stub），
- * 只测计算与事件契约，不测真实渲染。
- */
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { openAnchoredOverlay } from "../ui/anchoredOverlay";
 
@@ -21,7 +12,7 @@ interface Rect {
     height: number;
 }
 
-/** jsdom 返回全 0 的 rect，给元素注入确定的几何 */
+
 function stubRect(el: Element, rect: Rect): void {
     vi.spyOn(el, "getBoundingClientRect").mockReturnValue({
         left: rect.left,
@@ -74,7 +65,7 @@ describe("anchoredOverlay 定位", () => {
 
         expect(el.parentElement).toBe(document.body);
         expect(el.style.left).toBe("300px");
-        expect(el.style.top).toBe("126px"); // 锚点 bottom 120 + gap 6
+        expect(el.style.top).toBe("126px");
         expect(overlay.isOpen()).toBe(true);
         overlay.dispose();
     });
@@ -88,7 +79,7 @@ describe("anchoredOverlay 定位", () => {
         stubRect(el, { left: 0, top: 0, width: 120, height: 80 });
         const overlay = openAnchoredOverlay({ el, anchor, align: "right" });
 
-        expect(el.style.left).toBe("220px"); // 340 - 120
+        expect(el.style.left).toBe("220px");
         overlay.dispose();
     });
 
@@ -101,7 +92,7 @@ describe("anchoredOverlay 定位", () => {
         stubRect(el, { left: 0, top: 0, width: 120, height: 80 });
         const overlay = openAnchoredOverlay({ el, anchor, viewportMargin: 8 });
 
-        expect(el.style.left).toBe("872px"); // 1000 - 120 - 8
+        expect(el.style.left).toBe("872px");
         overlay.dispose();
     });
 
@@ -120,7 +111,7 @@ describe("anchoredOverlay 定位", () => {
             viewportRightMargin: 12,
         });
 
-        expect(el.style.left).toBe("868px"); // 1000 - 120 - 12
+        expect(el.style.left).toBe("868px");
         overlay.dispose();
     });
 
@@ -133,7 +124,7 @@ describe("anchoredOverlay 定位", () => {
         stubRect(el, { left: 0, top: 0, width: 120, height: 80 });
         const overlay = openAnchoredOverlay({ el, anchor });
 
-        // 720 + 6 + 80 越过 800 - 8 → top = 700 - 80 - 6
+
         expect(el.style.top).toBe("614px");
         overlay.dispose();
     });
@@ -157,7 +148,7 @@ describe("anchoredOverlay 定位", () => {
         stubRect(anchor, { left: 300, top: 100, width: 40, height: 20 });
 
         const el = makeEl();
-        // 实测矩形的宽度是错的（模拟未布局），显式 size 必须优先
+
         stubRect(el, { left: 0, top: 0, width: 500, height: 500 });
         const overlay = openAnchoredOverlay({
             el,
@@ -248,7 +239,7 @@ describe("anchoredOverlay 关闭契约", () => {
         expect(() => overlay.dispose()).not.toThrow();
         expect(document.body.contains(el)).toBe(false);
 
-        // 监听器已摘：再派发关闭事件不产生任何动作（也不会因已移除元素抛错）
+
         expect(() => pressEscape()).not.toThrow();
         expect(() => window.dispatchEvent(new Event("scroll"))).not.toThrow();
     });

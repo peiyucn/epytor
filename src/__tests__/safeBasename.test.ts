@@ -26,7 +26,7 @@ describe("sanitizeBasename 文件名安全化", () => {
     it("Windows 保留设备名 应该 返回空串（回归：此前 CON.png 等 rename 失败仅无差别报错）", () => {
         for (const reserved of ["CON", "con", "PRN", "AUX", "NUL", "COM1", "COM9", "LPT1", "LPT9"]) {
             expect(sanitizeBasename(reserved)).toBe("");
-            // 带扩展名同样非法
+
             expect(sanitizeBasename(`${reserved}.png`)).toBe("");
         }
     });

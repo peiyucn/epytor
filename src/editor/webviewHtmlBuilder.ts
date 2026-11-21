@@ -1,9 +1,4 @@
-/**
- * HTML document for the WYSIWYG webview.
- *
- * Config values are sanitized before they are injected into the page: workspace settings travel
- * with a cloned repo and must not be able to escape the style/script context.
- */
+
 import * as vscode from "vscode";
 import { statSync } from "node:fs";
 import { getNonce } from "../utils/getNonce";
@@ -19,15 +14,12 @@ import {
 import { buildWebviewHtml } from "../utils/webviewHtml";
 import { normalizeTableWrapMode, resolveTableWrapVars } from "../../shared/tableWrap";
 
-/** Append a cache-busting query. The unit-test webview mock returns a plain string. */
+
 function appendCacheStamp(uri: string, stamp: string): string {
     return `${uri}${uri.includes("?") ? "&" : "?"}v=${stamp}`;
 }
 
-/**
- * Cache stamp for the webview bundle. A same-version reinstall keeps the same resource URL,
- * so use the bundle mtime to force the webview to fetch the new build after reinstall.
- */
+
 function webviewBuildStamp(extensionUri: vscode.Uri): string {
     try {
         return Math.trunc(
@@ -50,7 +42,7 @@ export function buildEditorWebviewHtml(webview: vscode.Webview, extensionUri: vs
         DEFAULT_EDITOR_MAX_WIDTH,
         MIN_EDITOR_MAX_WIDTH,
     );
-    // Normalize at the boundary: a config value can be any JSON scalar.
+
     const tableWrapVars = resolveTableWrapVars(normalizeTableWrapMode(cfg.get("tableWrapMode")));
     const buildStamp = webviewBuildStamp(extensionUri);
     const scriptUri = appendCacheStamp(
