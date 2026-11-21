@@ -1,24 +1,10 @@
-/**
- * Caret guards around IME composition and full-width colons.
- *
- * Chrome can resolve the post-input caret one character past the inserted text; the caret
- * then visibly sits after the following character. Two independent guards cover the known
- * paths:
- *
- * - `appendTransaction`: a transaction that inserts exactly a full-width colon and leaves
- *   the caret at insertion end + 1. This catches direct `insertText` and DOM-observer
- *   commits that do not expose a usable composition marker.
- * - `compositionend`: fall back to the paragraph text when Chrome reports the selection
- *   only after the observer flush. If the composed text ends one character before the
- *   cursor, put the caret back at the end of the composed text.
- */
+
 import { $prose } from "@milkdown/kit/utils";
 import { Plugin, TextSelection, type Transaction } from "@milkdown/kit/prose/state";
 import { ReplaceStep } from "@milkdown/kit/prose/transform";
 
 const FULL_WIDTH_COLON = "：";
 
-/** The replacement step that inserts exactly the full-width colon, if any. */
 function colonInsertionStep(tr: Transaction): ReplaceStep | null {
     for (const step of tr.steps) {
         if (!(step instanceof ReplaceStep) || step.slice.size !== 1) { continue; }
@@ -60,11 +46,9 @@ export const imeCaretGuardPlugin = $prose(() => {
                                     TextSelection.create(view.state.doc, view.state.selection.from - 1),
                                 ),
                             );
-                        } catch { /* position vanished */ }
+                        } catch {}
                     };
 
-                    // Wait for the DOM observer to commit the composition; a second rAF pass
-                    // covers Chrome reporting its final selection one frame later.
                     setTimeout(() => {
                         fix();
                         if (typeof requestAnimationFrame === "function") { requestAnimationFrame(fix); }

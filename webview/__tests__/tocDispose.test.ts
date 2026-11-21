@@ -1,10 +1,4 @@
-/**
- * TOC 实例的可拆装性（回归：`tocRefresh` 需要在同一文件里起第二个实例，前一实例的 window
- * 监听与吸顶订阅会叠加在它上面）。
- *
- * 页面生命周期下这不是泄漏修复——webview 与页面同寿命。dispose 存在的目的是让「第二个实例」
- * 从干净状态开始，而不是叠在前一个之上。
- */
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { initToc } from "../components/toc";
 
@@ -19,7 +13,7 @@ describe("TOC 实例的 dispose", () => {
         const remove = vi.spyOn(window, "removeEventListener");
 
         const toc = initToc(() => null);
-        document.body.appendChild(toc.panel);   // the caller owns mounting
+        document.body.appendChild(toc.panel);
         const resizeAdded = add.mock.calls.filter((c) => c[0] === "resize").length;
         expect(resizeAdded).toBeGreaterThan(0);
         expect(document.querySelector(".toc-panel")).not.toBeNull();

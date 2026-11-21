@@ -1,8 +1,4 @@
-/**
- * updateNotifyPlugin 首帧假脏标记回归测试：
- * 编辑器 settle 后用户首次点击定位光标（纯选区事务）不应触发 markDirty——
- * 回归：prevDoc=null 使首事务无条件误发脏标记，未编辑就出现 ● 圆点。
- */
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockVscodeApi } from "./setup";
 import { createEditor } from "../editor";
@@ -12,14 +8,14 @@ import type { EditorView } from "@milkdown/kit/prose/view";
 
 if (typeof (window as unknown as Record<string, unknown>).ResizeObserver === "undefined") {
     (window as unknown as Record<string, unknown>).ResizeObserver = class {
-        observe() { /* noop */ } unobserve() { /* noop */ } disconnect() { /* noop */ }
+        observe() {  } unobserve() {  } disconnect() {  }
     };
 }
 if (typeof window.matchMedia === "undefined") {
     window.matchMedia = (() => ({
         matches: false, media: "", onchange: null,
-        addListener() { /* noop */ }, removeListener() { /* noop */ },
-        addEventListener() { /* noop */ }, removeEventListener() { /* noop */ },
+        addListener() {  }, removeListener() {  },
+        addEventListener() {  }, removeEventListener() {  },
         dispatchEvent() { return false; },
     })) as typeof window.matchMedia;
 }
@@ -36,12 +32,11 @@ describe("updateNotifyPlugin 首帧脏标记", () => {
         const onDocumentChanged = vi.fn();
         const editor = await createEditor(root, "hello world", onDocumentChanged);
 
-        // 点击：mousedown（capture）置位 _hasUserInteracted，随后浏览器产生选区事务
         root.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
         const view: EditorView = editor.action((ctx) => ctx.get(editorViewCtx));
-        // pos 2 位于首段文本内部（pos 0 是文档边界，TextSelection 无效）
+
         view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 2)));
-        expect(view.state.selection.from).toBe(2); // 确认事务真实生效（非无效 dispatch）
+        expect(view.state.selection.from).toBe(2);
 
         expect(onDocumentChanged).not.toHaveBeenCalled();
         const dirtyCalls = mockVscodeApi.postMessage.mock.calls.filter(

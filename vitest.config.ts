@@ -33,6 +33,14 @@ export default defineConfig({
                     setupFiles: ["./webview/__tests__/setup.ts"],
                 },
             },
+            {
+                extends: true,
+                test: {
+                    name: "policy",
+                    environment: "node",
+                    include: ["test/**/*.test.ts"],
+                },
+            },
         ],
         coverage: {
             provider: "v8",

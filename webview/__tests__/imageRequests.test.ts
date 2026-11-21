@@ -1,8 +1,4 @@
-/**
- * 图片请求编排与插入接线（覆盖 app/imageRequests.ts）。
- * 拆分自 index.ts（audit F1）；用例锁住：请求超时语义（上传/重命名 reject、图库 resolve(null)）、
- * 扩展回复路由、重命名后的 URI 重映射 + 文档节点重写、拖放/粘贴/选择器事件接线。
- */
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Editor } from "@milkdown/kit/core";
 import { editorViewCtx } from "@milkdown/kit/core";
@@ -16,7 +12,6 @@ import { mockVscodeApi } from "./setup";
 
 const postMessage = mockVscodeApi.postMessage;
 
-/** 最小 Editor 桩：action 把 ctx.get 固定成同一个 view。 */
 function fakeEditor(view: unknown): Editor {
     return {
         action: (fn: (ctx: { get(key: unknown): unknown }) => unknown) =>
@@ -24,7 +19,6 @@ function fakeEditor(view: unknown): Editor {
     } as unknown as Editor;
 }
 
-/** 插入图片用的视图桩。 */
 function insertionView() {
     const node = { kind: "image-node" };
     const tr = { kind: "transaction" };

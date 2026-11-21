@@ -1,14 +1,7 @@
-/**
- * 空任务项识别（纯函数）回归测试。
- *
- * 回归来源（2026-09-13，owner 在笔记里踩到）：`- [ ] `（标记后什么都不写）在 remark-gfm
- * 里不被识别成任务项——mdast 的 `checked` 停在 null、`[ ]` 留成正文文本（实测三种空写法
- * 全部如此）。本函数在解析后补齐，让空复选框与 `- [ ] a` 同构。
- */
+
 import { describe, expect, it } from "vitest";
 import { fixEmptyTaskListItems, type MdastNode } from "../markdown/emptyTaskListItem";
 
-/** 造一棵 `- [标记]` 的列表树：marker 为 null 表示没有标记文本 */
 function listTree(marker: string | null, checked: boolean | null = null, extra: MdastNode[] = []): MdastNode {
     const paragraph: MdastNode = {
         type: "paragraph",

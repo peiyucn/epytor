@@ -1,7 +1,4 @@
-/**
- * Code-block extras: copy feedback, a fullscreen lightbox button and keyboard navigation for
- * the language search box. All of it scrapes Crepe's code-block DOM (no official API yet).
- */
+
 import "./codeBlockEnhance.css";
 import { applyTooltip } from "@/ui/tooltip";
 import { IconMaximize2 } from "@/ui/icons";
@@ -11,16 +8,8 @@ import { t } from "@/i18n";
 const COPY_FEEDBACK_RESET_MS = 1500;
 const COPY_FEEDBACK_DELAY_MS = 100;
 
-/**
- * Page-lifecycle singleton: at most one fullscreen code-block lightbox exists.
- *
- * The lightbox lives on `document.body`, so the rebuild path (webview/index.ts, before the
- * editor container is replaced) must close it explicitly — otherwise a stale CodeMirror DOM
- * keeps covering the new document after revert/switch/reload.
- */
 const fullscreenLightboxHost = createLightboxHost();
 
-/** Close a still-open fullscreen lightbox (rebuild path only; no-op when none is open). */
 export function closeCodeBlockLightbox(): void {
     fullscreenLightboxHost.close();
 }
@@ -36,7 +25,6 @@ export function enhanceCodeBlocks(container: HTMLElement): void {
         }, COPY_FEEDBACK_DELAY_MS);
     });
 
-    // Our own button (not Crepe's), so it is created directly.
     const addFullscreenBtn = (block: Element): void => {
         const copyBtn = block.querySelector('.copy-button') as HTMLElement | null;
         if (copyBtn && !copyBtn.dataset.tip) { copyBtn.dataset.tip = '1'; applyTooltip(copyBtn, t('Copy Code')); }
@@ -67,7 +55,7 @@ export function enhanceCodeBlocks(container: HTMLElement): void {
                     header.className = 'epytor-fs-header';
                     const langSpan = document.createElement('span');
                     langSpan.className = 'epytor-fs-lang';
-                    langSpan.textContent = lang;  // textContent, never innerHTML: the label is external data.
+                    langSpan.textContent = lang;
                     const closeBtn = document.createElement('button');
                     closeBtn.className = 'epytor-fs-close';
                     closeBtn.textContent = '✕';
@@ -80,8 +68,7 @@ export function enhanceCodeBlocks(container: HTMLElement): void {
                     return { closeButton: closeBtn };
                 },
                 onOpen: (root) => {
-                    // Move the live editor after the overlay is attached: CodeMirror must not be
-                    // detached from the document on the way in.
+
                     const body = root.querySelector('.epytor-fs-body');
                     if (!body) return;
                     body.appendChild(cmEditor);
@@ -101,9 +88,6 @@ export function enhanceCodeBlocks(container: HTMLElement): void {
     new MutationObserver(() => requestAnimationFrame(scanBlocks))
         .observe(container, { childList: true, subtree: true });
 
-    // Keyboard navigation state, one entry per search input. Keyed explicitly because filtering
-    // re-renders the list: a `.focused` class alone loses the index (regression: arrows restarted
-    // from the top, Escape did nothing, Enter silently no-op without a highlight).
     const navStates = new WeakMap<HTMLElement, { activeIndex: number }>();
     container.addEventListener('keydown', (e) => {
         const input = e.target as HTMLElement;
@@ -133,7 +117,7 @@ export function enhanceCodeBlocks(container: HTMLElement): void {
             apply();
         } else if (e.key === 'Enter') {
             e.preventDefault();
-            // No highlight: pick the first item (it used to do nothing).
+
             const target = items[Math.max(state.activeIndex, 0)];
             target?.click();
         } else if (e.key === 'Escape') {

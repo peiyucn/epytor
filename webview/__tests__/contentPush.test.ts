@@ -1,15 +1,10 @@
-/**
- * 未落盘内容推送 + 选区/滚动位置持久化（覆盖 app/persistence.ts）。
- * 拆分自 index.ts（audit F1/F10）；用例锁住 400ms 尾沿推送、blur/pagehide 立即 flush、
- * requestContent 清脏、releaseDocTimers 的取消，以及滚动/选区快照的防抖写入。
- */
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Schema } from "@milkdown/kit/prose/model";
 import { EditorState, TextSelection } from "@milkdown/kit/prose/state";
 import type { EditorView } from "@milkdown/kit/prose/view";
 import { initSessionPersistence, type PersistenceDeps } from "../app/persistence";
 
-/** 只有一个内容块的视图桩，供可见行换算使用。 */
 function fakeView(extra: Record<string, unknown> = {}): EditorView {
     const block = document.createElement("div");
     block.getBoundingClientRect = () => ({
@@ -27,7 +22,6 @@ function fakeView(extra: Record<string, unknown> = {}): EditorView {
     return { state: { doc }, nodeDOM: () => block, ...extra } as unknown as EditorView;
 }
 
-/** 真实 ProseMirror 选区（TextSelection instanceof 判定需要真实实例）。 */
 function viewWithSelection(from: number, to: number): EditorView {
     const schema = new Schema({
         nodes: {
@@ -86,7 +80,7 @@ describe("未落盘内容推送", () => {
         const { persistence, deps } = createPersistence();
 
         persistence.markUnsavedChanges();
-        persistence.markUnsavedChanges(); // 防抖：连续的变更合并为一次
+        persistence.markUnsavedChanges();
         vi.advanceTimersByTime(399);
         expect(deps.notifyUnsavedContent).not.toHaveBeenCalled();
 

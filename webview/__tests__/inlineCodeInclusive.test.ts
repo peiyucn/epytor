@@ -1,8 +1,4 @@
-/**
- * 行内代码 inclusive 回归测试：
- * Milkdown 7.22.1（#2451）把 inlineCode mark 改为 inclusive:false，块尾输入即退出代码 span——
- * epytor 的 ./ @/ 路径补全依赖行内代码尾部继续编辑，config 覆盖恢复 inclusive:true（7.22.0 行为）。
- */
+
 import { afterEach, describe, expect, it } from "vitest";
 import { CrepeBuilder } from "@milkdown/crepe";
 import { editorViewCtx } from "@milkdown/kit/core";
@@ -12,14 +8,14 @@ import type { EditorView } from "@milkdown/kit/prose/view";
 
 if (typeof (window as unknown as Record<string, unknown>).ResizeObserver === "undefined") {
     (window as unknown as Record<string, unknown>).ResizeObserver = class {
-        observe() { /* noop */ } unobserve() { /* noop */ } disconnect() { /* noop */ }
+        observe() {  } unobserve() {  } disconnect() {  }
     };
 }
 if (typeof window.matchMedia === "undefined") {
     window.matchMedia = (() => ({
         matches: false, media: "", onchange: null,
-        addListener() { /* noop */ }, removeListener() { /* noop */ },
-        addEventListener() { /* noop */ }, removeEventListener() { /* noop */ },
+        addListener() {  }, removeListener() {  },
+        addEventListener() {  }, removeEventListener() {  },
         dispatchEvent() { return false; },
     })) as typeof window.matchMedia;
 }
@@ -39,7 +35,6 @@ function getView(editor: Awaited<ReturnType<typeof makeEditor>>): EditorView {
     return editor.action((ctx) => ctx.get(editorViewCtx));
 }
 
-/** 光标移到 code span 内最后一个字符之后（pos 是 code 文本末尾） */
 function caretAtEndOfCode(view: EditorView, text: string): void {
     view.state.doc.descendants((node, pos) => {
         if (node.text === text) {
@@ -61,7 +56,7 @@ describe("行内代码块尾输入（inclusive 回归）", () => {
         caretAtEndOfCode(view, "@/utils");
         view.dispatch(view.state.tr.insertText("x"));
 
-        let codeTexts: string[] = [];
+        const codeTexts: string[] = [];
         view.state.doc.descendants((node) => {
             if (node.marks.some((m) => m.type.name === "inlineCode")) codeTexts.push(node.text ?? "");
         });
@@ -74,7 +69,7 @@ describe("行内代码块尾输入（inclusive 回归）", () => {
         caretAtEndOfCode(view, "@/utils");
         view.dispatch(view.state.tr.insertText("x"));
 
-        let codeTexts: string[] = [];
+        const codeTexts: string[] = [];
         view.state.doc.descendants((node) => {
             if (node.marks.some((m) => m.type.name === "inlineCode")) codeTexts.push(node.text ?? "");
         });

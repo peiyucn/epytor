@@ -1,21 +1,4 @@
-/**
- * Fail-closed security alert gate for releases (AGENTS E18).
- *
- * Checks the three alert families the release rules require (Dependabot, code scanning, secret
- * scanning) and fails the publish job when any is open — or when the check itself cannot be
- * completed. A broken query must never read as "clean": non-200, timeout, malformed body and
- * missing credentials all block the release.
- *
- * Credentials follow the dsh-launcher-panel split:
- * - GITHUB_TOKEN_ALERTS: `${{ github.token }}`; reads Dependabot (`vulnerability-alerts: read`)
- *   and code scanning (`security-events: read`).
- * - SECRET_SCAN_TOKEN: environment secret `SECURITY_ALERTS_TOKEN`, a read-only fine-grained PAT.
- *   GITHUB_TOKEN cannot read secret scanning alerts ("Resource not accessible by integration").
- *
- * Usage: GITHUB_REPOSITORY=owner/repo GITHUB_TOKEN_ALERTS=... SECRET_SCAN_TOKEN=... \
- *          node scripts/security-gate.mjs
- * Self-test (no network): node scripts/security-gate.mjs --self-test
- */
+
 import process from "node:process";
 import { pathToFileURL } from "node:url";
 
@@ -23,14 +6,12 @@ const API_BASE = "https://api.github.com";
 const PAGE_SIZE = 100;
 const REQUEST_TIMEOUT_MS = 30_000;
 
-/** Alert families E18 requires to be zero before a release. */
 const ALERT_TYPES = [
     { name: "Dependabot", path: "dependabot/alerts", tokenKey: "alerts" },
     { name: "Code scanning", path: "code-scanning/alerts", tokenKey: "alerts" },
     { name: "Secret scanning", path: "secret-scanning/alerts", tokenKey: "secretScan" },
 ];
 
-/** Classify one alerts response; only an empty list on HTTP 200 counts as clean. */
 function evaluateAlertsResponse(status, body) {
     if (status !== 200) {
         return { ok: false, count: null, reason: `HTTP ${status}` };
@@ -41,7 +22,7 @@ function evaluateAlertsResponse(status, body) {
     if (body.length === 0) {
         return { ok: true, count: 0, reason: "" };
     }
-    // Any alert blocks; a full page only proves "at least" this many.
+
     return { ok: false, count: body.length, reason: body.length >= PAGE_SIZE ? ">=100 open" : "open" };
 }
 
@@ -56,7 +37,7 @@ async function fetchOpenAlerts(fetchImpl, repository, type, token) {
         },
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
-    let body = null;
+    let body;
     try {
         body = await response.json();
     } catch {
@@ -65,7 +46,6 @@ async function fetchOpenAlerts(fetchImpl, repository, type, token) {
     return evaluateAlertsResponse(response.status, body);
 }
 
-/** Run the gate; expected failures are returned, not thrown, so the CLI can report them. */
 async function runGate({ fetchImpl = fetch, repository, alertsToken, secretScanToken }) {
     if (!repository) {
         return { pass: false, reason: "GITHUB_REPOSITORY is not set", results: [] };
@@ -99,7 +79,6 @@ async function runGate({ fetchImpl = fetch, repository, alertsToken, secretScanT
     };
 }
 
-/** No-network checks; `pnpm run verify` runs this so the gate logic stays covered. */
 async function runSelfTest() {
     const cases = [];
     const expect = (label, actual, wanted) => {

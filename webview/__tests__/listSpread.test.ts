@@ -34,7 +34,7 @@ describe("changeRangeInFinalDoc（纯逻辑）", () => {
         const view = getEditorView()!;
         const tr = view.state.tr.insertText("xyz", 3);
         const range = changeRangeInFinalDoc([tr], tr.doc.content.size);
-        // 插入区间是 [3, 3+3)（doc 坐标含起始边界，这里断言覆盖到插入内容）
+
         expect(range).not.toBeNull();
         expect(range!.from).toBeLessThanOrEqual(3);
         expect(range!.to).toBeGreaterThanOrEqual(6);
@@ -87,7 +87,7 @@ describe("normalizeListSpread（纯逻辑）", () => {
         const tr2 = view.state.tr;
         normalizeListSpread(doc, view.state.schema, tr2, { from: 0, to: doc.content.size });
         expect(tr2.steps.length).toBeGreaterThan(0);
-        // 关键：列表级 spread 不动（用户写的项间空行由原文决定，这里不该被强标）
+
         const after = tr2.doc.firstChild!;
         expect(after.firstChild!.attrs.spread).toBe(true);
         expect(after.attrs.spread).toBe(false);
@@ -98,11 +98,11 @@ describe("normalizeListSpread（纯逻辑）", () => {
         const root = await mount("- p\n  - c1\n  - c2");
         const view = getEditorView()!;
         const list = view.state.doc.firstChild!;
-        // 该项有 paragraph + bullet_list 两块，但子列表不代表空行
+
         expect(list.firstChild!.childCount).toBeGreaterThan(1);
         const tr = view.state.tr;
         normalizeListSpread(view.state.doc, view.state.schema, tr, { from: 0, to: view.state.doc.content.size });
-        // 不含多段落的项：不产生任何步骤
+
         expect(tr.steps).toHaveLength(0);
         destroyEditor(); root.remove();
     }, 60000);
@@ -125,7 +125,7 @@ describe("normalizeListSpread（纯逻辑）", () => {
         const list = view.state.doc.firstChild!;
         expect(list.firstChild!.childCount).toBe(2);
         expect(list.firstChild!.attrs.spread).toBe(true);
-        // 删掉项内第二个段落 → 该项只剩一个段落，spread 应被收回
+
         const itemStart = 1;
         const secondParaPos = itemStart + 1 + list.firstChild!.firstChild!.nodeSize;
         const secondParaSize = list.firstChild!.child(1).nodeSize;

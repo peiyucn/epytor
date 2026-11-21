@@ -64,13 +64,12 @@ function setWorkspaceRoot(root: string | undefined): void {
         ? undefined
         : { uri: vscode.Uri.file(root), name: "proj", index: 0 };
     vi.mocked(vscode.workspace.getWorkspaceFolder).mockReturnValue(folder);
-    // Path-completion resolves its own folder by prefix, so both views must agree.
+
     (vscode.workspace as unknown as {
         workspaceFolders: vscode.WorkspaceFolder[] | undefined;
     }).workspaceFolders = folder ? [folder] : undefined;
 }
 
-/** VSCode FileStat needs timestamps; only `type`/`size` matter to the code under test. */
 function fileStat(type: vscode.FileType, size = 0): vscode.FileStat {
     return { type, ctime: 0, mtime: 0, size };
 }
@@ -189,7 +188,7 @@ describe("ImageMessageHandlers 图片消息处理", () => {
             harness.mappings.set(oldWebviewUri, "@/assets/a.png");
             vi.mocked(fsMock.stat)
                 .mockResolvedValueOnce(fileStat(vscode.FileType.File))
-                .mockRejectedValueOnce(new Error("ENOENT")); // 目标不存在 → 允许重命名
+                .mockRejectedValueOnce(new Error("ENOENT"));
             vi.mocked(fsMock.rename).mockResolvedValue();
 
             await handleImageRename(harness.ctx, "req-7", oldWebviewUri, "renamed");

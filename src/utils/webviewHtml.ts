@@ -1,11 +1,4 @@
-/**
- * First-frame HTML for the webview (pure, no vscode dependency, so tests can pin the frame).
- *
- * The first frame renders only the themed background — no spinner or overlay while rebuilding —
- * matching VS Code's built-in Markdown preview.
- *
- * Callers must pass sanitized values: config via webviewConfigSanitize, `i18nScript` via JSON.stringify.
- */
+
 export interface WebviewHtmlOptions {
     language: string;
     cspSource: string;

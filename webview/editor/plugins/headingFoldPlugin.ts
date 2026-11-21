@@ -1,9 +1,4 @@
-/**
- * Heading folding via ProseMirror decorations; fold state lives in plugin state and never
- * touches the document. Adapted from git-xing/md-wysiwyg-editor v0.3.x, minus its level
- * dropdown and `#H` markers (epytor's top bar already has the official heading dropdown). The
- * gutter holds only the fold arrow, shown on heading hover.
- */
+
 import "../../heading.css";
 import { Plugin, PluginKey, TextSelection } from "@milkdown/kit/prose/state";
 import { Decoration, DecorationSet } from "@milkdown/kit/prose/view";
@@ -15,12 +10,6 @@ import { t } from "../../i18n";
 import { findHeadingFoldRange, getHeadingLevel, isHeadingNode, buildHeadingIndex, computeAllHeadingSignature, computeHeadingSignature } from "../../outline/headingFold";
 import { getWebviewState, setWebviewState } from "../../messaging";
 
-/**
- * Persist fold state so it survives editor rebuilds. Plugin state dies with the Milkdown
- * instance (revert, window reload, tab reopen), so the fold set is kept in webview state and
- * validated by a heading-structure signature: a changed doc would fold the wrong headings.
- * Keep-alive tab switches need no persistence — that instance is still alive.
- */
 function persistFoldState(doc: ProseNode, folded: ReadonlySet<number>): void {
     const cur = getWebviewState() ?? {};
     setWebviewState({
@@ -29,10 +18,6 @@ function persistFoldState(doc: ProseNode, folded: ReadonlySet<number>): void {
     });
 }
 
-/**
- * Filter restored fold positions down to those still pointing at a heading (the doc may have
- * changed; a stale position would fold the wrong heading). Pure function, directly testable.
- */
 export function normalizeFoldPositions(doc: ProseNode, folded: number[]): number[] {
     return folded.filter((pos) => {
         if (!Number.isInteger(pos) || pos < 0 || pos > doc.content.size) { return false; }
@@ -46,7 +31,7 @@ export function normalizeFoldPositions(doc: ProseNode, folded: number[]): number
 
 export type HeadingFoldMeta =
     | { type: "toggle"; pos: number }
-    /** Replace the whole fold set (restored from webview state on rebuild; see index.ts restoreFoldState). */
+
     | { type: "set"; folded: number[] };
 type HeadingFoldRange = { from: number; to: number };
 
@@ -92,7 +77,7 @@ function createFoldGutter(
                 view.state.selection.from < range.to &&
                 view.state.selection.to > range.from
             ) {
-                // Cursor sits inside the range about to collapse: move it out first.
+
                 tr.setSelection(
                     TextSelection.near(tr.doc.resolve(Math.min(headingPos + 1, tr.doc.content.size))),
                 );
@@ -111,9 +96,9 @@ function createFoldGutter(
 export function buildFoldDecorations(doc: ProseNode, folded: ReadonlySet<number>): DecorationSet {
     const decorations: Decoration[] = [];
     const hiddenRanges: HeadingFoldRange[] = [];
-    // Shared heading index: one pass yields both headings and fold ranges, same view as TOC/sticky.
+
     for (const entry of buildHeadingIndex(doc)) {
-        if (!entry.topLevel) continue; // Folding applies to top-level headings only (nested ones are neither decorated nor sticky).
+        if (!entry.topLevel) continue;
 
         const collapsed = folded.has(entry.pos);
         const foldable = entry.foldRange !== null;
@@ -129,7 +114,7 @@ export function buildFoldDecorations(doc: ProseNode, folded: ReadonlySet<number>
                     entry.pos + 1,
                     (view) => createFoldGutter(view, entry.pos, collapsed),
                     {
-                        // Key includes fold state so a flip rebuilds the widget (chevron icon swap).
+
                         key: `epytor-heading-fold-gutter-${entry.pos}-${collapsed ? "closed" : "open"}`,
                     },
                 ),
@@ -142,8 +127,7 @@ export function buildFoldDecorations(doc: ProseNode, folded: ReadonlySet<number>
     }
 
     if (hiddenRanges.length > 0) {
-        // Merge overlapping ranges (outer folds contain inner ones) so a single two-pointer pass
-        // over top-level blocks can decide visibility. Regression: per-block `some` was O(blocks x folds).
+
         const sorted = [...hiddenRanges].sort((a, b) => a.from - b.from);
         const merged: HeadingFoldRange[] = [];
         for (const range of sorted) {
@@ -174,7 +158,7 @@ export function buildFoldDecorations(doc: ProseNode, folded: ReadonlySet<number>
 }
 
 export const headingFoldPlugin = $prose(() => {
-    // Per-instance decoration cache, reused while the heading + fold signature is unchanged.
+
     let cachedSignature = "";
     let cachedDecorations: DecorationSet | null = null;
 
@@ -215,8 +199,7 @@ export const headingFoldPlugin = $prose(() => {
         props: {
             decorations(state) {
                 const folded = headingFoldPluginKey.getState(state) ?? new Set<number>();
-                // Reuse while the signature holds. Regression: rebuilding on every keystroke caused
-                // typing lag on 10k-line docs; debouncing only postponed the cost.
+
                 const signature = computeHeadingSignature(state.doc, folded);
                 if (cachedDecorations !== null && signature === cachedSignature) {
                     return cachedDecorations;
@@ -226,7 +209,7 @@ export const headingFoldPlugin = $prose(() => {
                 return cachedDecorations;
             },
             handleKeyDown(view, event) {
-                // Enter at the end of a folded heading: expand first, then let the default run.
+
                 if (event.key !== "Enter") return false;
                 const folded = headingFoldPluginKey.getState(view.state);
                 if (!folded || folded.size === 0) return false;
@@ -245,7 +228,6 @@ export const headingFoldPlugin = $prose(() => {
                 if (headingPos === null || !folded.has(headingPos)) return false;
                 if ($from.pos < headingPos + 1 + headingTextLen) return false;
 
-                // Expand and put the cursor in the first revealed block (no new paragraph).
                 const headingNode = view.state.doc.nodeAt(headingPos);
                 const range = headingNode
                     ? findHeadingFoldRange(view.state.doc, headingPos, getHeadingLevel(headingNode))
@@ -292,8 +274,7 @@ export const headingFoldPlugin = $prose(() => {
                     if (hoveredGutter && !view.dom.contains(hoveredGutter)) {
                         setHoveredGutter(null);
                     }
-                    // Persist on change (restored after a webview rebuild). An unchanged Set keeps
-                    // its identity, so this per-transaction comparison stays O(1).
+
                     const folded = headingFoldPluginKey.getState(view.state);
                     if (folded !== headingFoldPluginKey.getState(prevState)) {
                         persistFoldState(view.state.doc, folded ?? new Set<number>());

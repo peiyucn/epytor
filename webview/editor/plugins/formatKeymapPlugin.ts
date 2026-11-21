@@ -1,9 +1,4 @@
-/**
- * Formatting shortcuts for inline marks.
- *
- * Mod-e toggles inline code; with an empty selection it inserts an empty code span and puts
- * the caret inside, so the next typed character becomes code (matches the toolbar buttons).
- */
+
 import { commandsCtx, editorViewCtx } from "@milkdown/kit/core";
 import {
     toggleStrongCommand,

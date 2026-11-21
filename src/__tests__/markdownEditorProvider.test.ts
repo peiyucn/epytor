@@ -1,11 +1,4 @@
-/**
- * MarkdownEditorProvider 的集成级单测：尽量走公共路径（openCustomDocument / resolveCustomEditor /
- * webview 消息 / onDidDispose 回调），不再直接调 private 方法。
- *
- * 背景：Provider 曾因 18 个 per-uri 容器漏清导致「重开文档被判成有未保存改动 → 失活即落盘」。
- * 第一组用例用反射枚举实例与各状态模块内部的 Map/Set，任何一个漏清都会红——新增容器时不需要
- * 记得改测试。
- */
+
 import * as os from "os";
 import * as path from "path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -18,8 +11,6 @@ const DOC_FS_PATH = path.join(os.tmpdir(), "epytor-provider-test-doc.md");
 const DOC_URI = vscode.Uri.file(DOC_FS_PATH);
 const URI_KEY = DOC_URI.toString();
 
-// FileWatcher watches the OS directly; capture the callback so provider tests can simulate an
-// external write without touching the real filesystem (test rules: no real disk writes).
 const fsWatchMock = vi.hoisted(() => ({
     watch: vi.fn((..._args: unknown[]) => ({ on: vi.fn(), close: vi.fn() })),
 }));
@@ -37,7 +28,6 @@ const TOKEN = {
 
 const fsMock = vscode.workspace.fs;
 
-/** VSCode FileStat needs timestamps; only `type`/`size` matter to the code under test. */
 function fileStat(type: vscode.FileType, size = 0): vscode.FileStat {
     return { type, ctime: 0, mtime: 0, size };
 }
@@ -139,12 +129,12 @@ function perUriContainers(provider: MarkdownEditorProvider): Array<[string, Map<
         }
     };
     collect(provider, "");
-    // 状态已外移到独立所有者；新增这类所有者时在这里登记，让「一个都不能漏」继续成立。
+
     for (const ownerName of ["_navigation", "_statusBar", "_externalChange"]) {
         const owner = (provider as unknown as Record<string, unknown>)[ownerName];
         if (owner && typeof owner === "object") { collect(owner, `${ownerName}.`); }
     }
-    // 全局容器：键不是 uriKey，不应随面板关闭清理。当前没有。
+
     return out;
 }
 
@@ -157,7 +147,7 @@ function testContext(): vscode.ExtensionContext {
     return {
         subscriptions: [],
         extensionUri: vscode.Uri.file(process.cwd()),
-        // 目录路径中放一个文件名：WriteAudit 的 mkdir 会失败并被记录，但绝不写真实磁盘。
+
         logUri: vscode.Uri.file(path.join(process.cwd(), "package.json", "epytor-test-logs")),
     } as unknown as vscode.ExtensionContext;
 }
@@ -201,8 +191,7 @@ describe("MarkdownEditorProvider", () => {
     afterEach(async () => {
         harness?.disposePanel();
         harness = undefined;
-        // Queued audit writes are asynchronous (and fail with ENOTDIR here); let them settle
-        // while the console spies are still installed so they cannot pollute the test output.
+
         await new Promise((resolve) => setTimeout(resolve, 0));
         vi.restoreAllMocks();
     });
@@ -255,7 +244,6 @@ describe("MarkdownEditorProvider", () => {
         return found;
     }
 
-    /** ready + 激活，使保存等拉取路径可用（canAskWebview 前置条件）。 */
     async function readyAndActivate(target: Harness): Promise<void> {
         await target.receive({ type: "ready" });
         target.activate(true);
@@ -430,7 +418,7 @@ describe("MarkdownEditorProvider", () => {
         it("空保存守卫：缓冲等于上次写入、文档模型已是别的文本 应该 跳过写盘", async () => {
             const target = await openHarness("base");
             await readyAndActivate(target);
-            // 外部写入被采纳后模型与 lastSaved 不同（模拟）；此时一次 stale flush 不得写回。
+
             target.document.update("external-version");
             vi.mocked(fsMock.readFile).mockResolvedValue(Buffer.from("external-version", "utf-8"));
 
@@ -445,7 +433,7 @@ describe("MarkdownEditorProvider", () => {
         it("回归（B2b）：空保存守卫 应该 读真实盘上文本，内存模型滞后时也要拦住回滚", async () => {
             const target = await openHarness("base");
             await readyAndActivate(target);
-            // 外部改动尚未采纳：document.getText() 仍是旧内容，但盘上已是新内容。
+
             vi.mocked(fsMock.readFile).mockResolvedValue(Buffer.from("disk-new", "utf-8"));
 
             const savePromise = target.provider.saveCustomDocument(target.document, TOKEN);
@@ -475,9 +463,7 @@ describe("MarkdownEditorProvider", () => {
 
         it("回归：新打开即激活的面板（未收到 view-state 事件） 应该 也拉取 webview 内容再保存", async () => {
             const target = await openHarness("base");
-            // 真实打开路径：面板创建时就是激活的，`onDidChangeViewState` 不会补发。
-            // 这里刻意不调用 activate(true)；旧实现因此把这次保存当成「问不到 webview」，
-            // 直接用落盘备份写盘，刚输入的字符会丢。
+
             await target.receive({ type: "ready" });
 
             const savePromise = target.provider.saveCustomDocument(target.document, TOKEN);
@@ -509,7 +495,7 @@ describe("MarkdownEditorProvider", () => {
         it("切换源码视图时 有真实编辑 应该 先写盘再切换", async () => {
             const target = await openHarness("base");
             await readyAndActivate(target);
-            // 磁盘与上次保存相同（无外部写入），本次拉取的内容是真实编辑。
+
             vi.mocked(fsMock.readFile).mockResolvedValue(Buffer.from("base", "utf-8"));
 
             const switchPromise = target.receive({ type: "switchToTextEditor" });
@@ -589,10 +575,7 @@ describe("MarkdownEditorProvider", () => {
     });
 
     describe("外部变更（面板初始激活态）", () => {
-        /**
-         * Simulate an OS write event: the provider registers its watcher callback through the
-         * mocked `fs.watch`, so tests can drive the real external-change path without a disk.
-         */
+
         async function openHarnessWithWatcher(initialContent: string): Promise<{
             target: Harness;
             fireExternalWrite: () => Promise<void>;
@@ -608,7 +591,7 @@ describe("MarkdownEditorProvider", () => {
                 async fireExternalWrite(): Promise<void> {
                     if (!watchCallback) { throw new Error("file watcher 未注册"); }
                     watchCallback("change", path.basename(DOC_FS_PATH));
-                    // FileWatcher debounces burst writes by 200ms.
+
                     await new Promise((resolve) => setTimeout(resolve, 300));
                 },
             };
@@ -618,8 +601,6 @@ describe("MarkdownEditorProvider", () => {
             const { target, fireExternalWrite } = await openHarnessWithWatcher("base");
             await target.receive({ type: "ready" });
 
-            // 面板创建时就是激活的（未经过 view-state 事件）；旧实现读不到 webview，
-            // 走 defer 并弹「while you were editing」，即使一个字符都没改。
             vi.mocked(fsMock.readFile).mockResolvedValue(Buffer.from("external", "utf-8"));
             await fireExternalWrite();
 
@@ -634,13 +615,11 @@ describe("MarkdownEditorProvider", () => {
         it("回归：ready 前到达的外部变更 应该 在 ready 后立刻结算，不留陈旧内容", async () => {
             const { target, fireExternalWrite } = await openHarnessWithWatcher("base");
 
-            // webview 还没 ready：决策只能是 defer，但干净编辑器不该弹警告。
             vi.mocked(fsMock.readFile).mockResolvedValue(Buffer.from("external-before-ready", "utf-8"));
             await fireExternalWrite();
             expect(target.document.getText()).toBe("base");
             expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
 
-            // ready 是「webview 可读了」的唯一时机；初始激活的面板不会再有激活事件。
             await target.receive({ type: "ready" });
             await waitForPosted(target.posted, "requestContent");
             await target.receive({ type: "contentResponse", content: "base" });

@@ -9,7 +9,6 @@ import {
     type CellClickState,
 } from "../table/cellClickState";
 
-/** 走一遍 mousedown → mouseup（默认不移动） */
 function clickAt(state: CellClickState, pos: number, x = 0, y = 0): void {
     beginClick(state, { pos, x, y });
 }
@@ -19,7 +18,7 @@ describe("表格单元格点击状态机", () => {
         const s = createCellClickState();
         clickAt(s, 42);
         expect(s.pendingClickPos).toBe(42);
-        beginClick(s, null); // 落在非单元格上
+        beginClick(s, null);
         expect(s.pendingClickPos).toBeNull();
         expect(s.cellClickTarget).toBeNull();
     });
@@ -29,7 +28,7 @@ describe("表格单元格点击状态机", () => {
         clickAt(s, 5, 0, 0);
         markDragged(s, 100, 100, 0, 0);
         expect(s.clickIsPlain).toBe(false);
-        clickAt(s, 9, 50, 50); // 新一次点击
+        clickAt(s, 9, 50, 50);
         expect(s.clickIsPlain).toBe(true);
         expect(s.wasCrossCell).toBe(false);
         expect(s.lastGoodCellSelection).toBeNull();
@@ -38,9 +37,9 @@ describe("表格单元格点击状态机", () => {
     it("位移未超阈值 应该 仍算纯单击；超过阈值 应该 算拖拽", () => {
         const s = createCellClickState();
         clickAt(s, 5, 0, 0);
-        markDragged(s, 2, 2, 0, 0); // 曼哈顿距离 4，未超过
+        markDragged(s, 2, 2, 0, 0);
         expect(s.clickIsPlain).toBe(true);
-        markDragged(s, 3, 2, 0, 0); // 距离 5，超过
+        markDragged(s, 3, 2, 0, 0);
         expect(s.clickIsPlain).toBe(false);
     });
 
@@ -50,7 +49,7 @@ describe("表格单元格点击状态机", () => {
         s.wasCrossCell = true;
         s.lastGoodCellSelection = { fake: "selection" };
         endClick(s);
-        // 收尾后立刻仍保留（等后续 click 事件）
+
         expect(s.lastGoodCellSelection).not.toBeNull();
         expect(s.pendingClickPos).toBeNull();
         await new Promise((r) => setTimeout(r, 260));
@@ -60,10 +59,9 @@ describe("表格单元格点击状态机", () => {
     it("普通单击 应该在微任务里清掉追踪（同一次事件循环内仍可见）", async () => {
         const s = createCellClickState();
         clickAt(s, 7);
-        let seenDuringSync = 0;
         endClick(s);
-        seenDuringSync = s.pendingClickPos === null ? 0 : 1;
-        expect(seenDuringSync).toBe(1); // 同步阶段还没清
+        const seenDuringSync = s.pendingClickPos === null ? 0 : 1;
+        expect(seenDuringSync).toBe(1);
         await Promise.resolve();
         await Promise.resolve();
         expect(s.pendingClickPos).toBeNull();

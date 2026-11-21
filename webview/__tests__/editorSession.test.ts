@@ -1,15 +1,10 @@
-/**
- * 编辑器实例与保存快照（覆盖 editor/editorSession.ts）。
- * 拆分自 editor.ts 的四个模块级 `let`（audit F2/F10）：用例锁住「无编辑器时返回基线」、
- * 模式切换作废旧 doc 快照、destroy 的清理顺序与幂等。
- */
+
 import { describe, expect, it, vi } from "vitest";
 import type { Editor } from "@milkdown/kit/core";
 import { editorViewCtx } from "@milkdown/kit/core";
 import type { EditorView } from "@milkdown/kit/prose/view";
 import { createEditorSession, SavedSnapshot } from "../editor/editorSession";
 
-/** 只满足 getMarkdownForSave 无编辑器分支所需的最小 Editor 形状（不进入真实序列化）。 */
 function fakeEditorWithView(view: EditorView): Editor {
     return {
         action: (fn: (ctx: { get(key: unknown): unknown }) => unknown) =>
@@ -70,7 +65,7 @@ describe("EditorSession 保存与生命周期", () => {
         session.snapshot.seedDoc({} as never);
         session.setSerializationMode("compatible");
         expect(session.getSerializationMode()).toBe("compatible");
-        expect(session.getEditor()).toBeNull(); // 模式切换不应触碰编辑器实例
+        expect(session.getEditor()).toBeNull();
     });
 
     it("destroy 应该 按序释放主题订阅、CM observer 与编辑器，且幂等", () => {
@@ -88,12 +83,12 @@ describe("EditorSession 保存与生命周期", () => {
         session.destroy();
         expect(order).toEqual(["theme", "cm", "editor"]);
         expect(session.getEditor()).toBeNull();
-        // 与旧实现一致：destroy 不清空 markdown 基线，只作废 doc 快照（重建窗口保存仍安全）。
+
         expect(session.getMarkdownForSave()).toBe("# base\n");
         expect(session.snapshot.doc).toBeNull();
 
         expect(() => session.destroy()).not.toThrow();
-        expect(order).toEqual(["theme", "cm", "editor"]); // 幂等：句柄已置空，不重复调用
+        expect(order).toEqual(["theme", "cm", "editor"]);
     });
 
     it("重复设置 CM observer 应该 先断开上一个（避免重建泄漏 observer）", () => {

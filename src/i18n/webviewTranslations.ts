@@ -1,4 +1,4 @@
-/** WebView-side Simplified Chinese table (keys are the English source text). */
+
 export const ZH_CN_WEBVIEW: Record<string, string> = {
     'Contents': '目录',
     'Collapse': '收起',
@@ -39,21 +39,21 @@ export const ZH_CN_WEBVIEW: Record<string, string> = {
     'Project Images': '项目图片',
     'Click or drag image here': '点击选择或拖拽图片到此处',
     'Insert': '插入',
-    // imageView toolbar
+
     'Close': '关闭',
     'View Full Size': '查看原图',
     'Delete': '删除',
     'Edit Image Path': '编辑图片路径',
     'Image path or URL': '图片路径或 URL',
     'Image not found': '图片未找到',
-    // mermaid
+
     'Zoom In': '放大',
     'Zoom Out': '缩小',
     'Reset Zoom': '重置缩放',
     'Toggle preview': '切换预览',
     'Math Formula': '数学公式',
     'View Fullscreen': '全屏查看',
-    // findBar
+
     'Find': '查找',
     'Previous Match': '上一个匹配项',
     'Next Match': '下一个匹配项',
@@ -61,8 +61,7 @@ export const ZH_CN_WEBVIEW: Record<string, string> = {
     'Regular Expression': '正则表达式',
     'Invalid Regex': '无效的正则表达式',
     'No results': '无结果',
-    // toc
-    // Panel / overflow menu / heading fold (previously untranslated, so the Chinese UI showed English).
+
     'Add': '添加',
     'More': '更多',
     'Expand content': '展开内容',

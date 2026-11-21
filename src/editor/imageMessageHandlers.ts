@@ -1,11 +1,4 @@
-/**
- * Image message handlers: upload, gallery listing, rename, path suggestions and image-path
- * resolution.
- *
- * These used to live as five private methods on the provider, where every one of them reached
- * back into the provider's panel/uri bookkeeping. The explicit `ImageHandlerContext` keeps the
- * coupling visible and lets the handlers be exercised with a fake panel and map.
- */
+
 import * as path from "path";
 import * as vscode from "vscode";
 import { firstExistingDir, isWorkspaceLevelSetting, saveImageLocally, uploadImageToServer } from "../utils/imageService";
@@ -22,41 +15,34 @@ import { resolveDocPath, resolveWorkspaceRoot } from "../utils/docPath";
 import { sanitizeBasename } from "../utils/safeBasename";
 import type { PathSuggestionItem, ProjectImage } from "../../shared/messages";
 
-/** Regression: an unbounded payload could spike memory through one huge postMessage. */
 const MAX_IMAGE_UPLOAD_BYTES = 20 * 1024 * 1024;
-/** Cap on path-completion results; the dropdown is not a file browser. */
+
 const PATH_SUGGESTION_LIMIT = 15;
-/** Directories that only add noise to path completion. */
+
 const PATH_SUGGESTION_IGNORED_NAMES = new Set(["node_modules", ".git", "dist", ".DS_Store", "out", ".vscode-test"]);
-/** Extensions treated as images by the gallery and the thumbnail preview. */
+
 const IMAGE_EXTS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".tiff", ".ico"]);
 
-/**
- * Everything a handler needs from the provider. Image URI mapping (webviewUri -> the exact path
- * spelling to write back into the document) stays owned by the provider; handlers only register,
- * look up and drop entries through these callbacks.
- */
 export interface ImageHandlerContext {
     readonly documentUri: vscode.Uri;
     readonly panel: vscode.WebviewPanel;
     readonly uriKey: string;
-    /** Record webviewUri -> the path string that belongs in the document. */
+
     registerImageMapping(webviewUri: string, displayPath: string): void;
-    /** Document spelling previously registered for a webview URI (image rename lookup). */
+
     getImageMapping(webviewUri: string): string | undefined;
-    /** Drop one mapping (image rename replaces the old webview URI). */
+
     deleteImageMapping(webviewUri: string): void;
 }
 
-/** Warned once per URL: a server configured with plain http is allowed but flagged. */
 const insecureServerUrlWarned = new Set<string>();
 
 function warnInsecureServerUrlOnce(serverUrl: string): void {
-    let isPlainHttp = false;
+    let isPlainHttp: boolean;
     try {
         isPlainHttp = new URL(serverUrl).protocol === "http:";
     } catch {
-        return; // Unparseable URL: the upload itself will surface a concrete error.
+        return;
     }
     if (!isPlainHttp || insecureServerUrlWarned.has(serverUrl)) { return; }
     insecureServerUrlWarned.add(serverUrl);
@@ -93,13 +79,10 @@ export async function handleImageUpload(
     const cfg = vscode.workspace.getConfiguration("epytor", ctx.documentUri);
     const storage = cfg.get<string>("imageStorage", "local");
     try {
-        // New `imageServer` key wins over the 4 deprecated ones; invalid config must warn visibly,
-        // never be silently ignored.
+
         const resolution = storage === "server" ? readImageServerConfig(cfg) : undefined;
         if (resolution) { warnImageServerIssues(resolution.issues); }
 
-        // Workspace-level settings must not choose the upload target: a cloned repo could ship
-        // .vscode/settings.json pointing at an attacker and exfiltrate pasted images.
         const downgraded = resolution !== undefined
             && shouldDowngradeServerStorage(readServerStorageOrigin(cfg, resolution.settings.url));
         if (downgraded) {
@@ -108,7 +91,7 @@ export async function handleImageUpload(
                 message: vscode.l10n.t("Uploading to the image server was skipped because the image server settings come from workspace settings; the image was saved locally instead"),
             });
         } else if (resolution) {
-            // Plain http is allowed (intranet use) but warned once per URL.
+
             warnInsecureServerUrlOnce(resolution.settings.url);
         }
 
@@ -122,8 +105,7 @@ export async function handleImageUpload(
             const webviewUri = ctx.panel.webview.asWebviewUri(absUri);
             url = webviewUri.toString();
             ctx.registerImageMapping(url, relPath);
-            // Workspace-level settings may not pick the folder; say so instead of silently
-            // writing somewhere other than the configured path.
+
             if (localDirDowngraded) {
                 ctx.panel.webview.postMessage({
                     type: "notice",
@@ -142,8 +124,6 @@ export async function handleImageUpload(
 export async function handleGetProjectImages(ctx: ImageHandlerContext, id: string): Promise<void> {
     const cfg = vscode.workspace.getConfiguration("epytor", ctx.documentUri);
 
-    // Share planImageLocalDir with the write path: without it, a workspace-level imageLocalPath
-    // let the gallery list names and thumbnails outside the workspace (e.g. ~/.ssh).
     const plan = planImageLocalDir({
         customPath: cfg.get<string>("imageLocalPath", "").trim(),
         docDir: ctx.documentUri.scheme === "file" ? path.dirname(ctx.documentUri.fsPath) : null,
@@ -151,7 +131,7 @@ export async function handleGetProjectImages(ctx: ImageHandlerContext, id: strin
         workspaceLevel: isWorkspaceLevelSetting(cfg, "imageLocalPath"),
     });
 
-    let targetDir: vscode.Uri | null = null;
+    let targetDir: vscode.Uri | null;
     if (plan.kind === "fixed") {
         targetDir = vscode.Uri.file(plan.dir);
     } else {
@@ -181,7 +161,7 @@ export async function handleGetProjectImages(ctx: ImageHandlerContext, id: strin
                 images.push({ relPath, webviewUri: wvUri, name });
             }
         } catch (error) {
-            // "No images" and "cannot read the folder" used to look identical in the gallery.
+
             ctx.panel.webview.postMessage({
                 type: "notice",
                 message: vscode.l10n.t(
@@ -209,9 +189,7 @@ export async function handleImageRename(
 
     try {
         const mdDir = path.dirname(ctx.documentUri.fsPath);
-        // The uriMap keeps the document's original spelling, so `@/assets/a.png` must be
-        // resolved with the same rules as display/save; `path.resolve(mdDir, …)` used to report
-        // "Image not found" for workspace-relative spellings.
+
         const oldAbsPath = resolveDocPath(normalizeImageDestination(oldRelPath), {
             docFsPath: ctx.documentUri.fsPath,
             workspaceRoot: resolveWorkspaceRoot(ctx.documentUri) ?? null,
@@ -220,7 +198,6 @@ export async function handleImageRename(
 
         await vscode.workspace.fs.stat(oldUri);
 
-        // Reject illegal characters and Windows reserved device names.
         const oldExt = path.extname(oldAbsPath);
         const safeBasename = sanitizeBasename(newBasename);
         if (!safeBasename) {
@@ -231,14 +208,13 @@ export async function handleImageRename(
         const dir = path.dirname(oldAbsPath);
         const targetUri = vscode.Uri.file(path.join(dir, safeBasename + oldExt));
 
-        // Never overwrite: an existing target is reported, not replaced.
         try {
             await vscode.workspace.fs.stat(targetUri);
             const errMsg = vscode.l10n.t('A file named "{0}" already exists.', safeBasename + oldExt);
             ctx.panel.webview.postMessage({ type: "imageRenameError", id, error: errMsg });
             vscode.window.showErrorMessage(errMsg);
             return;
-        } catch { /* not found: continue */ }
+        } catch {}
 
         await vscode.workspace.fs.rename(oldUri, targetUri);
 
@@ -275,16 +251,13 @@ export async function handleGetPathSuggestions(
     }
 
     const docFsPath = ctx.documentUri.fsPath;
-    // Owning folder only: a standalone file falls back to its own directory for `@/`.
+
     const workspaceRoot = resolveWorkspaceRoot(ctx.documentUri);
 
     const lastSlash = q.lastIndexOf("/");
     const dirPart = lastSlash >= 0 ? q.slice(0, lastSlash + 1) : "";
     const namePart = lastSlash >= 0 ? q.slice(lastSlash + 1) : q;
 
-    // `@/` is the workspace root alias; without a workspace it falls back to the document
-    // directory like every other consumer. The old branch dropped the remainder of `@/a/b`,
-    // which made the dropdown list the document directory regardless of the typed subpath.
     const absDir = resolveDocPath(dirPart, {
         docFsPath,
         workspaceRoot: workspaceRoot ?? null,
@@ -338,9 +311,7 @@ export async function handleResolveImagePath(
             docFsPath: ctx.documentUri.fsPath,
             workspaceRoot: resolveWorkspaceRoot(ctx.documentUri) ?? null,
         });
-        // No webviewUri -> the webview falls back to the raw relPath after its timeout.
-        // `fs.existsSync` blocked the extension host on slow/network drives; the async stat has
-        // the same existence semantics and can be mocked in tests.
+
         const exists = await vscode.workspace.fs.stat(vscode.Uri.file(absPath))
             .then(() => true, () => false);
         if (!exists) { return; }
@@ -348,7 +319,7 @@ export async function handleResolveImagePath(
         ctx.registerImageMapping(webviewUri, relPath);
         ctx.panel.webview.postMessage({ type: "imagePathResolved", id, webviewUri });
     } catch (error) {
-        // Invalid path: no reply, the webview falls back after its timeout — but leave a trace.
+
         console.warn(`[epytor] image path resolution failed for ${ctx.uriKey}:`, error);
     }
 }

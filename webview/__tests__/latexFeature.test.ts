@@ -1,8 +1,4 @@
-/**
- * 惰性 KaTeX latex feature（vendor/latexFeature.ts）回归测试：
- * 数学解析/序列化往返/命令切换，以及 katex 模块加载未决时的源码占位、
- * 就绪后按 token 收敛只渲染最新值的 NodeView 行为。
- */
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createEditor, destroyEditor } from "../editor";
 import { commandsCtx, editorViewCtx } from "@milkdown/kit/core";
@@ -20,15 +16,13 @@ const h = vi.hoisted(() => {
     return { katexModuleGate, resolveKatexModule, katexRender };
 });
 
-// katex 模块求值挂起（模拟 chunk 网络加载中），由测试显式放行——
-// 与真实惰性加载一致：loadKatex() 未决期间渲染请求排队，就绪后按 token 收敛。
 vi.mock("katex", async () => {
     await h.katexModuleGate;
     return {
         default: {
             render: (...args: unknown[]) => {
                 h.katexRender(...args);
-                // 模拟同步渲染写 DOM（真实 katex.render 为同步）
+
                 const dom = args[1] as HTMLElement;
                 dom.innerHTML = `<i class="katex-render">K:${String(args[0])}</i>`;
             },
@@ -39,20 +33,20 @@ vi.mock("katex", async () => {
 
 if (typeof (window as unknown as Record<string, unknown>).ResizeObserver === "undefined") {
     (window as unknown as Record<string, unknown>).ResizeObserver = class {
-        observe() { /* noop */ } unobserve() { /* noop */ } disconnect() { /* noop */ }
+        observe() {  } unobserve() {  } disconnect() {  }
     };
 }
 if (typeof window.matchMedia === "undefined") {
     window.matchMedia = (() => ({
         matches: false, media: "", onchange: null,
-        addListener() { /* noop */ }, removeListener() { /* noop */ },
-        addEventListener() { /* noop */ }, removeEventListener() { /* noop */ },
+        addListener() {  }, removeListener() {  },
+        addEventListener() {  }, removeEventListener() {  },
         dispatchEvent() { return false; },
     })) as typeof window.matchMedia;
 }
 if (typeof (window as unknown as Record<string, unknown>).IntersectionObserver === "undefined") {
     (window as unknown as Record<string, unknown>).IntersectionObserver = class {
-        observe() { /* noop */ } unobserve() { /* noop */ } disconnect() { /* noop */ } takeRecords() { return []; }
+        observe() {  } unobserve() {  } disconnect() {  } takeRecords() { return []; }
     };
 }
 (window as unknown as Record<string, unknown>).__i18n = {
@@ -146,7 +140,6 @@ describe("惰性 KaTeX latex feature", () => {
         expect(mathCount).toBe(1);
         expect(mathValue).toBe("hello");
 
-        // 命令已把选区设为该节点（NodeSelection），再次执行还原文本
         editor.action((ctx) => {
             ctx.get(commandsCtx).call("ToggleLatex");
         });
@@ -160,19 +153,16 @@ describe("惰性 KaTeX latex feature", () => {
         const span = root.querySelector<HTMLElement>('span[data-type="math_inline"]');
         expect(span).not.toBeNull();
 
-        // 未就绪：占位样式 + 源码文本；样式 <link> 已注入（幂等，先于模块求值）
         expect(span!.classList.contains("epytor-math-inline--loading")).toBe(true);
         expect(span!.textContent).toBe("a");
         expect(document.head.querySelectorAll("link[data-epytor-katex]")).toHaveLength(1);
 
-        // katex 仍未就绪时值变化：第二次渲染请求排队，占位跟随新值
         const view = getView(editor);
         const pos = findMathPos(editor);
         expect(pos).toBeGreaterThan(0);
         view.dispatch(view.state.tr.setNodeMarkup(pos, undefined, { value: "b" }));
         expect(span!.textContent).toBe("b");
 
-        // 放行 katex 模块：两次渲染请求收敛为一次、只渲染最新值 b
         h.resolveKatexModule();
         await vi.waitFor(() => expect(h.katexRender).toHaveBeenCalledTimes(1));
         expect(h.katexRender).toHaveBeenCalledWith(
@@ -189,7 +179,6 @@ describe("惰性 KaTeX latex feature", () => {
         h.resolveKatexModule();
         await vi.waitFor(() => expect(h.katexRender).toHaveBeenCalledTimes(1));
 
-        // 重建编辑器（revert 场景）：再次触发加载路径
         const second = await makeEditor("$b$");
         void second;
         expect(document.head.querySelectorAll("link[data-epytor-katex]")).toHaveLength(1);

@@ -9,18 +9,25 @@ jobs:
   publish:
     name: publish
     runs-on: ubuntu-latest
-    # 发布环境：Deployments 页留下每次发布记录（dsh-launcher-panel / dsh-sparrow 同款做法）
     environment: marketplace-publish
     permissions:
       contents: write
-      # E18 gate reads Dependabot (`vulnerability-alerts`) and code scanning
-      # (`security-events`) with GITHUB_TOKEN. Secret scanning is not readable through
-      # GITHUB_TOKEN, so that one query uses the SECURITY_ALERTS_TOKEN PAT.
       security-events: read
       vulnerability-alerts: read
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Verify tag commit is on main
+        shell: bash
+        run: |
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "${GITHUB_SHA}" origin/main; then
+            echo "::error::tag 提交不在 main 上：先把改动合入 main 再打 tag（E16）"
+            exit 1
+          fi
 
       - uses: pnpm/action-setup@v6
 
@@ -32,10 +39,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # E18 fail-closed gate: any open Dependabot / code scanning / secret scanning alert, or a
-      # check that cannot be completed, aborts the release. Dependabot and code scanning use
-      # GITHUB_TOKEN; secret scanning needs the read-only SECURITY_ALERTS_TOKEN fine-grained PAT
-      # because GITHUB_TOKEN cannot read those alerts (same wiring as dsh-launcher-panel).
       - name: Security gate (fail-closed)
         timeout-minutes: 5
         run: node scripts/security-gate.mjs
@@ -57,8 +60,6 @@ jobs:
         run: |
           VERSION="${{ github.ref_name }}"
           VERSION="${VERSION#v}"
-          # 从两份 CHANGELOG 抽取本版本条目，英文在上、中文在下拼成发布说明。
-          # 用 index() 前缀匹配而非正则：awk 里 \[ 是非法转义会退化成字符类，匹配失效。
           extract() {
             awk -v ver="${VERSION}" '
               BEGIN { found=0; lines="" }

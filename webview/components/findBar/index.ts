@@ -6,18 +6,17 @@ import { IconChevronUp, IconChevronDown, IconX } from "@/ui/icons";
 import { t, kbd } from "@/i18n";
 import { findMatches, MAX_MATCHES } from "@/find/findMatches";
 
-// CSS Custom Highlight API (Chromium 105+ / Electron 22+); not in the DOM lib yet.
 declare class Highlight {
     constructor(...ranges: Range[]);
 }
-declare namespace CSS {
-    const highlights: Map<string, Highlight>;
+interface CssHighlights {
+    delete(name: string): void;
+    set(name: string, value: Highlight): void;
 }
+const cssHighlights = (CSS as unknown as { highlights: CssHighlights }).highlights;
 
-/** Input debounce: every keystroke recomputes all matches, which is slow on long documents. */
 const SEARCH_DEBOUNCE_MS = 150;
 
-/** Space above the first match when scrolling it into view. */
 const FIND_SCROLL_OFFSET_PX = 60;
 
 export interface FindBarController {
@@ -91,30 +90,30 @@ export function initFindBar(getEditorEl: () => HTMLElement | null): FindBarContr
     let matchRanges: Range[] = [];
     let currentIdx = 0;
     let debounceTimer = 0;
-    /** True when the match list hit MAX_MATCHES (the count then renders "N+"). */
+
     let truncated = false;
 
     function updateHighlights() {
         if (!("highlights" in CSS)) { return; }
         if (!matchRanges.length) {
-            CSS.highlights.delete("find-highlight");
-            CSS.highlights.delete("find-highlight-current");
+            cssHighlights.delete("find-highlight");
+            cssHighlights.delete("find-highlight-current");
             return;
         }
-        CSS.highlights.set("find-highlight", new Highlight(...matchRanges));
+        cssHighlights.set("find-highlight", new Highlight(...matchRanges));
         if (matchRanges[currentIdx]) {
-            CSS.highlights.set("find-highlight-current", new Highlight(matchRanges[currentIdx]));
+            cssHighlights.set("find-highlight-current", new Highlight(matchRanges[currentIdx]));
         }
     }
 
     function clearHighlights() {
         if (!("highlights" in CSS)) { return; }
-        CSS.highlights.delete("find-highlight");
-        CSS.highlights.delete("find-highlight-current");
+        cssHighlights.delete("find-highlight");
+        cssHighlights.delete("find-highlight-current");
     }
 
     function search(query: string) {
-        if (!visible) return; // Late call after close (see the timer cleanup there).
+        if (!visible) return;
         matchRanges = [];
         currentIdx = 0;
         truncated = false;
@@ -139,7 +138,7 @@ export function initFindBar(getEditorEl: () => HTMLElement | null): FindBarContr
                 break;
             }
             for (const m of result.matches) {
-                // Cap the total: one Highlight with thousands of Ranges is expensive.
+
                 if (matchRanges.length >= MAX_MATCHES) {
                     truncated = true;
                     break;
@@ -237,7 +236,6 @@ export function initFindBar(getEditorEl: () => HTMLElement | null): FindBarContr
         search(input.value);
     });
 
-    // Keep mousedown inside the bar away from the editor.
     bar.addEventListener("mousedown", (e) => e.stopPropagation());
 
     function open(initialQuery?: string) {
@@ -253,8 +251,7 @@ export function initFindBar(getEditorEl: () => HTMLElement | null): FindBarContr
 
     function close() {
         visible = false;
-        // Regression (P3): the pending debounce used to run after close, reviving highlights,
-        // writing the count into the hidden bar and scrolling the page.
+
         clearTimeout(debounceTimer);
         debounceTimer = 0;
         bar.classList.remove("find-bar--visible");

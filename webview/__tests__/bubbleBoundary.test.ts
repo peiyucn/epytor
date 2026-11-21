@@ -1,12 +1,4 @@
-/**
- * 行内公式编辑气泡的定位（回归：气泡越出编辑区 / 压住固定工具栏）。
- *
- * 定位算法在 webview/editor/bubbleBoundary.ts 的 placeBubble（纯函数，可直测）。
- * 这里测的是**数学结果**，不是「代码里有没有某个字符串」——前几轮吃过的教训：
- * 断言接线存在，但算出来的坐标是错的，真机照样不对。
- *
- * jsdom 无布局引擎，所以几何全部由用例显式给定，不依赖真实渲染。
- */
+
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -16,7 +8,6 @@ import {
     placeBubble,
 } from "../editor/bubbleBoundary";
 
-/** 典型编辑区：左侧 TOC 占 200，顶部工具栏占 36，视口 1200×800 */
 const VIEW = {
     contentLeft: 200,
     contentTop: 36,
@@ -24,7 +15,6 @@ const VIEW = {
     viewportHeight: 800,
 };
 
-/** 气泡尺寸 */
 const FLOAT = { width: 260, height: 44 };
 
 describe("placeBubble：气泡必须落在编辑区内", () => {
@@ -36,7 +26,7 @@ describe("placeBubble：气泡必须落在编辑区内", () => {
     });
 
     it("公式贴编辑区左边（TOC 后面）时 应该 不越到 TOC 底下", () => {
-        // 公式在 x=200（紧贴 TOC 右缘）
+
         const pos = placeBubble({ x: 200, y: 300, width: 20, height: 20 }, FLOAT, VIEW);
 
         expect(pos.x).toBeGreaterThanOrEqual(VIEW.contentLeft + BUBBLE_BOUNDARY_PADDING);
@@ -52,16 +42,15 @@ describe("placeBubble：气泡必须落在编辑区内", () => {
     });
 
     it("公式贴近视口底部、下方放不下时 应该 翻到上方（而不是跑到页面顶部压住工具栏）", () => {
-        // 公式在 y=780，下方没有空间
+
         const pos = placeBubble({ x: 400, y: 780, width: 40, height: 18 }, FLOAT, VIEW);
 
-        // 必须翻到公式上方
         expect(pos.y).toBeLessThan(780);
         expect(pos.y).toBe(780 - FLOAT.height - BUBBLE_GAP);
     });
 
     it("上下都放不下时 应该 夹在编辑区内，且不压住顶部工具栏", () => {
-        // 极矮视口，几乎没有空间
+
         const tight = { ...VIEW, viewportHeight: 120 };
         const pos = placeBubble({ x: 400, y: 60, width: 40, height: 20 }, FLOAT, tight);
 
@@ -72,7 +61,7 @@ describe("placeBubble：气泡必须落在编辑区内", () => {
     });
 
     it("任何输入下 气泡都不压倒顶部工具栏（contentTop 之上）", () => {
-        // 扫一批极端位置，全部必须满足「y >= contentTop + padding」
+
         for (const y of [0, 10, 36, 50, 100, 400, 700, 790, 800]) {
             const pos = placeBubble({ x: 400, y, width: 40, height: 20 }, FLOAT, VIEW);
             expect(
@@ -101,13 +90,6 @@ describe("placeBubble：气泡必须落在编辑区内", () => {
     });
 });
 
-/**
- * 接线（latexFeature）——F4 例外，理由在 latexBubbleBounds.test.ts 文件头：
- * vendor/latexFeature.ts 是 vendored 上游实现（保持与上游逐节对照），floating-ui 中间件
- * 只在真实布局引擎里执行，jsdom 无法对「气泡是否真的被 clamp」做行为断言，因此这里锁
- * 接线结构（不用 flip/shift、placeBubble 委托、fixed 策略）而非坐标结果——坐标结果由
- * 上面的 placeBubble 纯函数用例覆盖。
- */
 describe("接线（latexFeature）", () => {
     const latexSrc = readFileSync(
         path.resolve(process.cwd(), "webview/vendor/latexFeature.ts"),
@@ -120,10 +102,10 @@ describe("接线（latexFeature）", () => {
         const list = m![1];
 
         expect(list).toContain("placeInsideContentViewport()");
-        // flip/shift 会让气泡翻到页面顶部压住工具栏，必须不用
+
         expect(list).not.toContain("flip(");
         expect(list).not.toContain("shift(");
-        // clamp 必须在 size 之后（要用最终尺寸算右边界）
+
         expect(list.indexOf("size(")).toBeLessThan(
             list.indexOf("placeInsideContentViewport()"),
         );
@@ -138,20 +120,18 @@ describe("接线（latexFeature）", () => {
         expect(fn).toContain("placeBubble(");
         expect(fn).toContain("rects.reference");
         expect(fn).toContain("rects.floating");
-        // 编辑区左边界来自 body 的 padding-left（TOC 占位）
+
         expect(fn).toContain("getComputedStyle(document.body)");
         expect(fn).toContain("paddingLeft");
-        // 编辑区顶部来自固定工具栏底边
+
         expect(fn).toContain("milkdown-top-bar");
     });
 
     it("气泡应该 留在 .milkdown 内（继承 --crepe-* 变量；fixed 不需要挪到 body）", () => {
-        // 挪到 body 会丢失 .milkdown 上定义的 --crepe-color-surface / --crepe-font-code
-        // 等变量，按钮与图标样式崩掉（真机回归）。
+
         expect(latexSrc).not.toContain("document.body.appendChild(content)");
         expect(latexSrc).not.toMatch(/root:\s*document\.body/);
-        // strategy 仍是 fixed：.milkdown 只有 position:relative，无 transform/filter，
-        // 不会让 fixed 退化
+
         expect(latexSrc).toMatch(/strategy:\s*"fixed"/);
     });
 
@@ -185,22 +165,12 @@ describe("样式（latex.css）", () => {
     });
 
     it("选择器 应该 带 .milkdown 前缀（气泡留在 .milkdown 内以继承 --crepe-* 变量）", () => {
-        // 挪到 body 会继承不到 --crepe-color-surface / --crepe-font-code，按钮与
-        // 图标样式崩掉（真机回归：确认按钮变白底方块）。
+
         expect(latexCss).toMatch(/\.milkdown \.milkdown-latex-inline-edit\s*\{/);
     });
 
 });
 
-
-
-/**
- * 外观（latex.css）——CSS 结构断言保留说明（F4 例外）：
- * 这一组要求 latex.css 的气泡外观逐项镜像 style.css 里 link 弹层的覆盖值（上游 crepe 值
- * 被 owner 判定不对）。jsdom 的 getComputedStyle 无法跨两张样式表比较「同一属性是否取到
- * 同一个变量/数值」，也不能验证伪元素与 !important 级联，所以按选择器解析出声明体后逐项
- * 比对是这里唯一诚实可行的检查；规则本身在 vendored 外观文件里，改动风险低。
- */
 describe("外观必须与链接/文件引用弹层完全一致（镜像 style.css 的覆盖值）", () => {
     const latexCssNoComments = latexCss.replace(/\/\*[\s\S]*?\*\//g, "");
     const styleCss = readFileSync(
@@ -243,9 +213,9 @@ describe("外观必须与链接/文件引用弹层完全一致（镜像 style.cs
         expect(body).toMatch(/border-radius:\s*3px/);
         expect(body).toMatch(/background:\s*var\(--vscode-input-background/);
         expect(body).toMatch(/border:\s*1px solid var\(--vscode-input-border/);
-        // 字号必须 !important：style.css 的全局 !important 会命中气泡内 ProseMirror
+
         expect(body).toMatch(/font-size:\s*12px\s*!important/);
-        // padding 同理，正文是 padding:0 !important
+
         expect(body).toMatch(/padding:\s*0\s+6px\s*!important/);
     });
 

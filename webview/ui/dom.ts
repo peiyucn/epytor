@@ -1,9 +1,5 @@
 import { applyTooltip } from '@/ui/tooltip';
 
-/**
- * Generic button factory.
- * onClick is wrapped with e.preventDefault() + e.stopPropagation().
- */
 export function createButton(options: {
     className: string;
     icon?: string;
@@ -36,20 +32,12 @@ export function createButton(options: {
     return btn;
 }
 
-/**
- * Generic separator factory.
- * Replaces the per-component `sep()` / `sSep()` / `makeSep()` copies.
- */
 export function createSeparator(className: string, tag: 'div' | 'span' = 'div'): HTMLElement {
     const el = document.createElement(tag);
     el.className = className;
     return el;
 }
 
-/**
- * Bind Enter/Escape handling to an input.
- * Takes care of isComposing, stopPropagation and preventDefault.
- */
 export function setupInputKeyboard(
     input: HTMLInputElement,
     onEnter: () => void,

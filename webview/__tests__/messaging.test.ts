@@ -1,11 +1,7 @@
-/**
- * messaging.ts 测试：验证消息发送函数是否以正确格式调用 postMessage。
- * acquireVsCodeApi 已在 setup.ts 中注入到 globalThis。
- */
+
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { mockVscodeApi } from "./setup";
 
-// 延迟导入，确保 acquireVsCodeApi 在 setup.ts 中已完成注入
 const {
     notifyReady,
     notifyMarkDirty,

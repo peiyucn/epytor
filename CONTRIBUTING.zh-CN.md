@@ -42,15 +42,13 @@ pnpm run package   # 打包输出 releases/*.vsix
 - **通信**：WebView ↔ Extension 只通过 `webview/messaging.ts`
 - **CSS**：必须使用 `--vscode-*` 变量以适配亮/暗主题
 - **Git commit**：英文类型前缀 + 中文描述（例：`feat: 新增功能`）
-- **测试**：`pnpm test` 必须在 push 前通过（CI 在每次 push/PR 到 `main`/`dev` 时自动运行，见 `.github/workflows/ci.yml`）
+- **测试**：`pnpm run verify` 必须在 push 前通过（CI 在每次 push/PR 到 `main` 时自动运行，见 `.github/workflows/ci.yml`）
 
 ## 提交变更
 
-1. 从 `dev` 分支创建新分支：`git checkout -b feature/your-feature`
-2. 编写代码、测试，执行 `pnpm test` + `pnpm build` 验证
-3. 向 **`dev`** 分支发起 Pull Request
-
-> **说明：** `dev` 是活跃开发分支，`main` 是稳定发布分支——请勿向 `main` 发起 PR。
+1. 从 `main` 分支创建新分支：`git checkout -b feature/your-feature`
+2. 编写代码、测试，执行 `pnpm run verify` 验证
+3. 向 **`main`** 分支发起 Pull Request
 
 ## 报告 Bug
 

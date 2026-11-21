@@ -22,7 +22,6 @@ async function mount(markdown: string): Promise<HTMLElement> {
     return root;
 }
 
-/** 模拟输入法一次组合：先插入拼音占位，再替换成候选词（两步，同一组合 ID） */
 function compose(view: EditorView, pinyin: string, hanzi: string, compositionId: number): void {
     const at = Selection.atEnd(view.state.doc).from;
     view.dispatch(
@@ -85,9 +84,7 @@ describe("撤销粒度", () => {
         const view = getEditorView()!;
         compose(view, "nihao", "你好", 1);
         expect(view.state.doc.textContent).toBe("hello你好");
-        // 修复前：组合的多步撤销里，第一步的映射位置越过最终文档末尾，
-        // listSpreadNormalizePlugin 的 appendTransaction 抛 TypeError，
-        // 整条撤销事务被丢弃 —— 表现为 Ctrl+Z 与顶栏撤销按钮双双「没反应」。
+
         expect(doUndo(view)).toBe(true);
         expect(view.state.doc.textContent).toBe("hello");
         destroyEditor(); root.remove();

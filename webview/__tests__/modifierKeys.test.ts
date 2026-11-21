@@ -1,9 +1,4 @@
-/**
- * `ui/modifierKeys`：Ctrl/Meta 按住状态的单一来源。
- *
- * 原先 index.ts（body class）与 pathLink（cmdHeld）各维护一份，收敛后 pathLink 的
- * 悬停高亮必须跟随共享状态；本文件同时覆盖状态机本身与 pathLink 的接线。
- */
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
     installModifierKeyTracking,
@@ -20,7 +15,6 @@ function keyUp(init: KeyboardEventInit): void {
     document.dispatchEvent(new KeyboardEvent("keyup", init));
 }
 
-/** 状态是页面级单例：每个用例结束把状态复位，避免互相污染 */
 function resetModifierState(): void {
     keyUp({ key: "Control" });
 }
@@ -86,7 +80,7 @@ describe("modifierKeys 状态机", () => {
         const unsubscribe = onModifierChange(listener);
 
         keyDown({ key: "Control", ctrlKey: true });
-        keyDown({ key: "a", ctrlKey: true }); // 状态未变：不重复通知
+        keyDown({ key: "a", ctrlKey: true });
         keyUp({ key: "Control" });
 
         expect(listener.mock.calls.map((call) => call[0])).toEqual([true, false]);

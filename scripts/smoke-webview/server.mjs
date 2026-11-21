@@ -1,6 +1,5 @@
-// Tiny static server for the webview smoke harness (no dependencies).
-// Serves harness.html and the built `dist/` bundle from the repo root.
-// Binds an ephemeral port by default and prints `PORT=<n>` so the driver can find it.
+
+
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
@@ -10,7 +9,6 @@ const REPO_ROOT = path.resolve(import.meta.dirname, "../..");
 const DIST_ROOT = path.resolve(REPO_ROOT, "dist");
 const HARNESS = path.join(import.meta.dirname, "harness.html");
 
-/** Resolve a /dist/ URL below DIST_ROOT, or null when it would escape the folder. */
 function resolveDistPath(urlPath) {
     const resolved = path.resolve(DIST_ROOT, urlPath.slice("/dist/".length));
     if (resolved !== DIST_ROOT && !resolved.startsWith(DIST_ROOT + path.sep)) { return null; }

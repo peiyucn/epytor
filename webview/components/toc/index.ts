@@ -16,16 +16,14 @@ interface HeadingEntry {
     level: number;
     text: string;
     pos: number;
-    /** Stable fold key (`level:text#nth`); `pos` drifts on every edit. */
+
     key: string;
 }
 
-/** Regression: `level:text` alone merged same-name headings; pos keys broke on edit drift. */
 export function headingFoldKey(level: number, text: string, nth: number): string {
     return `${level}:${text}#${nth}`;
 }
 
-/** Assign fold keys by occurrence order (pure; test seam). */
 export function assignFoldKeys<T extends { level: number; text: string }>(headings: T[]): (T & { key: string })[] {
     const seen = new Map<string, number>();
     return headings.map((h) => {
@@ -44,26 +42,17 @@ const TAB_DRAG_THRESHOLD_PX = 3;
 const ITEM_INDENT_STEP_PX = 12;
 const ITEM_INDENT_BASE_PX = 8;
 
-/**
- * Auto-show needs the editor column plus this margin (default 900 + 100px).
- *
- * Measured against the viewport, never against the free space beside the column: opening the
- * panel shrinks that space and would immediately close it again (feedback loop).
- */
 export const TOC_AUTO_SHOW_EXTRA_PX = 100;
 
-/** Pure predicate: is the viewport wide enough to auto-open? */
 export function shouldAutoShowToc(viewportWidth: number, editorMaxWidth: number): boolean {
     return viewportWidth >= editorMaxWidth + TOC_AUTO_SHOW_EXTRA_PX;
 }
 
-/** Dismissed wins over width; a manual open clears that preference but keeps the width rule. */
 export function resolveTocOpen(dismissed: boolean, viewportWidth: number, editorMaxWidth: number): boolean {
     if (dismissed) { return false; }
     return shouldAutoShowToc(viewportWidth, editorMaxWidth);
 }
 
-/** Every heading level, indexed like folding/sticky does (TOC lists all levels). */
 function getHeadings(view: EditorView): HeadingEntry[] {
     return assignFoldKeys(
         buildHeadingIndex(view.state.doc).map((entry) => ({
@@ -74,7 +63,6 @@ function getHeadings(view: EditorView): HeadingEntry[] {
     );
 }
 
-/** `nodeDOM` is exact; fall back to `domAtPos` + ancestor walk when the node owns no DOM. */
 function findHeadingElement(view: EditorView, pos: number): HTMLElement | null {
     const dom = view.nodeDOM(pos) as HTMLElement | null;
     if (dom?.matches("h1,h2,h3,h4,h5,h6")) return dom;
@@ -101,7 +89,6 @@ function isHeadingVisible(headings: HeadingEntry[], index: number, collapsed: Se
     return true;
 }
 
-/** Editor page width in px, written by initToc's owner on config changes. */
 let _editorMaxWidth = DEFAULT_EDITOR_MAX_WIDTH;
 
 export function setTocEditorMaxWidth(width: number): void {
@@ -113,45 +100,25 @@ export function initToc(getEditorView: () => EditorView | null): {
     toggle: () => void;
     refresh: () => void;
     show: () => void;
-    /** Detach this instance's listeners (idempotent). */
+
     dispose: () => void;
 } {
     const panel = document.createElement("div");
     panel.className = "toc-panel";
 
-    /** List item → heading DOM element (filled on refresh; used by click-to-jump). */
     const headingEls = new WeakMap<HTMLElement, HTMLElement>();
 
-    /** Heading pos → list item (active highlight follows these). */
     const itemByPos = new Map<number, HTMLElement>();
 
-    /**
-     * List item → its *current* heading pos, rebound together with `itemByPos`; clicking reads
-     * it in O(1). Not `posAtDOM`: that is "node start + 1" and has caused two off-by-one bugs.
-     */
     const posByItem = new Map<HTMLElement, number>();
 
-    /**
-     * Rendered signature (visible identity + fold state, no positions) and its DOM items.
-     * Typing only shifts positions, so an unchanged signature means no rebuild — the regression
-     * was `innerHTML = ""` on every typing pause, which made the list flicker.
-     * Initial `null`, not `""`: an empty document also has an empty signature and must still
-     * render the "No headings" placeholder.
-     */
     let renderedSignature: string | null = null;
     let renderedItems: HTMLElement[] = [];
 
-    /**
-     * Highlight the active section and scroll it into view.
-     * Only the list's own scrollTop moves; `scrollIntoView` would also scroll the page.
-     */
     function applyActiveHeading(pos: number | null): void {
-        // Positions drift on input while the sticky plugin publishes the *new* pos; rebind
-        // instead of clearing the highlight. Not a hot path: it only publishes real changes.
+
         if (pos !== null && !itemByPos.has(pos)) { rebindFromDocument(); }
 
-        // The click pin outranks geometry (short documents cannot express "which item was
-        // clicked"); any further user interaction releases it. See outline/headingHighlight.ts.
         const resolved = resolveHighlight(pinnedHighlight, pos, getUserInteractionEpoch());
         pinnedHighlight = resolved.pin;
         const effective = resolved.pos;
@@ -168,15 +135,8 @@ export function initToc(getEditorView: () => EditorView | null): {
         list.scrollTop += itemRect.top - listRect.top - (listRect.height - itemRect.height) / 2;
     }
 
-    /** Click pin (null = follow scrolling); released by `resolveHighlight` on interaction. */
     let pinnedHighlight: HeadingHighlightPin | null = null;
 
-    /**
-     * Release the pin when the user interacts again. The lazy release inside
-     * `applyActiveHeading` is not enough: the plugin only publishes a *change*, which never
-     * happens in short documents. Bubble phase: a click on an item bumps the epoch first, so
-     * the pin created with the new epoch still matches and does not release itself.
-     */
     function releasePinOnInteraction(): void {
         if (pinnedHighlight === null) { return; }
         if (getUserInteractionEpoch() === pinnedHighlight.epoch) { return; }
@@ -184,13 +144,12 @@ export function initToc(getEditorView: () => EditorView | null): {
         applyActiveHeading(getActiveHeadingPos());
     }
 
-    /** Recompute item ↔ pos bindings from the current document (DOM untouched; drift fallback). */
     function rebindFromDocument(): void {
         const view = getEditorView();
         if (!view) return;
         const headings = getHeadings(view);
         const visible = visibleHeadingIndices(headings);
-        // Structure differs ⇒ refresh has not landed yet; rebinding now would mismatch.
+
         if (renderSignature(headings, visible) !== renderedSignature) { return; }
         bindPositions(view, headings, visible);
     }
@@ -200,7 +159,7 @@ export function initToc(getEditorView: () => EditorView | null): {
 
     const headerTitle = document.createElement("span");
     headerTitle.className = "toc-header-title";
-    // Short label: the panel is narrow, so "Contents" (localized) fits.
+
     headerTitle.textContent = t("Contents");
     header.appendChild(headerTitle);
 
@@ -210,21 +169,15 @@ export function initToc(getEditorView: () => EditorView | null): {
     panel.appendChild(header);
     panel.appendChild(list);
 
-    // Fixed tab outside the panel; JS keeps it on the panel's right edge.
     const tabEl = document.createElement("button");
     tabEl.className = "toc-toggle-tab";
     tabEl.tabIndex = -1;
     document.body.appendChild(tabEl);
 
-    /**
-     * Two states only. `dismissedByUser` is the persisted "user closed it" preference and
-     * outranks width; opening clears it. See docs/specs/2026-09-12-toc-two-state.md.
-     */
     let isOpen = false;
     let dismissedByUser = false;
     let panelWidth = TOC_WIDTH;
 
-    // Restore close preference and width (`tocPinned` is retired and no longer read).
     const savedState = getWebviewState();
     if (savedState?.tocDismissed === true) { dismissedByUser = true; }
     if (savedState?.tocWidth && typeof savedState.tocWidth === "number") {
@@ -232,13 +185,10 @@ export function initToc(getEditorView: () => EditorView | null): {
     }
     panel.style.width = `${panelWidth}px`;
 
-    // Fold keys are stable identities (level:text#nth). Pos keys misfolded across documents
-    // and drifted on edit; level:text alone made duplicate headings share one toggle.
     const collapsedHeadings = new Set<string>();
     if (Array.isArray(savedState?.tocCollapsed)) {
         for (const key of savedState.tocCollapsed) {
-            // Accept current string keys only; legacy numeric/level:text keys are dropped once
-            // (they can never match again and would be re-persisted forever).
+
             if (typeof key === "string" && key.includes("#")) collapsedHeadings.add(key);
         }
     }
@@ -252,18 +202,15 @@ export function initToc(getEditorView: () => EditorView | null): {
         });
     }
 
-    /** Fold marker; part of the render signature so arrow flips trigger a rebuild. */
     function foldStateOf(headings: HeadingEntry[], idx: number): string {
         if (!hasChildren(headings, idx)) { return "-"; }
         return collapsedHeadings.has(headings[idx].key) ? "closed" : "open";
     }
 
-    /** Visible identity + fold state, deliberately position-free. */
     function renderSignature(headings: HeadingEntry[], visible: number[]): string {
         return visible.map((idx) => `${headings[idx].key}|${foldStateOf(headings, idx)}`).join("\n");
     }
 
-    /** Indexes of headings currently visible under the collapsed set. */
     function visibleHeadingIndices(headings: HeadingEntry[]): number[] {
         const visible: number[] = [];
         for (let idx = 0; idx < headings.length; idx++) {
@@ -272,7 +219,6 @@ export function initToc(getEditorView: () => EditorView | null): {
         return visible;
     }
 
-    /** Build one item; only called on structural changes. */
     function createItem(headings: HeadingEntry[], idx: number): HTMLElement {
         const h = headings[idx];
         const item = document.createElement("div");
@@ -297,7 +243,7 @@ export function initToc(getEditorView: () => EditorView | null): {
                 refresh();
             });
         } else {
-            // Leaf placeholder dash: the row itself jumps, so no "disabled" cursor.
+
             toggle.textContent = "–";
         }
         item.appendChild(toggle);
@@ -309,45 +255,35 @@ export function initToc(getEditorView: () => EditorView | null): {
 
         item.appendChild(label);
 
-        // Bind the jump to the whole row: the label is only the text box, so clicks on the
-        // padding were dead even though hover highlighted the full row. The arrow stops
-        // propagation itself, so it never doubles up here.
         item.addEventListener("mousedown", (e) => {
             e.preventDefault();
             e.stopPropagation();
             const v = getEditorView();
             if (!v) return;
             try {
-                // Pos comes from the element recorded at refresh time: O(1), and correct for
-                // duplicate titles (the former level+text lookup always hit the first one).
+
                 const el = headingEls.get(item);
                 if (!el || !v.dom.contains(el)) return;
                 const targetPos = posByItem.get(item);
                 if (targetPos === undefined) return;
                 const topbarH = topbarHeight();
-                // Hide the sticky bar until the next interaction so the target shows normally.
+
                 hideStickyUntilNextInteraction();
-                // Land below the reading line, otherwise the highlight stays on the previous item.
+
                 const top = headingScrollTop(
                     el.getBoundingClientRect().top + window.scrollY,
                     topbarH,
                 );
-                // Pin the clicked item: short documents cannot scroll, so geometry alone always
-                // reports the last item. Epoch read after the click, else it releases itself.
+
                 pinnedHighlight = pinHeadingHighlight(targetPos, getUserInteractionEpoch());
                 applyActiveHeading(targetPos);
                 window.scrollTo({ top, behavior: "smooth" });
-            } catch { /* heading element already detached; skip this jump */ }
+            } catch {}
         });
 
         return item;
     }
 
-    /**
-     * Rebind item ↔ pos from the current document without touching the DOM.
-     * Positions are always re-read: typing shifts every heading, stale bindings point at the
-     * wrong section.
-     */
     function bindPositions(view: EditorView, headings: HeadingEntry[], visible: number[]): void {
         itemByPos.clear();
         posByItem.clear();
@@ -369,19 +305,16 @@ export function initToc(getEditorView: () => EditorView | null): {
         const visible = visibleHeadingIndices(headings);
         const signature = renderSignature(headings, visible);
 
-        // Same structure (typing): leave the DOM alone and only rebind positions, so list
-        // scroll, hover and tooltips are not interrupted.
         if (signature === renderedSignature) {
             bindPositions(view, headings, visible);
             applyActiveHeading(getActiveHeadingPos());
             return;
         }
 
-        // Structure changed (rename / add / remove / level / fold): rebuild the list.
         renderedSignature = signature;
         list.innerHTML = "";
         renderedItems = [];
-        // headingEls is a WeakMap: dropped items become collectable without clearing.
+
         if (visible.length === 0) {
             const empty = document.createElement("div");
             empty.className = "toc-empty";
@@ -402,7 +335,7 @@ export function initToc(getEditorView: () => EditorView | null): {
     function syncBodyPadding(): void {
         document.body.classList.toggle("toc-open", isOpen);
         const topbar = document.querySelector<HTMLElement>(".milkdown-top-bar");
-        // The panel always pushes the body (no overlay mode); narrow windows are the user's call.
+
         if (isOpen) {
             document.body.style.paddingLeft = `${panelWidth}px`;
             if (topbar) topbar.style.paddingLeft = `${panelWidth}px`;
@@ -412,10 +345,6 @@ export function initToc(getEditorView: () => EditorView | null): {
         }
     }
 
-    /**
-     * Keep the tab on the panel's right edge. `transform`, not `left`: the panel opens with a
-     * compositor-only transform, so a layout-property tab visibly lags behind it.
-     */
     function updateTabPos(): void {
         tabEl.style.transform = isOpen ? `translateX(${panelWidth}px)` : 'translateX(0px)';
         tabEl.textContent = isOpen ? "‹" : "›";
@@ -423,7 +352,6 @@ export function initToc(getEditorView: () => EditorView | null): {
         applyTooltip(tabEl, isOpen ? t("Collapse") : t("Expand"), { placement: "above" });
     }
 
-    /** Close; `byUser` records the "user closed it" preference (persisted, outranks width). */
     function close(byUser: boolean): void {
         isOpen = false;
         panel.classList.remove("toc-panel--open");
@@ -435,7 +363,6 @@ export function initToc(getEditorView: () => EditorView | null): {
         syncBodyPadding();
     }
 
-    /** Open; a user open clears the close preference (width then decides whether it stays). */
     function open(byUser: boolean): void {
         isOpen = true;
         if (byUser && dismissedByUser) {
@@ -456,7 +383,6 @@ export function initToc(getEditorView: () => EditorView | null): {
         }
     }
 
-    // Closed: click toggles. Open: click toggles, drag resizes.
     let tabDragStart = 0;
     let tabDragWidth = 0;
     let tabDragging = false;
@@ -493,7 +419,7 @@ export function initToc(getEditorView: () => EditorView | null): {
     });
 
     function checkAutoShow(): void {
-        // Collapsed host viewport is a fake 300×150; measuring there flashes the panel on return.
+
         if (shouldSkipViewportWork()) return;
         const shouldOpen = resolveTocOpen(dismissedByUser, document.documentElement.clientWidth, _editorMaxWidth);
         if (shouldOpen && !isOpen) {
@@ -505,21 +431,17 @@ export function initToc(getEditorView: () => EditorView | null): {
         }
     }
 
-    // Panel geometry (top/height) is declared statically in toc.css, aligned with the top bar.
-
     updateTabPos();
     requestAnimationFrame(() => {
         checkAutoShow();
-        // First frame: sync the current section (the subscription only covers changes).
+
         applyActiveHeading(getActiveHeadingPos());
     });
 
     window.addEventListener("resize", checkAutoShow);
-    // Follow the active heading (same source as the sticky bar's innermost line).
+
     const unsubscribeActiveHeading = onActiveHeadingChange(applyActiveHeading);
 
-    // Release the click pin on the next interaction; the event set is the single source of
-    // truth in userInteraction (regression F4).
     window.addEventListener("scroll", releasePinOnInteraction, { passive: true });
     for (const type of USER_INTERACTION_EVENT_TYPES) {
         window.addEventListener(type, releasePinOnInteraction, { passive: true });
@@ -530,13 +452,6 @@ export function initToc(getEditorView: () => EditorView | null): {
         tabEl.style.visibility = 'visible';
     }
 
-    /**
-     * Detach every listener this instance registered.
-     *
-     * The webview normally lives as long as the page, so this is not a leak fix — it exists so a
-     * second instance (tests, or a future per-document remount) starts clean instead of stacking
-     * listeners on top of the previous one (regression: tocRefresh had to work around it).
-     */
     let disposed = false;
     function dispose(): void {
         if (disposed) { return; }

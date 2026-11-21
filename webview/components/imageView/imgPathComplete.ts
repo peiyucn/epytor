@@ -16,13 +16,11 @@ const IMAGE_BLUR_CLOSE_DELAY_MS = 150;
 
 const _pendingResolve = new Map<string, (uri: string) => void>();
 
-/** Called by index.ts when an imagePathResolved message arrives. */
 export function dispatchImagePathResolved(id: string, webviewUri: string): void {
     const cb = _pendingResolve.get(id);
     if (cb) { _pendingResolve.delete(id); cb(webviewUri); }
 }
 
-/** Resolve a relPath to a webviewUri (async; falls back to the input after 3s). */
 export function resolveToWebviewUri(relPath: string): Promise<string> {
     return new Promise((resolve) => {
         const id = `rip_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 5)}`;
@@ -38,11 +36,6 @@ export function resolveToWebviewUri(relPath: string): Promise<string> {
     });
 }
 
-/**
- * Attach image-path autocomplete to an input.
- * `onEnter` / `onEscape` fire when the dropdown is closed (i.e. confirm / cancel).
- * Returns a cleanup function that removes every listener and closes the dropdown.
- */
 export function attachImgPathComplete(
     input: HTMLInputElement,
     onEnter?: () => void,
@@ -50,7 +43,7 @@ export function attachImgPathComplete(
 ): () => void {
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     let skipDatasetClear = false;
-    /** Most recent suggestion request; stale responses must not replace the current dropdown. */
+
     let latestSuggestionId = "";
 
     const dropdown = createPathDropdown<PathSuggestionItem>({
@@ -81,7 +74,7 @@ export function attachImgPathComplete(
         input.focus();
 
         if (item.isDir) {
-            // The new value ends with `/`: the debounced flow will not fire on its own.
+
             retriggerCompletionAfterDirectoryPick(dropdown, triggerSuggest);
         } else {
             dropdown.close();
@@ -91,20 +84,18 @@ export function attachImgPathComplete(
     function triggerSuggest(): void {
         const query = input.value.trim();
         if (!query || !PATH_PREFIX_REGEX.test(query)) {
-            // Invalidate any in-flight response (the query no longer matches) so it cannot revive.
+
             latestSuggestionId = "";
             dropdown.close();
             return;
         }
 
-        // Registration/timeout live in pathSuggestionRequests (P4: hand-rolled Map+setTimeout).
         const handle = beginPathSuggestionRequest();
         latestSuggestionId = handle.id;
         handle.promise.then((items) => {
-            // Stale guard: with large directories B can be requested after A and A may answer
-            // last, overwriting B's dropdown.
+
             if (teardown.disposed || handle.id !== latestSuggestionId) { return; }
-            // Second guard: refuse to render when the input left the document (dialog closed).
+
             if (!input.isConnected) return;
             const filtered = items.filter(item => item.isDir || item.webviewUri !== undefined);
             if (filtered.length === 0) return;
@@ -114,12 +105,12 @@ export function attachImgPathComplete(
                 filtered,
                 `${rect.width}px`,
             );
-        }).catch(() => { /* timeout/cancel: give up silently, never revive the dropdown */ });
+        }).catch(() => {  });
         notifyGetPathSuggestions(handle.id, query);
     }
 
     function onInput(): void {
-        // The first input after autocomplete keeps the dataset (dataset means "manually typed").
+
         if (skipDatasetClear) {
             skipDatasetClear = false;
         } else {
@@ -158,7 +149,7 @@ export function attachImgPathComplete(
         }
 
         if (!dropdown.isOpen()) { return; }
-        dropdown.handleKeydown(e); // arrows / Tab
+        dropdown.handleKeydown(e);
     }
 
     function onDocMousedown(e: MouseEvent): void {
@@ -168,7 +159,7 @@ export function attachImgPathComplete(
     }
 
     function onBlur(): void {
-        // Delayed close so the mousedown-driven applySelection wins.
+
         setTimeout(() => {
             if (!teardown.disposed) { dropdown.close(); }
         }, IMAGE_BLUR_CLOSE_DELAY_MS);

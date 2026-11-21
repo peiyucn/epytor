@@ -31,14 +31,12 @@ describe("frontmatterPanel 组件", () => {
         const onChangeOld = vi.fn();
         const onChangeNew = vi.fn();
 
-        // 旧面板：编辑后 300ms 内被替换
         const oldHandle = createFrontmatterPanel("---\ntitle: A\n---\n", onChangeOld)!;
         document.body.appendChild(oldHandle.panel);
         const oldInput = oldHandle.panel.querySelector<HTMLInputElement>(".fm-val-input")!;
         oldInput.value = "STALE";
         oldInput.dispatchEvent(new Event("input"));
 
-        // revert：替换面板（先 dispose 旧的）
         oldHandle.dispose();
         const newHandle = createFrontmatterPanel("---\ntitle: A\n---\n", onChangeNew)!;
         document.body.appendChild(newHandle.panel);
@@ -105,7 +103,6 @@ describe("frontmatterPanel 组件", () => {
         newKey.value = "date";
         newVal.value = "2026-09-07";
 
-        // 失焦立即提交（防抖窗口内切走不丢改动）
         newVal.dispatchEvent(new FocusEvent("blur"));
 
         expect(onChange).toHaveBeenCalledWith("---\ntitle: A\ndate: 2026-09-07\n---\n");
@@ -117,17 +114,14 @@ describe("frontmatterPanel 组件", () => {
         const handle = createFrontmatterPanel(src, onChange)!;
         document.body.appendChild(handle.panel);
 
-        // 只有顶层 kv 行渲染为可编辑行（title + tags），列表行不渲染
         expect(handle.panel.querySelectorAll("tr.fm-row")).toHaveLength(2);
 
-        // 编辑 title：raw 行必须原位保留
         const titleVal = handle.panel.querySelector<HTMLInputElement>(".fm-val-input")!;
         titleVal.value = "Y";
         titleVal.dispatchEvent(new Event("input"));
         vi.advanceTimersByTime(300);
         expect(onChange).toHaveBeenLastCalledWith("---\ntitle: Y\ntags:\n  - a\n  - b\n---\n");
 
-        // 删除 title 行：tags 行与列表行必须保留
         const delBtn = handle.panel.querySelector<HTMLButtonElement>(".fm-del-btn")!;
         delBtn.click();
         vi.advanceTimersByTime(300);

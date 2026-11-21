@@ -1,9 +1,4 @@
-/**
- * 表格换行往返回归测试（闭环方案，源码形态 <br>）：
- * Extension 加载时把表格内 <br> 转为 &#10; 实体再进解析器（convertTableBrForDisplay），
- * 渲染为换行；保存序列化回 <br>。覆盖手测反馈「编辑后进源码正常、回编辑页换行失效」
- * ——根因：remark-gfm 解析层丢弃 <br>。
- */
+
 import { afterEach, describe, expect, it } from "vitest";
 import { CrepeBuilder } from "@milkdown/crepe";
 import { editorViewCtx, remarkStringifyOptionsCtx } from "@milkdown/kit/core";
@@ -15,14 +10,14 @@ import { withTableBreakHandler } from "../markdown/markdownSerializer";
 
 if (typeof (window as unknown as Record<string, unknown>).ResizeObserver === "undefined") {
     (window as unknown as Record<string, unknown>).ResizeObserver = class {
-        observe() { /* noop */ } unobserve() { /* noop */ } disconnect() { /* noop */ }
+        observe() {  } unobserve() {  } disconnect() {  }
     };
 }
 if (typeof window.matchMedia === "undefined") {
     window.matchMedia = (() => ({
         matches: false, media: "", onchange: null,
-        addListener() { /* noop */ }, removeListener() { /* noop */ },
-        addEventListener() { /* noop */ }, removeEventListener() { /* noop */ },
+        addListener() {  }, removeListener() {  },
+        addEventListener() {  }, removeEventListener() {  },
         dispatchEvent() { return false; },
     })) as typeof window.matchMedia;
 }
@@ -49,7 +44,7 @@ function setCursor(view: EditorView, pos: number): void {
 
 function pressShiftEnter(view: EditorView): boolean {
     let handled = false;
-    const event = { key: "Enter", shiftKey: true, preventDefault() { /* noop */ }, stopPropagation() { /* noop */ } } as unknown as KeyboardEvent;
+    const event = { key: "Enter", shiftKey: true, preventDefault() {  }, stopPropagation() {  } } as unknown as KeyboardEvent;
     view.someProp("handleKeyDown", (f) => {
         if (f(view, event)) { handled = true; return true; }
         return false;
@@ -67,7 +62,7 @@ describe("表格换行往返（<br> 闭环）", () => {
         view.state.doc.descendants((node) => { if (node.type.name === "hardbreak") hb++; });
         expect(hb).toBe(1);
         expect(view.dom.querySelectorAll('span[data-type="hardbreak"][data-is-inline="true"]').length).toBe(1);
-        // 序列化输出 GFM 标准 <br>（源码形态），加载时再由 Extension 转回实体
+
         expect(editor.action(getMarkdown())).toContain("x<br>z");
     });
 

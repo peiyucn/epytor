@@ -15,7 +15,6 @@ const PATH_ACTIVE_CLASS = "path-complete-item--active";
 
 type SuggestionItem = PathSuggestionItem;
 
-/** Current inline <code> at the caret (excludes pre>code and a>code). */
 function getActiveInlineCode(): HTMLElement | null {
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) { return null; }
@@ -30,7 +29,6 @@ function getActiveInlineCode(): HTMLElement | null {
     return code as HTMLElement;
 }
 
-/** InlineCode mark range under the selection (null when the caret is not in such a mark). */
 function getCodeNodeRangeFromSelection(view: EditorView): { from: number; to: number } | null {
     const { state } = view;
     const codeMark = state.schema.marks["inlineCode"];
@@ -53,11 +51,6 @@ function getCodeNodeRangeFromSelection(view: EditorView): { from: number; to: nu
     return from !== undefined && to !== undefined ? { from, to } : null;
 }
 
-/**
- * Inline-code path completion. Page-lifecycle singleton: the webview calls it once per page,
- * so no rebuild path tears it down. The returned detach exists for tests and keeps the
- * listener/timer cleanup contract explicit.
- */
 export function initPathComplete(getEditorViewFn: () => EditorView | null): () => void {
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     let savedRange: { from: number; to: number } | null = null;
@@ -110,7 +103,6 @@ export function initPathComplete(getEditorViewFn: () => EditorView | null): () =
             return;
         }
 
-        // Request registration and timeout cleanup live in pathSuggestionRequests (P4: hand-rolled Map+setTimeout).
         const handle = beginPathSuggestionRequest();
         handle.promise.then((items) => {
             const currentCode = getActiveInlineCode();
@@ -122,11 +114,10 @@ export function initPathComplete(getEditorViewFn: () => EditorView | null): () =
                 { left: rect.left + window.scrollX, top: rect.bottom + window.scrollY + 2 },
                 items,
             );
-        }).catch(() => { /* timeout/cancel: give up silently, never revive the dropdown */ });
+        }).catch(() => {  });
         notifyGetPathSuggestions(handle.id, query);
     }
 
-    // Capture phase: the dropdown must see keys before the editor.
     function onKeydown(e: KeyboardEvent): void {
         dropdown.handleKeydown(e);
     }

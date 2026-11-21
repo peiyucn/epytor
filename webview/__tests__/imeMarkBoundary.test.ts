@@ -1,26 +1,18 @@
-/**
- * Typing at the boundary of an inline mark (2026-11-01 hand-test).
- *
- * Regression: clicking just past **bold** or pressing End resolves the DOM caret to the
- * end of the strong text. An IME-composed full-width colon then either joined the bold mark
- * or the caret ended one character past the inserted colon. The fix makes strong/emphasis/
- * strikethrough marks non-inclusive, so the boundary belongs outside the mark and the
- * composed punctuation is plain; typing inside the marked text keeps the mark.
- */
+
 import { afterEach, describe, expect, it } from "vitest";
 import { TextSelection } from "@milkdown/kit/prose/state";
 import { createEditor, destroyEditor, getEditorView } from "../editor";
 
 if (typeof (window as unknown as Record<string, unknown>).ResizeObserver === "undefined") {
     (window as unknown as Record<string, unknown>).ResizeObserver = class {
-        observe() { /* noop */ } unobserve() { /* noop */ } disconnect() { /* noop */ }
+        observe() {  } unobserve() {  } disconnect() {  }
     };
 }
 if (typeof window.matchMedia === "undefined") {
     window.matchMedia = (() => ({
         matches: false, media: "", onchange: null,
-        addListener() { /* noop */ }, removeListener() { /* noop */ },
-        addEventListener() { /* noop */ }, removeEventListener() { /* noop */ },
+        addListener() {  }, removeListener() {  },
+        addEventListener() {  }, removeEventListener() {  },
         dispatchEvent() { return false; },
     })) as typeof window.matchMedia;
 }
@@ -33,7 +25,7 @@ if (typeof window.matchMedia === "undefined") {
 async function openEditor(markdown: string): Promise<void> {
     const root = document.createElement("div");
     document.body.appendChild(root);
-    await createEditor(root, markdown, () => { /* noop */ });
+    await createEditor(root, markdown, () => {  });
     for (let attempt = 0; attempt < 100; attempt++) {
         if (document.querySelector(".milkdown .ProseMirror")) { return; }
         await new Promise((resolve) => setTimeout(resolve, 10));
@@ -41,7 +33,6 @@ async function openEditor(markdown: string): Promise<void> {
     throw new Error("editor was not mounted");
 }
 
-/** PM range of the strong text. */
 function strongRange(): { from: number; to: number; text: string } {
     const view = getEditorView();
     if (!view) { throw new Error("view missing"); }
@@ -119,8 +110,7 @@ describe("行内格式边界输入（2026-11-01 手测）", () => {
     });
 
     it("IME 组合结束后光标多跳一个字 应该 拉回到组合文本末尾", async () => {
-        // Chrome 在带格式边界做 IME 组合时可能把选区报后一位；录屏里冒号后光标落在
-        // 下一个字「斯」后面。compositionend 之后用组合文本长度做兜底修正。
+
         await openEditor("**粗体**斯\n");
         const { to } = strongRange();
         const view = getEditorView();
@@ -134,7 +124,6 @@ describe("行内格式边界输入（2026-11-01 手测）", () => {
         Object.defineProperty(end, "data", { value: "：" });
         view.dom.dispatchEvent(end);
 
-        // Simulate the browser's post-composition transaction: colon inserted, caret one past.
         const tr = view.state.tr.insertText("：", to);
         tr.setSelection(TextSelection.create(tr.doc, to + 2));
         view.dispatch(tr);

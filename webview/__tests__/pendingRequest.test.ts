@@ -11,7 +11,7 @@ describe("PendingRequestRegistry 请求-响应注册表", () => {
         const { id, promise } = reg.begin({ timeoutMs: 5000, timeout: { kind: "reject", error: "timeout" } });
         reg.resolve(id, "ok");
         await expect(promise).resolves.toBe("ok");
-        // 槽位已清：重复结算无害
+
         expect(() => reg.resolve(id, "again")).not.toThrow();
     });
 

@@ -1,17 +1,4 @@
-/**
- * 组件样式就近归属（F12）。
- *
- * 回归方向：这类组件样式原本散在全局 `style.css` 里，改一个面板要跨文件搜，`!important` 也容易
- * 在全局层越攒越多。迁到组件目录后，本用例防止它们被重新塞回全局文件，并确保组件仍然加载
- * 自己的 css（迁了文件但没加载 = 样式静默失效）。
- *
- * 2026-10-30 改造（F4）：原先「组件 source 里含 `import "./x.css"` 字面量」三条断言是对实现
- * 文本做字符串匹配，重构换个 import 写法就假红；现在改为
- * 1) 归属：解析 CSS 规则结构，断言规则在对应 sheet、不在全局（不再全文找字符串）；
- * 2) 加载：jsdom 下 Vite 把 CSS import 处理成空模块，DOM 里观察不到样式表，因此用
- *    `vi.mock` 拦住组件自己的 css 模块，动态 import 组件后检查拦截是否命中——这是模块图
- *    层面的行为断言，与 import 语句的写法无关。
- */
+
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -38,7 +25,6 @@ interface CssRule {
     body: string;
 }
 
-/** 解析出规则的选择器集合与声明体；@media 外层被丢弃，内部规则按顶层解析（够本文件用）。 */
 function parseRules(css: string): CssRule[] {
     const rules: CssRule[] = [];
     for (const match of css.replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
@@ -50,7 +36,6 @@ function parseRules(css: string): CssRule[] {
     return rules;
 }
 
-/** 是否存在任意一条规则的选择器包含给定片段 */
 function hasSelectorContaining(rules: CssRule[], fragment: string): boolean {
     return rules.some((rule) => rule.selectors.some((selector) => selector.includes(fragment)));
 }
@@ -81,8 +66,7 @@ describe("顶栏样式归属", () => {
     });
 
     it("全局 style.css 不应该 再承载顶栏布局与品牌规则", () => {
-        // 折叠期守卫（html[data-epytor-host-collapsed] .milkdown-top-bar）刻意留在全局，
-        // 它不是顶栏样式而是视口几何，所以这里只禁后代表达式。
+
         expect(hasSelectorContaining(globalRules, ".milkdown .milkdown-top-bar")).toBe(false);
         expect(hasSelectorContaining(globalRules, ".epytor-brand")).toBe(false);
     });

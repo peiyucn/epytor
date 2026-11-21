@@ -13,7 +13,7 @@ describe("formatFileSize 文件大小显示", () => {
         expect(formatFileSize(1024)).toBe("1.0 KB");
         expect(formatFileSize(1536)).toBe("1.5 KB");
         expect(formatFileSize(12595)).toBe("12.3 KB");
-        // 整千也保留一位小数，避免状态栏宽度跳动
+
         expect(formatFileSize(8 * 1024)).toBe("8.0 KB");
     });
 

@@ -35,7 +35,7 @@ describe("minimalDiff", () => {
     });
 
     it("列表标记符与嵌套缩进宽度变化时应该保留原始行风格", () => {
-        // 回归：mdast 固定输出 `*` 与 3 空格缩进，此前保存会把用户的 `-` / 4 空格嵌套改写
+
         const saved = "- one\n- two\n1. a\n    1. b\n        1. c";
         const serialized = "* one\n* two\n1. a\n   1. b\n      1. c";
 
@@ -50,7 +50,7 @@ describe("minimalDiff", () => {
     });
 
     it("列表缩进层级真的变了时应该采用新缩进", () => {
-        // `- b` 从同级变成 `- a` 的子项：段内缩进档位从 1 档变 2 档 → 不能当成写法差异
+
         const saved = "- a\n- b";
         const serialized = "- a\n  - b";
 
@@ -58,11 +58,7 @@ describe("minimalDiff", () => {
     });
 
     it("父项与子列表之间有空行时 嵌套项提升为同级 应该 采用新缩进（回归：层级被写回旧值）", () => {
-        // 手测反馈 2026-10-26：任务列表中间某项退格提升后「下面的层级跟着带乱」。
-        // 旧实现按「连续列表行段」取缩进档位：源文件里父项与子列表之间有空行，段在空行处
-        // 断开，子项各自独占一段、档位一律算 0；序列化结果没有空行、是完整一段，父项 0 档、
-        // 子项 1 档 —— 两边档位基准不同，提升后的 C2（0 档）反而与源文件里的 C2（0 档）签名
-        // 相同，于是整行沿用旧文本，刚做的层级提升被静默写回。
+
         const saved = "- [ ] P\n\n  - [ ] C1\n  - [ ] C2\n  - [ ] C3";
         const serialized = "- [ ] P\n  - [ ] C1\n- [ ] C2\n  - [ ] C3";
 
@@ -70,10 +66,7 @@ describe("minimalDiff", () => {
     });
 
     it("父项与子列表之间有空行时 未改动的嵌套项 应该 保留原文缩进宽度", () => {
-        // 同一条回归的另一面：真正的写法差异（4 空格 vs 2 空格）仍要被保留，不能因为
-        // 换用「文档级缩进单位」就把用户的手写缩进整段改写。
-        // 注：这里刻意不放空行——「源文件有空行、序列化没有」属于空行口径的既有差异
-        // （签名行集合规模不同即走重建），不在本用例范围内。
+
         const saved = "- P\n    - C1\n    - C2";
         const serialized = "- P\n  - C1\n  - C2";
 
@@ -108,10 +101,7 @@ describe("minimalDiff", () => {
         lines[lineCount / 2] = `paragraph ${lineCount / 2} changed`;
         const serialized = lines.join("\n");
 
-        // 挂钟断言对机器负载与覆盖率插桩敏感（测覆盖率时单轮会翻数倍）：改为「多轮取最小值 + 宽松上限」。
-        // 实测（Node 24，1 万行改一行）：现实现约 30ms；去掉锚点与上限（= 全文 LCS）约 4s，相差约 120 倍，
-        // 真回归仍会被抓住。
-        applyMinimalChanges(saved, serialized); // 预热（首次调用含 JIT）
+        applyMinimalChanges(saved, serialized);
         let best = Number.POSITIVE_INFINITY;
         for (let round = 0; round < 3; round++) {
             const start = performance.now();

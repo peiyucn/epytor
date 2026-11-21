@@ -1,7 +1,4 @@
-/**
- * VSCode API 最小可用 mock，供 Vitest 单元测试使用。
- * 通过 vitest.config.ts 的 resolve.alias 将 "vscode" 重定向到此文件。
- */
+
 import * as nodePath from "path";
 import { vi } from "vitest";
 
@@ -26,7 +23,6 @@ export const Uri = {
 
 export const FileType = { Unknown: 0, File: 1, Directory: 2, SymbolicLink: 64 } as const;
 
-/** Minimal geometry types: navigation code constructs and compares these. */
 export class Position {
     constructor(public readonly line: number, public readonly character: number) {}
 }
@@ -35,7 +31,6 @@ export class Range {
     readonly start: Position;
     readonly end: Position;
 
-    /** Supports both real overloads: (start, end) and (startLine, startChar, endLine, endChar). */
     constructor(
         start: Position | number,
         end: Position | number,
@@ -67,7 +62,6 @@ export const TextEditorRevealType = {
 
 export const ViewColumn = { Active: -1, Beside: -2, One: 1, Two: 2, Three: 3 } as const;
 
-/** Tab input types: extension commands discriminate on `instanceof`. */
 export class TabInputCustom {
     constructor(
         public readonly uri: ReturnType<typeof makeUri>,
@@ -121,7 +115,7 @@ export const window = {
 export const StatusBarAlignment = { Left: 1, Right: 2 } as const;
 
 export const commands = {
-    // Real VS Code returns a Thenable; callers chain `.then` for error logging.
+
     executeCommand: vi.fn(() => Promise.resolve(undefined)),
     registerCommand: vi.fn(() => ({ dispose: vi.fn() })),
 };
@@ -131,10 +125,6 @@ export const env = {
     openExternal: vi.fn(() => Promise.resolve(true)),
 };
 
-/**
- * Real (small) EventEmitter. Units are exercised through `new` and then bound to their
- * events, so a bare `vi.fn()` stub (not constructable, no real fan-out) is not enough.
- */
 export class EventEmitter<T = unknown> {
     private listeners = new Set<(event: T) => void>();
 
@@ -158,7 +148,6 @@ export const l10n = {
     ),
 };
 
-/** Real class: host code calls `new CancellationTokenSource()` and disposes it. */
 export class CancellationTokenSource {
     readonly token = {
         isCancellationRequested: false,

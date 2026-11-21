@@ -223,7 +223,7 @@ describe("readImageServerConfig", () => {
 });
 
 describe("readServerStorageOrigin / shouldDowngradeServerStorage", () => {
-    /** 只提供 inspect 的配置桩（inspect 返回值按 section 注入） */
+
     const makeCfg = (sections: Record<string, unknown>) => ({
         inspect: (key: string) => sections[key] as never,
     });

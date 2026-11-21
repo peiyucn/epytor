@@ -1,9 +1,4 @@
-/**
- * 表格软换行回归测试：单元格内 Shift+Enter 应插入 hardbreak（序列化为 <br>）。
- * 实现路径：webview/editor/plugins/softBreakKeymap.ts 始终插入 hardbreak（不采用上游命令的
- * 「行尾已有 hardbreak 时转段落」行为——表格单元格内反直觉，用户实测反馈）。
- * 历史：更早版本官方 tableKeymap 曾把 Shift+Enter 绑定 goToNextCell（7.22.1 已移除）。
- */
+
 import { afterEach, describe, expect, it } from "vitest";
 import { CrepeBuilder } from "@milkdown/crepe";
 import { editorViewCtx, remarkStringifyOptionsCtx } from "@milkdown/kit/core";
@@ -15,16 +10,16 @@ import { withTableBreakHandler } from "../markdown/markdownSerializer";
 
 if (typeof (window as unknown as Record<string, unknown>).ResizeObserver === "undefined") {
     (window as unknown as Record<string, unknown>).ResizeObserver = class {
-        observe() { /* noop */ }
-        unobserve() { /* noop */ }
-        disconnect() { /* noop */ }
+        observe() {  }
+        unobserve() {  }
+        disconnect() {  }
     };
 }
 if (typeof window.matchMedia === "undefined") {
     window.matchMedia = (() => ({
         matches: false, media: "", onchange: null,
-        addListener() { /* noop */ }, removeListener() { /* noop */ },
-        addEventListener() { /* noop */ }, removeEventListener() { /* noop */ },
+        addListener() {  }, removeListener() {  },
+        addEventListener() {  }, removeEventListener() {  },
         dispatchEvent() { return false; },
     })) as typeof window.matchMedia;
 }
@@ -54,8 +49,8 @@ function pressShiftEnter(view: EditorView): boolean {
     const event = {
         key: "Enter",
         shiftKey: true,
-        preventDefault() { /* noop */ },
-        stopPropagation() { /* noop */ },
+        preventDefault() {  },
+        stopPropagation() {  },
     } as unknown as KeyboardEvent;
     view.someProp("handleKeyDown", (f) => {
         if (f(view, event)) { handled = true; return true; }
@@ -77,21 +72,18 @@ describe("表格软换行（softBreakKeymap）", () => {
         view.state.doc.descendants((node, pos) => {
             if (cellPos < 0 && node.type.name === "table_cell") cellPos = pos;
         });
-        // 光标在单元格文本 "x" 之后（cellPos+1 段落起点，+2 "x"，+3 段落末尾）
+
         setCursor(view, cellPos + 3);
 
         const handled = pressShiftEnter(view);
         expect(handled).toBe(true);
 
-        // 单元格内出现 hardbreak
         let hasHardbreak = false;
         view.state.doc.descendants((node) => {
             if (node.type.name === "hardbreak") hasHardbreak = true;
         });
         expect(hasHardbreak).toBe(true);
 
-        // 模拟真实用户行为：换行后继续输入 "z"（孤立段落末尾 hardbreak 会被
-        // Milkdown hardbreakFilterNodes 序列化时丢弃，这是 CommonMark 正确语义）
         let hbPos = -1;
         view.state.doc.descendants((node, pos) => {
             if (hbPos < 0 && node.type.name === "hardbreak") hbPos = pos;
@@ -108,7 +100,7 @@ describe("表格软换行（softBreakKeymap）", () => {
         const view = getView(editor);
         setCursor(view, 5);
         const handled = pressShiftEnter(view);
-        // Milkdown 全局默认：单元格外 Shift+Enter 同样产生 hardbreak（软换行）
+
         let hasHardbreak = false;
         view.state.doc.descendants((node) => {
             if (node.type.name === "hardbreak") hasHardbreak = true;
@@ -124,7 +116,7 @@ describe("表格软换行（softBreakKeymap）", () => {
         view.state.doc.descendants((node, pos) => {
             if (cellPos < 0 && node.type.name === "table_cell") cellPos = pos;
         });
-        setCursor(view, cellPos + 3); // 光标在 "x" 之后
+        setCursor(view, cellPos + 3);
 
         expect(pressShiftEnter(view)).toBe(true);
         expect(pressShiftEnter(view)).toBe(true);

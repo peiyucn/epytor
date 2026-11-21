@@ -30,7 +30,7 @@ describe("frontmatter 序列化", () => {
         ];
         const out = serializeFrontmatter(entries);
         expect(out).toBe('---\ntitle: "A: B"\nurl: https://example.com/a:b\n---\n');
-        // 往返
+
         expect(parseFrontmatter(out)).toEqual(entries);
     });
 

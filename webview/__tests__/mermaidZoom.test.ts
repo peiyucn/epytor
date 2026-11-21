@@ -41,11 +41,9 @@ describe("enhanceMermaidPreview 倍率保持", () => {
         expect(zoomIn).not.toBeNull();
         zoomIn!.dispatchEvent(new MouseEvent("click"));
 
-        // 默认 0.8×，点一次 + → 1.0
         expect(container.dataset["epytorMermaidZoom"]).toBe("1");
         expect(svg.style.width).toBe("100%");
 
-        // 模拟主题重绘：innerHTML 清空子节点（dataset 保留），重新 enhance
         container.innerHTML = "";
         const svg2 = document.createElementNS("http://www.w3.org/2000/svg", "svg");
         container.appendChild(svg2);
@@ -59,16 +57,14 @@ describe("enhanceMermaidPreview 倍率保持", () => {
         document.body.appendChild(container);
         const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
         container.appendChild(svg);
-        // 模拟真实布局：原始渲染宽度 500px
+
         vi.spyOn(svg, "getBoundingClientRect").mockReturnValue({ width: 500 } as DOMRect);
 
         enhanceMermaidPreview(container, svg);
 
-        // 默认 0.8× → 400px，且解除 mermaid 内联 max-width 压制
         expect(svg.style.width).toBe("400px");
         expect(svg.style.maxWidth).toBe("none");
 
-        // 点一次 + → 1.0× → 500px（原始大小）
         const buttons = container.querySelectorAll<HTMLButtonElement>(".epytor-mermaid-zoom-btn");
         buttons[0].dispatchEvent(new MouseEvent("click"));
         expect(svg.style.width).toBe("500px");

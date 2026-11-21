@@ -1,7 +1,4 @@
-/**
- * 输入基准（探针）：1 万行文档逐键 insertText 的管道耗时。
- * 定位「卡顿有改善但达不到可用状态」的剩余热点（listener 序列化 / decorations / 其他插件）。
- */
+
 import { describe, it } from "vitest";
 import { CrepeBuilder } from "@milkdown/crepe";
 import { editorViewCtx, remarkStringifyOptionsCtx } from "@milkdown/kit/core";
@@ -10,14 +7,14 @@ import { withTableBreakHandler } from "../markdown/markdownSerializer";
 
 if (typeof (window as unknown as Record<string, unknown>).ResizeObserver === "undefined") {
     (window as unknown as Record<string, unknown>).ResizeObserver = class {
-        observe() { /* noop */ } unobserve() { /* noop */ } disconnect() { /* noop */ }
+        observe() {  } unobserve() {  } disconnect() {  }
     };
 }
 if (typeof window.matchMedia === "undefined") {
     window.matchMedia = (() => ({
         matches: false, media: "", onchange: null,
-        addListener() { /* noop */ }, removeListener() { /* noop */ },
-        addEventListener() { /* noop */ }, removeEventListener() { /* noop */ },
+        addListener() {  }, removeListener() {  },
+        addEventListener() {  }, removeEventListener() {  },
         dispatchEvent() { return false; },
     })) as typeof window.matchMedia;
 }
@@ -48,7 +45,6 @@ describe("1 万行输入管道基准（探针）", () => {
         const editor = await makeEditor(lines.join("\n"));
         const view = getView(editor);
 
-        // 光标放文档中部
         const pos = Math.floor(view.state.doc.content.size / 2);
         let total = 0;
         let maxMs = 0;
@@ -59,7 +55,7 @@ describe("1 万行输入管道基准（探针）", () => {
             total += ms;
             if (ms > maxMs) maxMs = ms;
         }
-        // eslint-disable-next-line no-console
+
         console.log(`[input-bench] 100 键总计 ${total.toFixed(1)}ms，平均 ${(total / 100).toFixed(2)}ms/键，最慢 ${maxMs.toFixed(1)}ms`);
     }, 180000);
 });

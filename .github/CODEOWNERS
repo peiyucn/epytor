@@ -1,0 +1,10 @@
+/AGENTS.md @peiyucn
+/meta/ @peiyucn
+/scripts/check-policy.mjs @peiyucn
+/scripts/security-gate.mjs @peiyucn
+/test/policy-lint.test.ts @peiyucn
+/package.json @peiyucn
+/pnpm-lock.yaml @peiyucn
+/.github/ @peiyucn
+/docs/architecture.md @peiyucn
+/docs/release.md @peiyucn

@@ -1,18 +1,10 @@
-/**
- * IME composition gate.
- *
- * Regression: rebuilding the editor during an IME composition silently cancels it
- * (no compositionend, candidate window gone, focus back to body). Lifecycle rebuilds
- * await `whenIdle()` first; a timeout bounds the wait when compositionend never
- * arrives.
- */
 
-/** Fallback timeout (ms) when compositionend never arrives. */
+
 const COMPOSITION_WAIT_TIMEOUT_MS = 3000;
 
 export interface CompositionGate {
     isComposing(): boolean;
-    /** Resolve once composition ends (or the timeout fires); immediate when not composing. */
+
     whenIdle(): Promise<void>;
     dispose(): void;
 }

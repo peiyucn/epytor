@@ -1,11 +1,4 @@
-/**
- * Crepe editor assembly and the public editor API used by the entry.
- *
- * The module is a facade: instance/baseline state lives in `editor/editorSession.ts`,
- * save normalization in `editor/serialization.ts`, rebuild continuity in
- * `editor/continuity.ts`, Mermaid preview in `editor/mermaidPreview.ts`, CodeMirror theming
- * in `editor/cmTheme.ts`. Public exports are unchanged for existing callers and tests.
- */
+
 import {
     Editor,
     editorViewCtx,
@@ -25,7 +18,7 @@ import { linkTooltip } from "@milkdown/crepe/feature/link-tooltip";
 import { codeMirror } from "@milkdown/crepe/feature/code-mirror";
 import { cursor } from "@milkdown/kit/plugin/cursor";
 import { createVirtualCursor } from "./vendor/prosemirrorVirtualCursor";
-// Local lazy KaTeX: the upstream latex feature statically imports katex (~480 KB entry).
+
 import { latexFeature, createMathInlineView, renderLatexPreview } from "./vendor/latexFeature";
 import { listItem } from "@milkdown/crepe/feature/list-item";
 import { table } from "@milkdown/crepe/feature/table";
@@ -67,7 +60,6 @@ import { createMermaidPreview } from "./editor/mermaidPreview";
 import { createCodeBlockPreview } from "./editor/codeBlockPreview";
 import { createCmTheme } from "./editor/cmTheme";
 
-// Upstream's task-list tokenizer needs content after the marker; patch the mdast after remark-gfm.
 const emptyTaskListItemRemark = $remark("epytorEmptyTaskListItem", () => emptyTaskListItemPlugin);
 
 const WANTED_LANGS = new Set([
@@ -79,7 +71,7 @@ const WANTED_LANGS = new Set([
 const codeLanguages = allCodeLanguages.filter(
     (l: { alias: readonly string[] }) => l.alias.some((a) => WANTED_LANGS.has(a))
 );
-// Not in @codemirror/language-data: register text and mermaid as labels without highlighting.
+
 codeLanguages.unshift(LanguageDescription.of({
     name: "Text",
     alias: ["text", "plaintext", "txt"],
@@ -93,7 +85,6 @@ codeLanguages.push(LanguageDescription.of({
     load: async () => undefined as unknown as LanguageSupport,
 }));
 
-// Reset spread when an edited list item ends up with a single block child.
 const listSpreadNormalizePlugin = $prose((ctx) => {
     const schema = ctx.get(schemaCtx);
     return new Plugin({
@@ -116,7 +107,6 @@ export function getSerializationMode(): SerializationMode {
     return editorSession.getSerializationMode();
 }
 
-/** The only serialization entry point: the extension pulls content on save; typing never serializes. */
 export function getMarkdownForSave(): string {
     return editorSession.getMarkdownForSave();
 }
@@ -125,20 +115,10 @@ export function getEditorView(): EditorView | null {
     return editorSession.getView();
 }
 
-/**
- * Adopt disk content as the save baseline *before* a rebuild starts.
- *
- * `getMarkdownForSave()` falls back to the baseline while no editor exists, and that value
- * is also the base for the minimal diff. Updating it up front means a save request that lands
- * mid-rebuild answers with the fresh disk content instead of the previous document.
- * Only valid for `revert` (the content really came from disk); `init` may carry unsaved edits,
- * where the previous baseline must stay.
- */
 export function adoptDiskContentAsBaseline(content: string): void {
     editorSession.adoptDiskContentAsBaseline(content);
 }
 
-/** Destroy the editor and its side effects (theme subscription, CM observer); idempotent. */
 export function destroyEditor(): void {
     editorSession.destroy();
 }
@@ -150,7 +130,6 @@ export function captureEditorContinuity(): EditorContinuity | null {
     return view ? captureContinuity(view) : null;
 }
 
-/** Restore focus / selection / scroll after a rebuild, which otherwise leaves focus on `<body>`. */
 export function restoreEditorContinuity(
     continuity: EditorContinuity,
     options: { isActivePanel: boolean },
@@ -159,7 +138,6 @@ export function restoreEditorContinuity(
     return view ? restoreContinuity(view, continuity, options) : false;
 }
 
-/** Restore a persisted selection after a full reload; does not scroll or steal focus. */
 export function restoreSavedSelection(selection: TextSelectionRange): boolean {
     const view = editorSession.getView();
     return view ? restoreSelection(view, selection) : false;
@@ -172,13 +150,11 @@ export async function createEditor(
     onRenameImage?: (webviewUri: string, newBasename: string) => Promise<void>,
     onTocToggle?: () => void,
 ): Promise<Editor> {
-    // Runtime config is owned by the init payload and setSerializationMode; resetting it
-    // here rolls back user changes on revert. The epoch is shared with index.ts's scroll.
+
     const interactionEpochAtCreate = getUserInteractionEpoch();
 
     let isSettled = false;
 
-    // Notify only on doc changes. Regression: caret moves marked the doc dirty.
     let prevDoc: ProseNode | null = null;
     const updateNotifyPlugin = $prose(() =>
         new Plugin({
@@ -202,9 +178,8 @@ export async function createEditor(
         defaultValue: initialMarkdown,
     });
 
-    // Seed from the theme bus. Regression: a hard-coded value desynced CodeMirror until the observer ran.
     let isDark = isDarkTheme();
-    // Same order as the old inline wiring: release the previous count observer before starting another.
+
     editorSession.setCmObserverDisconnect(null);
     const cmTheme = createCmTheme(container, () => isDark);
     editorSession.setCmObserverDisconnect(cmTheme.dispose);
@@ -215,8 +190,6 @@ export async function createEditor(
         cmTheme.reconfigureAll();
     }));
 
-    // Local lazy KaTeX renderer; the vendored feature must not import codeBlockConfig
-    // (duplicate SliceType symbols break cross-context updates under pnpm peer variants).
     const renderPreview = createCodeBlockPreview({
         renderLatex: renderLatexPreview,
         mermaidPreview,
@@ -247,14 +220,10 @@ export async function createEditor(
         .addFeature(latexFeature)
         .addFeature(linkTooltip);
 
-    // Restore inlineCode inclusive:true (upstream flipped it to false in 7.22.1); path
-    // completion keeps editing at the end of a code span.
     crepe.editor.use(
         inlineCodeSchema.extendSchema((prev) => (ctx) => ({ ...prev(ctx), inclusive: true })),
     );
 
-    // A caret at the end of a formatted span is visually outside it. Upstream marks are
-    // inclusive by default, which makes new input inherit the mark at that boundary.
     crepe.editor.use(
         strongSchema.extendSchema((prev) => (ctx) => ({ ...prev(ctx), inclusive: false })),
     );
@@ -265,13 +234,9 @@ export async function createEditor(
         strikethroughSchema.extendSchema((prev) => (ctx) => ({ ...prev(ctx), inclusive: false })),
     );
 
-    // Self-register cursor + default virtual cursor: Crepe's variant skips inline-code
-    // warnings, hiding the boundary indicator and trapping arrow keys with inclusive:true.
     crepe.editor.use(cursor);
     crepe.editor.use($prose(() => createVirtualCursor({ skipWarning: ["strong", "emphasis", "strike_through"] })));
 
-    // One undo step per input: the default 500 ms merge makes Ctrl+Z unpredictable. IME
-    // candidates stay one step each (the composition id changes per commit).
     crepe.editor.use($prose(() => {
         let prevComposition: unknown = null;
         return new Plugin({
@@ -291,15 +256,12 @@ export async function createEditor(
         .config((ctx) => {
             editorSession.snapshot.seedMarkdown(initialMarkdown);
 
-            // Milkdown over-escapes `_`, `*`, `[` in plain text; keep its context rules and relax
-            // only the known false positives in clean mode.
             ctx.update(remarkStringifyOptionsCtx, (options) => {
                 const compatibleTextHandler = options.handlers?.text;
                 if (!compatibleTextHandler) return options;
-                // Keep the file's list markers: the default rewrites `- item` / `1) item`. Shared
-                // by both modes — this is source fidelity, not escaping policy.
+
                 const markers = detectListMarkerStyle(editorSession.snapshot.markdown);
-                // mdast degrades a soft break to a space inside table cells; emit `<br>` instead.
+
                 return withTableBreakHandler({
                     ...options,
                     bullet: markers.bullet,
@@ -316,7 +278,6 @@ export async function createEditor(
                 });
             });
 
-            // Inline math renders its source first, then lazily via local KaTeX (vendor/latexFeature.ts).
             ctx.set(nodeViewCtx, [
                 [
                     "image",
@@ -332,7 +293,7 @@ export async function createEditor(
         })
         .use(updateNotifyPlugin)
         .use(formatKeymapPlugin)
-        .use(headingFoldPlugin)     // Decoration only, never modifies the doc.
+        .use(headingFoldPlugin)
         .use(headingStickyPlugin)
         .use(softBreakKeymap)
         .use(cellClickFixPlugin)
@@ -345,7 +306,7 @@ export async function createEditor(
     const editor = await crepe.create();
     editorSession.setEditor(editor);
     isSettled = true;
-    // Seed both baselines after settle; a null prevDoc marked the doc dirty before any edit.
+
     prevDoc = editor.action((ctx) => ctx.get(editorViewCtx)).state.doc;
     editorSession.snapshot.seedDoc(prevDoc);
     return editor;

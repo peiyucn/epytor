@@ -1,8 +1,4 @@
-/**
- * 保存前序列化管线（覆盖 editor/serialization.ts）。
- * 拆分自 editor.ts 的 prepareMarkdownForSave（audit F2）；用例锁住行尾保持、
- * 最小差异、表格 `<br>` 风格与 `\&` 清理，保证纯函数化后行为不变。
- */
+
 import { describe, expect, it } from "vitest";
 import { prepareMarkdownForSave } from "../editor/serialization";
 
@@ -26,7 +22,7 @@ describe("prepareMarkdownForSave 保存前归一化", () => {
     });
 
     it("编辑后 应该 只替换改动行，未改动行沿用源文件写法（最小差异）", () => {
-        // 未改动的 `- a` 保留源文件标记；新写的 `* b!` 用序列化器输出（`*`）替换。
+
         const source = "- a\n- b\n";
         const serialized = "* a\n* b!\n";
         expect(prepareMarkdownForSave({ source, serialized, mode: "clean" })).toBe("- a\n* b!\n");
@@ -34,7 +30,7 @@ describe("prepareMarkdownForSave 保存前归一化", () => {
 
     it("clean 模式 应该 还原源文件的表格 <br /> 写法", () => {
         const source = "| a | b |\n| --- | --- |\n| x<br />y | z |\n";
-        // 序列化器按 GFM 写 `<br>`；clean 模式把它改回源文件的 `<br />`。
+
         const serialized = "| a | b |\n| --- | --- |\n| x<br>y | z |\n";
         expect(prepareMarkdownForSave({ source, serialized, mode: "clean" })).toBe(source);
     });

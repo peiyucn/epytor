@@ -1,11 +1,4 @@
-/**
- * 重建连续性（焦点/滚动）的纯逻辑接线测试。
- *
- * 恢复计划本身由 `app/rebuildRestore.ts` 覆盖；这里锁的是 continuity 模块从 EditorView
- * 取快照、再把计划写回视图的接线：焦点只在「原来有焦点且面板激活」时恢复，背景 webview
- * 不得抢焦点，滚动位置始终恢复。选择区恢复依赖真实 ProseMirror TextSelection，由真实
- * 编辑器集成用例（rebuildRestore/editorStatePersistence）覆盖，这里不伪造。
- */
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { EditorView } from "@milkdown/kit/prose/view";
 import { captureContinuity, restoreContinuity } from "../editor/continuity";
