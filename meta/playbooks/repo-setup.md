@@ -32,8 +32,9 @@
 
 6. **登记**
    - 做：README 的项目清单加一行；有 CI/发布的，加管线行。
-   - 调用：meta-repo 根 `README.md` 的 `## 项目清单`；[rules/engineering.md](../rules/engineering.md) E 工程管线第一段、E6。
-   - 证据：README 行、管线行。
+   - 做：同一行的 `GitHub 策略` 列标 `策略`（不纳入标 `—`），并在 `meta/github-policy.json` 加同名的期望值条目——只写期望值，不再写仓库名与可见性。
+   - 调用：meta-repo 根 `README.md` 的 `## 项目清单`；[rules/engineering.md](../rules/engineering.md) E 工程管线第一段、E6；[rules/repo-settings.md](../rules/repo-settings.md)。
+   - 证据：README 行、管线行、`check-github-policy` 输出。
 
 7. **校验**
    - 做：跑 GitHub 配置校验和项目契约校验。
