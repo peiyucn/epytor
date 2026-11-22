@@ -168,3 +168,10 @@ tag 提交须在默认分支上；发布工作流须对此做 fail-closed 校验
 | `sync` | 数据同步 |
 
 每个项目只放真实存在的环节，同型项目顺序保持一致。required checks 按 [repo-settings.md](repo-settings.md) 的 GitHub 控制映射对齐。
+
+### E25｜临时产物〔final〕
+
+agent 的一次性产物——临时脚本、PR 描述草稿、配置备份、临时 worktree——一律放工作区根（meta-repo）的 `TEMP/`，它已在 `.gitignore` 里忽略；收尾前清空，只留 `.gitkeep`。
+
+- 不放 `/tmp`：那是整机共享目录，产物与仓库无关、无法追溯，容易和其他会话的文件混在一起。
+- 临时 worktree 用 `git worktree remove` 收尾，不要 `rm -rf`，否则会留下失效的 worktree 记录。
