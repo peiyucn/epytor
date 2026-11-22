@@ -50,4 +50,4 @@ owner 保留 fast-forward 直推能力。公开仓库的外部 PR 与 Issue 一�
 | 发布 tag | tag ruleset：`v*` | E19 |
 | 发布环境 | environment + 环境级 secret | E4、E20 |
 
-机器可读期望值见 meta-repo 的 `github-policy.json`；校验：`node meta/scripts/check-github-policy.mjs`。
+名单见 meta-repo 的 `README.md` 的 `## 项目清单`（唯一登记处，`GitHub 策略` 列决定是否纳入）；机器可读期望值见 `meta/github-policy.json`（只写期望值，不重复仓库名与可见性）；校验：`node meta/scripts/check-github-policy.mjs`。
